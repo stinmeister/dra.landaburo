@@ -1,0 +1,62 @@
+.instagramCta {
+  background-color: var(--color-gris-claro);
+  padding: 6rem 2rem;
+  color: var(--color-negro);
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+}
+
+.label {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--color-gris);
+}
+
+.link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  text-decoration: none;
+  color: var(--color-negro);
+  transition: transform 0.3s ease;
+}
+
+.link:hover {
+  transform: translateY(-5px);
+}
+
+.icon {
+  color: var(--color-negro);
+  transition: color 0.3s ease;
+}
+
+.link:hover .icon {
+  color: var(--color-gris);
+}
+
+.handle {
+  font-family: var(--font-serif);
+  font-size: clamp(2.5rem, 6vw, 4rem);
+  font-weight: 400;
+  margin: 0;
+  color: var(--color-negro);
+  transition: color 0.3s ease;
+}
+
+.link:hover .handle {
+  color: var(--color-gris);
+}

@@ -1,0 +1,178 @@
+.main {
+  min-height: 100vh;
+  padding-top: 80px;
+  background-color: var(--color-white, #ffffff);
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.hero {
+  padding: 6rem 0 4rem;
+  text-align: center;
+  background-color: var(--color-gray-light, #d2d3d3);
+}
+
+.title {
+  font-family: var(--font-heading), serif;
+  font-size: 3rem;
+  color: var(--color-black, #000000);
+  margin: 0;
+  font-weight: 400;
+}
+
+.bioSection {
+  padding: 6rem 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  align-items: center;
+}
+
+.imageContainer {
+  width: 100%;
+  aspect-ratio: 3/4;
+  background-color: var(--color-gray-light, #d2d3d3);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.imagePlaceholder {
+  font-family: var(--font-body), sans-serif;
+  color: var(--color-gray, #848484);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.875rem;
+}
+
+.heading {
+  font-family: var(--font-heading), serif;
+  font-size: 2.5rem;
+  color: var(--color-black, #000000);
+  margin-bottom: 0.5rem;
+  font-weight: 400;
+}
+
+.subheading {
+  font-family: var(--font-body), sans-serif;
+  font-size: 1.125rem;
+  color: var(--color-gray, #848484);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2rem;
+}
+
+.bioText {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.bioText p {
+  font-family: var(--font-body), sans-serif;
+  font-size: 1.125rem;
+  color: var(--color-black, #000000);
+  line-height: 1.8;
+}
+
+.statsSection {
+  background-color: var(--color-black, #000000);
+  color: var(--color-white, #ffffff);
+}
+
+.valuesSection {
+  padding: 6rem 0;
+  background-color: var(--color-gray-light, #d2d3d3);
+}
+
+.sectionTitle {
+  font-family: var(--font-heading), serif;
+  font-size: 2.5rem;
+  color: var(--color-black, #000000);
+  margin-bottom: 4rem;
+  text-align: center;
+  font-weight: 400;
+}
+
+.valuesGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3rem;
+}
+
+.valueCard {
+  background-color: var(--color-white, #ffffff);
+  padding: 3rem 2rem;
+  text-align: center;
+  border: 1px solid var(--color-white, #ffffff);
+  transition: border-color 0.3s ease;
+}
+
+.valueCard:hover {
+  border-color: var(--color-black, #000000);
+}
+
+.valueCard h3 {
+  font-family: var(--font-body), sans-serif;
+  font-size: 1.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-black, #000000);
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+
+.valueCard p {
+  font-family: var(--font-body), sans-serif;
+  font-size: 1rem;
+  color: var(--color-gray, #848484);
+  line-height: 1.6;
+}
+
+@media (max-width: 992px) {
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 3rem;
+  }
+  
+  .imageContainer {
+    max-width: 500px;
+    margin: 0 auto;
+  }
+  
+  .valuesGrid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero {
+    padding: 4rem 0 3rem;
+  }
+  
+  .title {
+    font-size: 2.5rem;
+  }
+  
+  .heading {
+    font-size: 2rem;
+  }
+  
+  .bioSection,
+  .valuesSection {
+    padding: 4rem 0;
+  }
+  
+  .sectionTitle {
+    margin-bottom: 3rem;
+  }
+}

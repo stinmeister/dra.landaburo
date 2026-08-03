@@ -1,0 +1,127 @@
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  transition: background-color 0.3s ease, border-bottom 0.3s ease, backdrop-filter 0.3s ease;
+  padding: 1rem 2rem;
+  background-color: transparent;
+}
+
+.scrolled {
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--color-gris-claro, #D2D3D3);
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo {
+  font-family: var(--font-playfair, serif);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-negro, #000000);
+  text-decoration: none;
+}
+
+.desktopNav {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .desktopNav {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+  }
+}
+
+.navLink {
+  color: var(--color-negro, #000000);
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.navLink:hover {
+  color: var(--color-gris, #848484);
+}
+
+.navLinkActive {
+  font-weight: 600;
+  border-bottom: 2px solid var(--color-negro, #000000);
+}
+
+.dropdownContainer {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdownButton {
+  background: none;
+  border: none;
+  color: var(--color-negro, #000000);
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-family: inherit;
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background-color: var(--color-blanco, #FFFFFF);
+  border: 1px solid var(--color-gris-claro, #D2D3D3);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem 0;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  z-index: 10;
+}
+
+.dropdownContainer:hover .dropdownMenu,
+.dropdownContainer:focus-within .dropdownMenu {
+  opacity: 1;
+  visibility: visible;
+}
+
+.dropdownItem {
+  padding: 0.75rem 1.25rem;
+  color: var(--color-negro, #000000);
+  text-decoration: none;
+  transition: background-color 0.2s ease;
+}
+
+.dropdownItem:hover {
+  background-color: rgba(210, 211, 211, 0.2);
+}
+
+.mobileMenuBtn {
+  display: block;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-negro, #000000);
+}
+
+@media (min-width: 768px) {
+  .mobileMenuBtn {
+    display: none;
+  }
+}

@@ -1,0 +1,116 @@
+.footer {
+  background-color: var(--color-negro, #000000);
+  color: var(--color-blanco, #FFFFFF);
+  padding: 4rem 2rem 1.5rem;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 3rem;
+  margin-bottom: 3rem;
+}
+
+@media (min-width: 768px) {
+  .container {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+  }
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.logo {
+  font-family: var(--font-playfair, serif);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-blanco, #FFFFFF);
+  text-decoration: none;
+  margin-bottom: 0.5rem;
+}
+
+.description {
+  color: var(--color-gris-claro, #D2D3D3);
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.link {
+  color: var(--color-gris-claro, #D2D3D3);
+  text-decoration: none;
+  transition: color 0.2s ease;
+  font-size: 0.95rem;
+}
+
+.link:hover {
+  color: var(--color-blanco, #FFFFFF);
+}
+
+.title {
+  font-family: var(--font-playfair, serif);
+  font-size: 1.25rem;
+  color: var(--color-blanco, #FFFFFF);
+  margin-bottom: 0.5rem;
+}
+
+.infoItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  color: var(--color-gris-claro, #D2D3D3);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.infoItem svg {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.socialLink {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-gris-claro, #D2D3D3);
+  text-decoration: none;
+  transition: color 0.2s ease;
+  margin-top: 1rem;
+  font-size: 0.95rem;
+}
+
+.socialLink:hover {
+  color: var(--color-blanco, #FFFFFF);
+}
+
+.bottomBar {
+  max-width: 1200px;
+  margin: 0 auto;
+  border-top: 1px solid rgba(210, 211, 211, 0.2);
+  padding-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--color-gris, #848484);
+}
+
+@media (min-width: 768px) {
+  .bottomBar {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+}
