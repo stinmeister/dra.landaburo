@@ -13,6 +13,10 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
+  // Pages with dark hero backgrounds where white text is needed
+  const darkHeroPages = ['/', '/tratamientos'];
+  const hasDarkHero = darkHeroPages.includes(pathname) || pathname.startsWith('/tratamientos/');
+
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 50);
@@ -24,9 +28,15 @@ export default function Header() {
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
+  const headerClasses = [
+    styles.header,
+    scrolled ? styles.scrolled : '',
+    !hasDarkHero ? styles.lightPage : '',
+  ].filter(Boolean).join(' ');
+
   return (
     <>
-      <header className={`${styles.header} ${scrolled ? styles.scrolled : ''}`}>
+      <header className={headerClasses}>
         <div className={styles.container}>
           <Link href="/" className={styles.logo}>
             Dra. Landaburo
