@@ -69,7 +69,7 @@ export default function StatsCounter() {
             <div key={index} className={styles.statItem}>
               <div className={styles.statValue}>
                 <Counter end={stat.value} startAnimating={isVisible} />
-                {stat.suffix}
+                <span className={styles.suffix}>{stat.suffix}</span>
               </div>
               <div className={styles.statLabel}>{stat.label}</div>
             </div>

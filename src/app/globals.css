@@ -10,6 +10,17 @@
   --color-gris: #848484;
   --color-gris-claro: #D2D3D3;
   --color-blanco: #FFFFFF;
+  --color-champagne: #C5A47E;
+  --color-champagne-light: rgba(197, 164, 126, 0.15);
+  --color-champagne-dark: #A8875F;
+
+  /* Aliases (Normalization) */
+  --color-black: var(--color-negro);
+  --color-white: var(--color-blanco);
+  --color-gray: var(--color-gris);
+  --color-gray-light: var(--color-gris-claro);
+  --font-heading: var(--font-serif);
+  --font-body: var(--font-sans);
 
   /* Functional Colors */
   --color-bg: var(--color-blanco);
@@ -221,6 +232,14 @@ p {
 
 .animate-on-scroll.fade-right.is-visible {
   transform: translateX(0);
+}
+
+.animate-on-scroll.fade-in {
+  transform: none;
+}
+
+.animate-on-scroll.fade-in.is-visible {
+  transform: none;
 }
 
 /* Staggered delays for children */

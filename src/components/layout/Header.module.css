@@ -5,14 +5,14 @@
   right: 0;
   z-index: 1000;
   transition: background-color 0.3s ease, border-bottom 0.3s ease, backdrop-filter 0.3s ease;
-  padding: 1rem 2rem;
+  padding: 0.75rem 2rem;
   background-color: transparent;
 }
 
 .scrolled {
   background-color: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--color-gris-claro, #D2D3D3);
+  border-bottom: 1px solid var(--color-gris-claro);
 }
 
 .container {
@@ -24,11 +24,16 @@
 }
 
 .logo {
-  font-family: var(--font-playfair, serif);
+  font-family: var(--font-serif);
   font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--color-negro, #000000);
+  font-weight: 400;
+  color: var(--color-blanco);
   text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.scrolled .logo {
+  color: var(--color-negro);
 }
 
 .desktopNav {
@@ -44,20 +49,42 @@
 }
 
 .navLink {
-  color: var(--color-negro, #000000);
+  color: var(--color-blanco);
   text-decoration: none;
   font-size: 1rem;
   font-weight: 500;
   transition: color 0.2s ease;
+  position: relative;
+  font-family: var(--font-sans);
+}
+
+.scrolled .navLink {
+  color: var(--color-negro);
+}
+
+.navLink::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  width: 0;
+  height: 1px;
+  background-color: var(--color-champagne);
+  transition: width 0.3s ease, left 0.3s ease;
+}
+
+.navLink:hover::after {
+  width: 100%;
+  left: 0;
 }
 
 .navLink:hover {
-  color: var(--color-gris, #848484);
+  color: var(--color-champagne);
 }
 
-.navLinkActive {
-  font-weight: 600;
-  border-bottom: 2px solid var(--color-negro, #000000);
+.navLinkActive::after {
+  width: 100%;
+  left: 0;
 }
 
 .dropdownContainer {
@@ -68,22 +95,28 @@
 .dropdownButton {
   background: none;
   border: none;
-  color: var(--color-negro, #000000);
+  color: var(--color-blanco);
   font-size: 1rem;
   font-weight: 500;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  font-family: inherit;
+  font-family: var(--font-sans);
+  transition: color 0.3s ease;
+}
+
+.scrolled .dropdownButton {
+  color: var(--color-negro);
 }
 
 .dropdownMenu {
   position: absolute;
   top: 100%;
   left: 0;
-  background-color: var(--color-blanco, #FFFFFF);
-  border: 1px solid var(--color-gris-claro, #D2D3D3);
+  background-color: var(--color-blanco);
+  border: 1px solid var(--color-gris-claro);
+  border-top: 2px solid var(--color-champagne);
   box-shadow: 0 4px 6px rgba(0,0,0,0.05);
   min-width: 200px;
   display: flex;
@@ -103,13 +136,15 @@
 
 .dropdownItem {
   padding: 0.75rem 1.25rem;
-  color: var(--color-negro, #000000);
+  color: var(--color-negro);
   text-decoration: none;
-  transition: background-color 0.2s ease;
+  transition: color 0.2s ease, background-color 0.2s ease;
+  font-family: var(--font-sans);
 }
 
 .dropdownItem:hover {
-  background-color: rgba(210, 211, 211, 0.2);
+  background-color: rgba(210, 211, 211, 0.1);
+  color: var(--color-champagne);
 }
 
 .mobileMenuBtn {
@@ -117,7 +152,12 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--color-negro, #000000);
+  color: var(--color-blanco);
+  transition: color 0.3s ease;
+}
+
+.scrolled .mobileMenuBtn {
+  color: var(--color-negro);
 }
 
 @media (min-width: 768px) {

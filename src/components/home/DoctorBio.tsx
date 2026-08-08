@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { siteContent } from '@/data/site-content';
 import styles from './DoctorBio.module.css';
 import ScrollAnimation from '@/components/ui/ScrollAnimation';
@@ -21,7 +22,15 @@ export default function DoctorBio() {
         </ScrollAnimation>
         
         <ScrollAnimation animation="fade-in" delay={0.2} className={styles.imageContent}>
-          <div className={styles.imagePlaceholder}></div>
+          <div className={styles.imageWrapper}>
+            <Image
+              src="/images/WhatsApp-Image-2025-12-02-at-07.57.55_6c32d005.jpg"
+              alt="Dra. Landaburo"
+              fill
+              className={styles.image}
+              sizes="(max-width: 768px) 100vw, 55vw"
+            />
+          </div>
         </ScrollAnimation>
       </div>
     </section>

@@ -16,7 +16,13 @@ function InstagramIcon({ size = 20 }: { size?: number }) {
 export default function Footer() {
   return (
     <footer className={styles.footer}>
-      <div className={styles.container}>
+      <div className={styles.waveDivider}>
+        <svg viewBox="0 0 1440 120" preserveAspectRatio="none">
+          <path d="M0,0 C480,120 960,120 1440,0 L1440,120 L0,120 Z" fill="var(--color-negro)"></path>
+        </svg>
+      </div>
+      <div className={styles.footerContent}>
+        <div className={styles.container}>
         {/* Col 1 */}
         <div className={styles.col}>
           <Link href="/" className={styles.logo}>
@@ -81,6 +87,7 @@ export default function Footer() {
       <div className={styles.bottomBar}>
         <span>&copy; {new Date().getFullYear()} Dra. Paula Landaburo. Todos los derechos reservados.</span>
         <span>Desarrollado por Arbol</span>
+      </div>
       </div>
     </footer>
   );

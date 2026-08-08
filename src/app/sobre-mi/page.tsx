@@ -26,9 +26,14 @@ export default function SobreMiPage() {
           <div className={styles.container}>
             <div className={styles.grid}>
               <div className={styles.imageContainer}>
-                <div className={styles.imagePlaceholder}>
-                  {/* Replace with actual image when available */}
-                  <span>Fotografía Dra. Landaburo</span>
+                <div className={styles.imageWrapper}>
+                  <Image 
+                    src="/images/WhatsApp-Image-2025-12-02-at-07.57.55_6c32d005.jpg"
+                    alt="Dra. Paula Landaburo"
+                    fill
+                    style={{ objectFit: 'cover' }}
+                    priority
+                  />
                 </div>
               </div>
               

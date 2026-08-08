@@ -2,7 +2,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-body), sans-serif;
+  font-family: var(--font-sans);
   text-transform: uppercase;
   letter-spacing: 0.1em;
   font-weight: 500;
@@ -11,6 +11,7 @@
   transition: all 0.3s ease;
   border: none;
   outline: none;
+  border-radius: 2px;
 }
 
 /* Sizes */
@@ -31,30 +32,31 @@
 
 /* Variants */
 .primary {
-  background-color: var(--color-black, #000);
-  color: var(--color-white, #fff);
-  border: 1px solid var(--color-black, #000);
+  background-color: var(--color-champagne);
+  color: var(--color-blanco);
+  border: 1px solid var(--color-champagne);
 }
 
 .primary:hover {
-  background-color: var(--color-white, #fff);
-  color: var(--color-black, #000);
+  background-color: #A8875F;
+  border-color: #A8875F;
+  color: var(--color-blanco);
 }
 
 .secondary {
   background-color: transparent;
-  color: var(--color-black, #000);
-  border: 1px solid var(--color-black, #000);
+  color: var(--color-negro);
+  border: 1px solid var(--color-champagne);
 }
 
 .secondary:hover {
-  background-color: var(--color-black, #000);
-  color: var(--color-white, #fff);
+  background-color: var(--color-champagne);
+  color: var(--color-blanco);
 }
 
 .ghost {
   background-color: transparent;
-  color: var(--color-black, #000);
+  color: var(--color-negro);
   padding-left: 0;
   padding-right: 0;
 }

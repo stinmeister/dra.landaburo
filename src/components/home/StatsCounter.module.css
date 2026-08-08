@@ -1,5 +1,5 @@
 .statsSection {
-  background-color: var(--color-negro);
+  background: linear-gradient(to bottom, #000000, #111111);
   padding: 6rem 2rem;
   color: var(--color-blanco);
 }
@@ -33,6 +33,20 @@
   flex-direction: column;
   align-items: center;
   gap: 1rem;
+  position: relative;
+}
+
+@media (min-width: 992px) {
+  .statItem:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 15%;
+    bottom: 15%;
+    right: -1.5rem;
+    width: 1px;
+    background-color: var(--color-champagne);
+    opacity: 0.5;
+  }
 }
 
 .statValue {
@@ -40,6 +54,16 @@
   font-size: 3.5rem;
   line-height: 1;
   color: var(--color-blanco);
+}
+
+@media (min-width: 768px) {
+  .statValue {
+    font-size: 4.5rem;
+  }
+}
+
+.suffix {
+  color: var(--color-champagne);
 }
 
 .statLabel {

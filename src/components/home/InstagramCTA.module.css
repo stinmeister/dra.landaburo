@@ -1,7 +1,9 @@
 .instagramCta {
-  background-color: var(--color-gris-claro);
+  background-color: var(--color-blanco);
   padding: 6rem 2rem;
   color: var(--color-negro);
+  border-top: 1px solid var(--color-champagne);
+  border-bottom: 1px solid var(--color-champagne);
 }
 
 .container {
@@ -45,7 +47,7 @@
 }
 
 .link:hover .icon {
-  color: var(--color-gris);
+  color: var(--color-champagne);
 }
 
 .handle {
@@ -54,9 +56,10 @@
   font-weight: 400;
   margin: 0;
   color: var(--color-negro);
-  transition: color 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .link:hover .handle {
-  color: var(--color-gris);
+  color: var(--color-negro);
+  text-shadow: 0 4px 15px rgba(197, 164, 126, 0.4);
 }

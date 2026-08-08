@@ -26,46 +26,56 @@
 
 .card {
   display: block;
-  height: 400px;
+  aspect-ratio: 3/4;
   background-color: var(--color-negro);
   text-decoration: none;
   position: relative;
   overflow: hidden;
-  transition: transform 0.4s ease, filter 0.4s ease;
-  filter: brightness(0.9);
+  border: 1px solid transparent;
+  transition: all 0.4s ease;
 }
 
-@media (min-width: 768px) {
-  .card {
-    height: 500px;
-  }
+.image {
+  object-fit: cover;
+  filter: grayscale(30%) brightness(0.85);
+  transition: filter 0.4s ease, transform 0.8s ease;
 }
 
 .card:hover {
-  transform: scale(1.02);
-  filter: brightness(1);
+  border-color: var(--color-champagne);
+}
+
+.card:hover .image {
+  transform: scale(1.05);
+  filter: grayscale(0%) brightness(1);
 }
 
 .cardContent {
   position: absolute;
-  inset: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
-  background: linear-gradient(to top, rgba(0,0,0,0.4), transparent);
+  padding: 1.5rem;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  transform: translateY(0);
+  transition: transform 0.4s ease, background 0.4s ease;
 }
 
 .title {
   font-family: var(--font-serif);
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 400;
   color: var(--color-blanco);
   text-align: center;
   margin: 0;
-  transition: transform 0.3s ease;
 }
 
-.card:hover .title {
-  transform: translateY(-5px);
+.card:hover .cardContent {
+  background: rgba(0, 0, 0, 0.6);
 }

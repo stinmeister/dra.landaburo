@@ -1,7 +1,7 @@
 .main {
   min-height: 100vh;
   padding-top: 80px;
-  background-color: var(--color-white, #ffffff);
+  background-color: var(--color-blanco);
 }
 
 .container {
@@ -13,13 +13,14 @@
 .hero {
   padding: 6rem 0 4rem;
   text-align: center;
-  background-color: var(--color-gray-light, #d2d3d3);
+  background-color: var(--color-blanco);
+  border-bottom: 1px solid var(--color-gris-claro);
 }
 
 .title {
-  font-family: var(--font-heading), serif;
+  font-family: var(--font-serif);
   font-size: 3rem;
-  color: var(--color-black, #000000);
+  color: var(--color-negro);
   margin: 0;
   font-weight: 400;
 }
@@ -38,33 +39,41 @@
 .imageContainer {
   width: 100%;
   aspect-ratio: 3/4;
-  background-color: var(--color-gray-light, #d2d3d3);
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 1rem;
 }
 
-.imagePlaceholder {
-  font-family: var(--font-body), sans-serif;
-  color: var(--color-gray, #848484);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-size: 0.875rem;
+.imageContainer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--color-champagne);
+  z-index: 0;
+}
+
+.imageWrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  background-color: var(--color-gris-claro);
 }
 
 .heading {
-  font-family: var(--font-heading), serif;
+  font-family: var(--font-serif);
   font-size: 2.5rem;
-  color: var(--color-black, #000000);
+  color: var(--color-negro);
   margin-bottom: 0.5rem;
   font-weight: 400;
 }
 
 .subheading {
-  font-family: var(--font-body), sans-serif;
+  font-family: var(--font-sans);
   font-size: 1.125rem;
-  color: var(--color-gray, #848484);
+  color: var(--color-champagne);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 2rem;
@@ -77,26 +86,27 @@
 }
 
 .bioText p {
-  font-family: var(--font-body), sans-serif;
+  font-family: var(--font-sans);
   font-size: 1.125rem;
-  color: var(--color-black, #000000);
+  color: var(--color-negro);
   line-height: 1.8;
 }
 
 .statsSection {
-  background-color: var(--color-black, #000000);
-  color: var(--color-white, #ffffff);
+  background-color: var(--color-negro);
+  color: var(--color-blanco);
 }
 
 .valuesSection {
   padding: 6rem 0;
-  background-color: var(--color-gray-light, #d2d3d3);
+  background-color: var(--color-blanco);
+  border-top: 1px solid var(--color-gris-claro);
 }
 
 .sectionTitle {
-  font-family: var(--font-heading), serif;
+  font-family: var(--font-serif);
   font-size: 2.5rem;
-  color: var(--color-black, #000000);
+  color: var(--color-negro);
   margin-bottom: 4rem;
   text-align: center;
   font-weight: 400;
@@ -109,31 +119,35 @@
 }
 
 .valueCard {
-  background-color: var(--color-white, #ffffff);
+  background-color: var(--color-blanco);
   padding: 3rem 2rem;
   text-align: center;
-  border: 1px solid var(--color-white, #ffffff);
-  transition: border-color 0.3s ease;
+  border: 1px solid var(--color-gris-claro);
+  border-top: 2px solid transparent;
+  transition: all 0.3s ease;
 }
 
 .valueCard:hover {
-  border-color: var(--color-black, #000000);
+  border-color: var(--color-gris-claro);
+  border-top-color: var(--color-champagne);
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
 }
 
 .valueCard h3 {
-  font-family: var(--font-body), sans-serif;
+  font-family: var(--font-sans);
   font-size: 1.25rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--color-black, #000000);
+  color: var(--color-negro);
   margin-bottom: 1rem;
   font-weight: 500;
 }
 
 .valueCard p {
-  font-family: var(--font-body), sans-serif;
+  font-family: var(--font-sans);
   font-size: 1rem;
-  color: var(--color-gray, #848484);
+  color: var(--color-gris);
   line-height: 1.6;
 }
 
