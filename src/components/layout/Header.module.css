@@ -16,10 +16,10 @@
 }
 
 /* Pages without dark hero — show dark text immediately */
-.lightPage .logo,
-.lightPage .navLink,
-.lightPage .dropdownButton,
-.lightPage .mobileMenuBtn {
+.header.lightPage .logo,
+.header.lightPage .navLink,
+.header.lightPage .dropdownButton,
+.header.lightPage .mobileMenuBtn {
   color: var(--color-negro);
 }
 
