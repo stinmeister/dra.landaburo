@@ -251,3 +251,80 @@
 - **Prioridad sugerida:** 🔴 Alto
 - **Complejidad técnica estimada:** Media
 - **Estado:** 🆕 Nuevo
+
+---
+
+### TASK-019 — Sistema de Autenticación y Gestión de Usuarios por Roles (RBAC)
+
+- **Fuente:** Requerimiento de Arquitectura de Agustín
+- **Categoría:** Funcionalidad / Seguridad
+- **Qué pidió Agustín:** "hay distintos usuarios que se van a poder loguear con distintos privilegios."
+- **Especificación Funcional y Técnica:**
+  - **Tecnología:** Supabase Auth + Next.js Middleware para protección de rutas + Row Level Security (RLS) en base de datos.
+  - **URL de Acceso:** `dralandaburo.com/login` (redirección según rol tras autenticación exitosa).
+  - **Matriz de Permisos por Rol:**
+    1. **`Rol Admin / Ejecutivo` (Dra. Paula Landaburo / Agustín):**
+       - Acceso total a `/dashboard/ejecutivo`, `/dashboard/operativo`, finanzas, catálogo de comisiones, CRM de pacientes, gestión de stock y configuración.
+    2. **`Rol Profesional / Médico` (Dra. Paula / Mercedes):**
+       - Acceso a `/dashboard/medico`. Permite ver la agenda de turnos asignados, fichas clínicas de sus pacientes, catálogo de sus tratamientos y resumen de sus comisiones individuales. Sin acceso a finanzas globales de la clínica.
+    3. **`Rol Recepción / Operativo` (Doris / Ceci / Laura / Caro):**
+       - Acceso a `/dashboard/operativo`. Permite ver agenda de turnos, ejecutar tareas diarias de recontacto (Doris) o cumpleaños (Ceci), consultar guías operativas/manuales y gestionar leads inbound. Sin acceso a montos financieros ni comisiones.
+    4. **`Rol Paciente`:**
+       - Acceso a `/portal/paciente`. Permite consultar turnos agendados, historial de compras dermocosméticas, gift cards adquiridas y firmar consentimientos informados.
+  - **Control de Navegación:** El middleware de Next.js inspecciona el JWT de sesión en cada request. Si un usuario intenta ingresar a una ruta no autorizada (ej. Recepción intentando entrar a `/dashboard/ejecutivo`), es redirigido a su panel correspondiente con aviso de "Acceso denegado".
+- **Chequeo de marca:** OK
+- **Prioridad sugerida:** 🔴 Alto
+- **Complejidad técnica estimada:** Alta
+- **Estado:** 🆕 Nuevo
+
+---
+
+### TASK-020 — Portal Operativo de Empleados (Capacitaciones, Procesos & Tareas)
+
+- **Fuente:** Requerimiento Operativo de Agustín
+- **Categoría:** Funcionalidad / UX Interno
+- **Qué pidió Agustín:** "informes para los empleados, capacitaciones y demás"
+- **Especificación Funcional y Técnica:**
+  - **Acceso:** Usuarios autenticados con rol `Recepción / Operativo` o `Profesional`. URL: `dralandaburo.com/dashboard/operativo`.
+  - **Módulos del Panel:**
+    1. **Centro de Capacitaciones & Protocolos:**
+       - Biblioteca interactiva para consultar los manuales operativos cargados en Notion (Guía Doris de recontacto, Guía Ceci de cumpleaños, Guía Laura de Mystery Shopping, Flujos V1/V2/V3).
+    2. **Gestor de Tareas Operativas Diarias:**
+       - Checkbox interactivo con tareas asignadas del día por rol (ej. Doris: recontactar 5 pacientes del segmento "En Riesgo"; Ceci: enviar saludos de cumpleaños con plantillas pre-armadas de WhatsApp).
+    3. **Buscador de Tratamientos & Fichas Recomendadas:**
+       - Buscador rápido entre los 102 tratamientos con indicación de profesional responsable (Dra. vs Mercedes), duración, precio y tipo de ficha médica.
+    4. **Registro de Inbound / Captura de Prospectos:**
+       - Formulario rápido para clasificar y derivar consultas entrantes según el protocolo de atención.
+- **Chequeo de marca:** OK
+- **Prioridad sugerida:** 🟡 Medio
+- **Complejidad técnica estimada:** Media
+- **Estado:** 🆕 Nuevo
+
+---
+
+### TASK-021 — Dashboard Ejecutivo de Métricas Financieras, Inventario y KPIs de Negocio
+
+- **Fuente:** Requerimiento Ejecutivo de Agustín
+- **Categoría:** Funcionalidad / Business Intelligence
+- **Qué pidió Agustín:** "dashboard con métricas para el ejecutivo, para la parte ejecutiva, ingresos, ganancias, pérdidas, stock y demás."
+- **Especificación Funcional y Técnica:**
+  - **Acceso:** Exclusivo para rol `Admin / Ejecutivo`. URL: `dralandaburo.com/dashboard/ejecutivo`.
+  - **Módulos & Métricas Visualizadas:**
+    1. **Panel Financiero (Tiempo Real & Histórico):**
+       - **Facturación Total:** ARS acumulado y USD real (con tipo de cambio oficial/blue del día del servicio).
+       - **Flujo de Caja:** Ingresos Totales vs. Egresos Cargados = Ganancia / Pérdida Neta.
+       - **Desglose por Medio de Pago:** Gráfico circular de Transferencia ($) vs. Efectivo ($) vs. MercadoPago ($).
+    2. **Reparto de Comisiones & Liquidación:**
+       - Reporte de facturación por profesional: Dra. Paula Landaburo (100% servicios médicos) vs. Mercedes (30% comisión sobre los 20 tratamientos cosmetológicos).
+    3. **Gestión de Stock & Inventario de Dermocosmética:**
+       - Control de stock físico disponible de los 24 productos dermocosméticos.
+       - Registro de Lote y Fecha de Vencimiento (`[PRODUCTO]: [LOTE]:`).
+       - Alertas automáticas de bajo stock (< 5 unidades) y aviso de reorden.
+    4. **KPIs de Pacientes & CRM:**
+       - Base unificada de pacientes (800+).
+       - Distribución de pacientes por los 11 segmentos RFM (Activos, En Riesgo, No Perder, etc.).
+       - Tasa de efectividad de las olas de recontacto.
+- **Chequeo de marca:** OK
+- **Prioridad sugerida:** 🔴 Alto
+- **Complejidad técnica estimada:** Alta
+- **Estado:** 🆕 Nuevo
