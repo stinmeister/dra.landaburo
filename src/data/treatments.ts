@@ -2,7 +2,7 @@ export interface Treatment {
   slug: string;
   title: string;
   shortTitle: string;
-  category: 'facial' | 'corporal';
+  category: 'facial' | 'corporal' | 'capilar';
   description: string;
   fullDescription: string;
   icon: string;
@@ -63,12 +63,49 @@ export const treatments: Treatment[] = [
     description: 'Microinyecciones con activos específicos para hidratar, nutrir y mejorar la calidad de la piel.',
     fullDescription: 'La mesoterapia consiste en la aplicación de microinyecciones con activos específicos para hidratar, nutrir y mejorar la calidad de la piel del rostro y del cuerpo. Es un tratamiento versátil, utilizado tanto para luminosidad facial como para el abordaje de flacidez y textura en distintas zonas corporales. Se trabaja siempre con protocolos personalizados, pensados para sumar en conjunto con otros tratamientos del plan de cada paciente.',
   },
+  {
+    slug: 'prp',
+    title: 'Plasma Rico en Plaquetas (PRP)',
+    shortTitle: 'PRP',
+    category: 'facial',
+    icon: 'Sparkles',
+    description: '',
+    fullDescription: '// TODO: Copy médico pendiente de aprobación',
+  },
+  {
+    slug: 'carboxiterapia',
+    title: 'Carboxiterapia',
+    shortTitle: 'Carboxiterapia',
+    category: 'corporal',
+    icon: 'Activity',
+    description: '',
+    fullDescription: '// TODO: Copy médico pendiente de aprobación',
+  },
+  {
+    slug: 'dermapen',
+    title: 'Dermapen / Microagujas',
+    shortTitle: 'Dermapen',
+    category: 'facial',
+    icon: 'Feather',
+    description: '',
+    fullDescription: '// TODO: Copy médico pendiente de aprobación',
+  },
+  {
+    slug: 'capilar-masculino',
+    title: 'Tratamiento Capilar Masculino',
+    shortTitle: 'Capilar Masculino',
+    category: 'capilar',
+    icon: 'UserCheck',
+    description: '',
+    fullDescription: '// TODO: Copy médico pendiente de aprobación',
+  },
 ];
 
 export function getTreatmentBySlug(slug: string): Treatment | undefined {
   return treatments.find((t) => t.slug === slug);
 }
 
-export function getTreatmentsByCategory(category: 'facial' | 'corporal'): Treatment[] {
+export function getTreatmentsByCategory(category: 'facial' | 'corporal' | 'capilar'): Treatment[] {
   return treatments.filter((t) => t.category === category);
 }
+
