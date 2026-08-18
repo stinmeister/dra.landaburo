@@ -6,6 +6,7 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import WhatsAppButton from '@/components/layout/WhatsAppButton';
 import { Button } from '@/components/ui/Button';
+import TreatmentFAQ from '@/components/tratamientos/TreatmentFAQ';
 import { treatments, getTreatmentBySlug } from '@/data/treatments';
 import styles from './page.module.css';
 
@@ -37,6 +38,45 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
+const faqSchema = (treatmentTitle: string) => ({
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: '¿Cuánto dura el procedimiento?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: `La duración varía según el plan personalizado de ${treatmentTitle}. En la consulta inicial la Dra. Landaburo te informa los tiempos exactos.`,
+      },
+    },
+    {
+      '@type': 'Question',
+      name: '¿Es doloroso?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'La mayoría de los procedimientos se realizan con anestesia local cuando es necesario. El nivel de incomodidad es mínimo.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: '¿Cuándo se ven los resultados?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Depende del tratamiento. Algunos ofrecen resultados inmediatos; otros muestran mejoras progresivas durante semanas o meses con un enfoque gradual y natural.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: '¿Cuánto tiempo de recuperación necesito?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'La gran mayoría de los tratamientos permiten retomar la actividad habitual el mismo día. En la consulta previa se indican los cuidados post-procedimiento específicos.',
+      },
+    },
+  ],
+});
+
 export default async function TreatmentDetailPage({ params }: Props) {
   const { slug } = await params;
   const treatment = getTreatmentBySlug(slug);
@@ -51,6 +91,10 @@ export default async function TreatmentDetailPage({ params }: Props) {
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema(treatment.title)) }}
+      />
       <Header />
       <main className={styles.main}>
         <article>
@@ -77,6 +121,8 @@ export default async function TreatmentDetailPage({ params }: Props) {
                   <div className={styles.textContent}>
                     <p>{treatment.fullDescription}</p>
                   </div>
+
+                  <TreatmentFAQ />
 
                   <div className={styles.cta}>
                     <h2>¿Consultas sobre este tratamiento?</h2>

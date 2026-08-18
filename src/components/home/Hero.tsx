@@ -10,25 +10,19 @@ export default function Hero() {
 
   return (
     <section className={styles.hero}>
-      <Image 
-        src="/images/especialista-en-procedimiento-facial-con-instrumento-scaled.jpg"
-        alt="Especialista en procedimiento facial"
-        fill
-        priority
-        className={styles.bgImage}
-      />
-      <div className={styles.overlay}>
-        <div className={styles.shimmer}></div>
+      {/* ── Columna izquierda: texto ── */}
+      <div className={styles.textSide}>
+        <div className={styles.shimmer} />
         <div className={styles.content}>
           <ScrollAnimation animation="fade-up" delay={0}>
-            <div className={styles.decorativeLine}></div>
-            <h2 className={styles.subtitle}>{subtitle}</h2>
+            <div className={styles.decorativeLine} />
+            <p className={styles.subtitle}>{subtitle}</p>
           </ScrollAnimation>
-          
+
           <ScrollAnimation animation="fade-up" delay={0.2}>
             <h1 className={styles.title}>{title}</h1>
           </ScrollAnimation>
-          
+
           <ScrollAnimation animation="fade-up" delay={0.4}>
             <div className={styles.actions}>
               <Link href="/tratamientos" className={styles.cta}>
@@ -39,13 +33,25 @@ export default function Hero() {
         </div>
 
         <div className={styles.scrollIndicator}>
-          <ChevronDown className={styles.bounce} size={32} />
+          <ChevronDown className={styles.bounce} size={28} />
         </div>
       </div>
-      
+
+      {/* ── Columna derecha: retrato de la Dra. ── */}
+      <div className={styles.imageSide}>
+        <Image
+          src="/images/WhatsApp-Image-2025-12-02-at-07.57.55_6c32d005.jpg"
+          alt="Dra. Paula Landaburo — Medicina Estética"
+          fill
+          priority
+          className={styles.portrait}
+        />
+        <div className={styles.imageOverlay} />
+      </div>
+
       <div className={styles.waveContainer}>
         <svg className={styles.wave} viewBox="0 0 1440 120" preserveAspectRatio="none">
-          <path d="M0,0 C480,120 960,120 1440,0 L1440,120 L0,120 Z" fill="var(--color-bg)"></path>
+          <path d="M0,0 C480,120 960,120 1440,0 L1440,120 L0,120 Z" fill="var(--color-bg)" />
         </svg>
       </div>
     </section>

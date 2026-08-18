@@ -52,6 +52,52 @@ export const metadata: Metadata = {
   },
 };
 
+const schemaOrg = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'MedicalClinic',
+      '@id': 'https://www.dralandaburo.com/#clinic',
+      name: 'Consultorio Dra. Paula Landaburo — Medicina Estética & Dermatología',
+      url: 'https://www.dralandaburo.com',
+      telephone: '+54-9-11-6968-4062',
+      email: 'Paula@dralandaburo.com',
+      address: {
+        '@type': 'PostalAddress',
+        streetAddress: 'Leandro N. Alem 45',
+        addressLocality: 'Gualeguaychú',
+        addressRegion: 'Entre Ríos',
+        postalCode: 'E2820',
+        addressCountry: 'AR',
+      },
+      geo: {
+        '@type': 'GeoCoordinates',
+        latitude: -33.0094,
+        longitude: -58.5178,
+      },
+      openingHoursSpecification: [
+        {
+          '@type': 'OpeningHoursSpecification',
+          dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+          opens: '09:00',
+          closes: '17:00',
+        },
+      ],
+      medicalSpecialty: ['Dermatology', 'PlasticSurgery'],
+      sameAs: ['https://www.instagram.com/dra_landaburo/'],
+    },
+    {
+      '@type': 'Physician',
+      '@id': 'https://www.dralandaburo.com/#physician',
+      name: 'Dra. Paula Landaburo',
+      url: 'https://www.dralandaburo.com/sobre-mi',
+      worksFor: { '@id': 'https://www.dralandaburo.com/#clinic' },
+      medicalSpecialty: ['Dermatology'],
+      sameAs: ['https://www.instagram.com/dra_landaburo/'],
+    },
+  ],
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -59,6 +105,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es-AR" className={`${playfair.variable} ${ibmPlex.variable}`}>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaOrg) }}
+        />
+      </head>
       <body>{children}</body>
     </html>
   );

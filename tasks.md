@@ -11,7 +11,7 @@
 - Chequeo de marca: OK
 - Prioridad sugerida: Alto
 - Complejidad técnica estimada: Baja
-- Estado: Nuevo
+- Estado: ✅ Completado
 
 ---
 
@@ -24,7 +24,7 @@
 - Chequeo de marca: OK
 - Prioridad sugerida: Alto
 - Complejidad técnica estimada: Baja
-- Estado: Nuevo
+- Estado: ✅ Completado
 
 ---
 
@@ -141,7 +141,7 @@
 - Chequeo de marca: OK
 - Prioridad sugerida: Alto
 - Complejidad técnica estimada: Baja
-- Estado: Nuevo
+- Estado: ✅ Completado
 
 ---
 
@@ -154,7 +154,7 @@
 - Chequeo de marca: OK
 - Prioridad sugerida: Medio
 - Complejidad técnica estimada: Baja
-- Estado: Nuevo
+- Estado: ✅ Completado
 
 ---
 
@@ -232,4 +232,4 @@
 - Chequeo de marca: OK
 - Prioridad sugerida: Alto
 - Complejidad técnica estimada: Media
-- Estado: Nuevo
+- Estado: ✅ Completado
