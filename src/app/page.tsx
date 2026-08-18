@@ -8,6 +8,7 @@ import TreatmentCategories from '@/components/home/TreatmentCategories';
 import DoctorBio from '@/components/home/DoctorBio';
 import StatsCounter from '@/components/home/StatsCounter';
 import InstagramCTA from '@/components/home/InstagramCTA';
+import PartnersMarquee from '@/components/home/PartnersMarquee';
 
 export const metadata: Metadata = {
   title: 'Dra. Paula Landaburo | Medicina Estética',
@@ -22,6 +23,7 @@ export default function HomePage() {
         <Hero />
         <Welcome />
         <TreatmentCategories />
+        <PartnersMarquee />
         <DoctorBio />
         <StatsCounter />
         <InstagramCTA />
