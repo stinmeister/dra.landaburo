@@ -245,7 +245,8 @@
 - Chequeo de marca: OK — Paleta define `--color-negro: #1C1C1C` como color de texto sobre fondos claros.
 - Prioridad sugerida: Alto
 - Complejidad técnica estimada: Baja
-- Estado: Nuevo
+- Estado: Activo (Confirmado en QA en vivo 19/08/2026)
+- Nota QA: El navbar falla contextualmenete donde su fondo transparente/blur queda sobre zonas claras del contenido (ej. franja blanca antes de la foto del hero en /tratamientos, o área superior de /tratamientos/acido-hialuronico). Requiere fondo propio garantizado (sólido o blur opaco) independiente del contenido detrás.
 
 ---
 
@@ -258,7 +259,7 @@
 - Chequeo de marca: OK — Venta de dermocosmética coherente con posicionamiento médico. Sin descuentos ni urgencia artificial.
 - Prioridad sugerida: Alto
 - Complejidad técnica estimada: Alta
-- Estado: Nuevo
+- Estado: Nuevo / Pendiente Desarrollo (Verificado 404 en QA 19/08/2026)
 
 ---
 
@@ -271,7 +272,7 @@
 - Chequeo de marca: OK — Login es funcionalidad interna, no afecta identidad visual pública.
 - Prioridad sugerida: Alto
 - Complejidad técnica estimada: Alta
-- Estado: Nuevo
+- Estado: Nuevo / Pendiente Desarrollo (Verificado 404 en QA 19/08/2026)
 
 ---
 
@@ -284,7 +285,7 @@
 - Chequeo de marca: OK — Dashboards internos siguiendo paleta del design system.
 - Prioridad sugerida: Medio
 - Complejidad técnica estimada: Alta
-- Estado: Nuevo
+- Estado: Nuevo / Pendiente Desarrollo (Verificado 404 en QA 19/08/2026)
 
 ---
 
@@ -297,7 +298,7 @@
 - Chequeo de marca: OK — Eliminar texto de debug protege la seriedad y elegancia médica de la clínica.
 - Prioridad sugerida: Alto
 - Complejidad técnica estimada: Baja
-- Estado: Nuevo
+- Estado: Activo (Confirmado en QA en vivo 19/08/2026 en /tratamientos/acido-hialuronico)
 
 ---
 
@@ -310,33 +311,33 @@
 - Chequeo de marca: OK — Claridad informativa total para el paciente.
 - Prioridad sugerida: Alto
 - Complejidad técnica estimada: Media
-- Estado: Nuevo
+- Estado: Activo (Confirmado en QA en vivo 19/08/2026)
 
 ---
 
 ### TASK-025 — BUG/CONTENIDO: Estadísticas inconsistentes entre Home y Sobre Mí
-- Fuente: Screenshots de Home y Sobre Mí — 19/08/2026 (T-04)
+- Fuente: Screenshots de Home y Sobre Mí — 19/08/2026 (T-04) + Auditoría QA (19/08/2026)
 - Categoría: Contenido/Comunicación
-- Qué pidió Agustín: "El bloque de estadísticas muestra números distintos en cada página: Home: 6+ años / 537+ pacientes / 10+ certificaciones / 67% enfoque humano vs Sobre Mí: 10+ años / 800+ pacientes / 15+ certificaciones / 100% enfoque humano. Definir los números reales y que sean idénticos en todas las páginas."
-- Qué muestra la referencia: Inconsistencia entre los contadores numéricos de `StatsCounter` en la Home y la página `/sobre-mi`, afectando la credibilidad institucional.
+- Qué pidió Agustín: "El bloque de estadísticas muestra números distintos en cada página. Home: 10+ / 800+ / 15+ / 100% vs Sobre Mí: 9+ / 770+ / 14+ / 96%. Definir los números reales y que sean idénticos en todas las páginas."
+- Qué muestra la referencia: Inconsistencia entre los contadores numéricos de `StatsCounter` en la Home y la página `/sobre-mi`. Nota QA: el componente realiza una animación count-up desde 0 que no debe confundirse con valores estáticos.
 - Cómo se aplicaría acá: Centralizar los datos de estadísticas en `src/data/site-content.ts` (o archivo dedicado) como única fuente de verdad consumida por `StatsCounter.tsx` en Home y `/sobre-mi`. Confirmar con Agustín / Dra. Landaburo el set de datos real (ej: 10+ Años cuidando la piel, 800+ Pacientes acompañados, 15+ Certificaciones, 100% Enfoque humano) y asegurar que nunca más existan valores hardcodeados divergentes.
 - Chequeo de marca: OK — Datos precisos y sin falsas promesas.
 - Prioridad sugerida: Alto
 - Complejidad técnica estimada: Baja
-- Estado: Nuevo
+- Estado: Activo (Confirmado en QA en vivo 19/08/2026)
 
 ---
 
 ### TASK-026 — BUG/DISEÑO: Tarjetas de tratamiento con borde superior inconsistente en /tratamientos
-- Fuente: Screenshot de listado de Tratamientos — 19/08/2026 (T-05)
+- Fuente: Screenshot de listado de Tratamientos — 19/08/2026 (T-05) + Auditoría QA (19/08/2026)
 - Categoría: Diseño/UX
-- Qué pidió Agustín: "De las 9 tarjetas en el grid de 'Tratamientos', dos ('Ácido Hialurónico' y 'Biostimuladores de Colágeno') tienen un borde superior color terracota que las otras 7 no tienen. Definir si es intencional o bug."
-- Qué muestra la referencia: El catálogo de `/tratamientos` presenta 2 tarjetas con borde superior decorativo terracota/champagne y 7 sin él, generando un aspecto visual dispar.
-- Cómo se aplicaría acá: Auditar `src/app/tratamientos/page.tsx` y `page.module.css`. Si Agustín/diseño decide destacar tratamientos populares, normalizar la lógica con una propiedad formal en `treatments.ts` (`isFeatured?: boolean`) y una etiqueta visible ("Destacado") con estilo uniforme; de lo contrario, remover la clase condicional para que las 10 tarjetas compartan exactamente el mismo diseño base.
+- Qué pidió Agustín: "De las 9 tarjetas en el grid de 'Tratamientos', dos tenían un borde superior color terracota que las otras no tenían."
+- Qué muestra la referencia: En la auditoría QA en vivo del 19/08 se verificaron 6 tarjetas en `/tratamientos` y se constató que actualmente se muestran uniformes, sin borde superior diferenciado.
+- Cómo se aplicaría acá: Verificar la plantilla para constatar que el grid permanezca homogéneo.
 - Chequeo de marca: OK — Consistencia visual en el catálogo.
-- Prioridad sugerida: Medio
+- Prioridad sugerida: Bajo
 - Complejidad técnica estimada: Baja
-- Estado: Nuevo
+- Estado: Verificado en QA (Ya no se reproduce — pendiente confirmación final de cierre con Agustín)
 
 ---
 
@@ -344,12 +345,12 @@
 - Fuente: Análisis general de todas las páginas — 19/08/2026 (T-06)
 - Categoría: Diseño/UX
 - Qué pidió Agustín: "Actualmente casi todos los CTA usan estilo outline, compitiendo en peso visual entre sí. Definir un solo botón sólido (relleno color champagne/terracota) por vista para la acción prioritaria, y el resto en estilo outline. El CTA 'Agendar consulta' del navbar debería pasar a sólido de forma consistente en todo el sitio."
-- Qué muestra la referencia: Ausencia de jerarquía visual entre acciones primarias y secundarias en las diferentes vistas.
+- Qué muestra la referencia: Ausencia de jerarquía visual entre acciones primarias y secundarias en las diferentes vistas. En QA 19/08 se confirmó que el botón "Agendar consulta" del navbar continúa en estilo outline.
 - Cómo se aplicaría acá: Actualizar `src/components/ui/Button.tsx` y los módulos de layout/páginas: (1) Establecer el botón "Agendar consulta" en el Navbar con variante sólida (fondo `--color-champagne: #C5A47E`, texto `#1C1C1C` o `#FFFFFF`) en todo el sitio. (2) En cada pantalla/sección, garantizar que como máximo exista un único botón sólido en el primer viewport para guiar la conversión principal, dejando las opciones complementarias como `secondary` (outline) o `ghost`.
 - Chequeo de marca: OK — Uso exclusivo de paleta oficial (#C5A47E, #1C1C1C, #FFFFFF).
 - Prioridad sugerida: Medio
 - Complejidad técnica estimada: Media
-- Estado: Nuevo
+- Estado: Pendiente (No implementado)
 
 ---
 
@@ -357,10 +358,37 @@
 - Fuente: Decisión de diseño / Research NN/g — 19/08/2026 (T-07)
 - Categoría: Diseño/UX
 - Qué pidió Agustín: "Los botones actuales tienen esquinas completamente rectas. Cambiar a un radio suave (6px aprox.) — ni completamente recto ni tipo píldora — para alinear con la identidad cálida/editorial de la marca sin perder la formalidad clínica."
-- Qué muestra la referencia: Botones con esquinas vivas en 90° que lucen excesivamente rígidos frente a la tipografía serif y las curvas sutiles del diseño editorial.
+- Qué muestra la referencia: Botones con esquinas vivas en 90° que lucen excesivamente rígidos frente a la tipografía serif y las curvas sutiles del diseño editorial. En QA 19/08 se confirmó que mantienen esquinas de 90°.
 - Cómo se aplicaría acá: Modificar `src/components/ui/Button.module.css` (y los estilos de botones en Header, Hero, Footer, Tarjetas) aplicando `border-radius: 6px` a todas las variantes de botones del sitio.
 - Chequeo de marca: OK — Alineado con identidad cálida y profesional de la Dra. Landaburo.
 - Prioridad sugerida: Medio
 - Complejidad técnica estimada: Baja
-- Estado: Nuevo
+- Estado: Pendiente (No implementado)
+
+---
+
+### TASK-029 — BUG: Elemento input vacío flotando sobre la tarjeta de la doctora en sidebar de tratamientos
+- Fuente: Hallazgo nuevo en Auditoría QA en vivo por Claude en Chrome (19/08/2026 — NEW-01)
+- Categoría: Diseño/UX / Funcionalidad
+- Qué pidió Agustín: "En /tratamientos/acido-hialuronico, al hacer scroll hasta la sección de FAQ, aparece un recuadro vacío con borde, tipo campo de formulario, superpuesto sobre la tarjeta 'Dra. Paula Landaburo' en la barra lateral derecha. Parece un elemento con posicionamiento fixed o sticky mal calculado."
+- Qué muestra la referencia: Al scrollear en páginas de detalle de tratamiento, un contenedor input o elemento fantasma con borde se posiciona erróneamente encima del sidebar del perfil profesional de la Dra. Landaburo.
+- Cómo se aplicaría acá: Inspeccionar `src/app/tratamientos/[slug]/page.tsx` y su módulo CSS. Auditar las propiedades `position: sticky` o `fixed`, z-index y contenedores de formularios/typewriter en la página para corregir el flujo del DOM y evitar que elementos flotantes se desborden o superpongan sobre el sidebar académico.
+- Chequeo de marca: OK — Elimina glitches visuales que afectan la imagen profesional.
+- Prioridad sugerida: Medio
+- Complejidad técnica estimada: Baja
+- Estado: Nuevo / Activo
+
+---
+
+### TASK-030 — MEJORA/REVISIÓN: Widget flotante de chat / WhatsApp — Posición y consistencia de UX
+- Fuente: Hallazgo nuevo en Auditoría QA en vivo por Claude en Chrome (19/08/2026 — NEW-02)
+- Categoría: Diseño/UX / Funcionalidad
+- Qué pidió Agustín: "Hay un botón circular de chat flotando abajo a la derecha en varias páginas. Confirmar si es intencional, a dónde dirige y si su estilo/posición debe ajustarse para no interferir con otros CTAs."
+- Qué muestra la referencia: Botón circular flotante (WhatsApp / Chat) en el vértice inferior derecho que potencialmente se solapa con botones de acción ("Más sobre mí" o scroll to top).
+- Cómo se aplicaría acá: Auditar `src/components/layout/WhatsAppButton.tsx` y `WhatsAppButton.module.css`: (1) Confirmar URL de destino oficial (`https://wa.me/5491169684062`). (2) Ajustar `bottom` y `right` con padding responsive seguro para evitar solapamientos con botones fijos o contenido al pie. (3) Verificar que adopte el color champagne oficial `#C5A47E` acorde a TASK-012.
+- Chequeo de marca: OK — Comunicación médica directa por WhatsApp.
+- Prioridad sugerida: Bajo
+- Complejidad técnica estimada: Baja
+- Estado: Nuevo / A revisar con Agustín
+
 
