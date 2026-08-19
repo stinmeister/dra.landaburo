@@ -1,0 +1,140 @@
+.shell {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100vh;
+  background-color: var(--color-bg-alt);
+}
+
+.sidebar {
+  background-color: var(--color-negro);
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 1rem;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.sidebarHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(210, 211, 211, 0.1);
+  margin-bottom: 1.5rem;
+}
+
+.sidebarLogo {
+  font-family: var(--font-serif);
+  font-size: var(--text-lg);
+  font-weight: 400;
+  color: var(--color-blanco);
+  text-decoration: none;
+  line-height: 1.2;
+  transition: color var(--transition-fast);
+}
+
+.sidebarLogo:hover {
+  color: var(--color-champagne);
+}
+
+.sidebarBadge {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: var(--color-champagne);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.sidebarNav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.navItem {
+  display: block;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.65);
+  text-decoration: none;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.navItem:hover {
+  background-color: rgba(197, 164, 126, 0.12);
+  color: var(--color-champagne);
+}
+
+.sidebarFooter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(210, 211, 211, 0.1);
+}
+
+.sidebarHomeLink {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: var(--color-gris);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.sidebarHomeLink:hover {
+  color: var(--color-gris-claro);
+}
+
+.content {
+  padding: 2rem 2.5rem;
+  overflow-y: auto;
+}
+
+/* Responsive: stack sidebar above on small screens */
+@media (max-width: 768px) {
+  .shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  .sidebar {
+    position: static;
+    height: auto;
+    flex-direction: row;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .sidebarHeader {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .sidebarNav {
+    flex-direction: row;
+    flex: none;
+  }
+
+  .sidebarFooter {
+    border-top: none;
+    padding-top: 0;
+    flex-direction: row;
+    margin-left: auto;
+  }
+
+  .content {
+    padding: 1.5rem 1.25rem;
+  }
+}

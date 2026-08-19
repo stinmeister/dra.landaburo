@@ -7,6 +7,7 @@ import { ChevronDown, Menu, ShoppingBag } from 'lucide-react';
 import styles from './Header.module.css';
 import { navigation } from '@/data/navigation';
 import MobileMenu from './MobileMenu';
+import UserMenu from './UserMenu';
 
 export default function Header() {
   const [scrolled, setScrolled] = useState(false);
@@ -79,11 +80,12 @@ export default function Header() {
             })}
           </nav>
 
-          {/* Columna derecha: CTA + Carrito + Burger mobile */}
+          {/* Columna derecha: CTA + UserMenu + Carrito + Burger mobile */}
           <div className={styles.headerRight}>
             <Link href="/contacto" className={styles.ctaBtn}>
               Agendar consulta
             </Link>
+            <UserMenu />
             <button className={styles.cartBtn} aria-label="Carrito">
               <ShoppingBag size={20} />
             </button>

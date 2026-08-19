@@ -1,0 +1,144 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: var(--text-3xl);
+  font-weight: 400;
+  color: var(--color-negro);
+  line-height: var(--leading-tight);
+}
+
+.date {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-gris);
+  text-transform: capitalize;
+}
+
+.errorBanner {
+  padding: 0.75rem 1rem;
+  background-color: rgba(197, 80, 80, 0.08);
+  border: 1px solid rgba(197, 80, 80, 0.25);
+  border-radius: var(--radius-md);
+  color: #c55050;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.leftCol,
+.rightCol {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.card {
+  background-color: var(--color-blanco);
+  border: 1px solid var(--color-gris-claro);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cardTitle {
+  font-family: var(--font-serif);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  color: var(--color-negro);
+}
+
+.cardHelper {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: var(--color-gris);
+  margin-top: -0.25rem;
+}
+
+/* Guides */
+.guides {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.guideItem {
+  border-left: 2px solid var(--color-champagne);
+  padding-left: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.guideHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.guideName {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-negro);
+}
+
+.guideRole {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: var(--color-gris);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.guideList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  list-style: none;
+  padding: 0;
+}
+
+.guideListItem {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-gris);
+  line-height: var(--leading-relaxed);
+  padding-left: 0.75rem;
+  position: relative;
+}
+
+.guideListItem::before {
+  content: '·';
+  position: absolute;
+  left: 0;
+  color: var(--color-champagne);
+  font-weight: 700;
+}

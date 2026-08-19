@@ -1,0 +1,212 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: var(--text-3xl);
+  font-weight: 400;
+  color: var(--color-negro);
+  line-height: var(--leading-tight);
+}
+
+.period {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-gris);
+  text-transform: capitalize;
+}
+
+.errorBanner {
+  padding: 0.75rem 1rem;
+  background-color: rgba(197, 80, 80, 0.08);
+  border: 1px solid rgba(197, 80, 80, 0.25);
+  border-radius: var(--radius-md);
+  color: #c55050;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+}
+
+/* Metric cards */
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.metricCard {
+  background-color: var(--color-blanco);
+  border: 1px solid var(--color-gris-claro);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.metricLabel {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-gris);
+}
+
+.metricValue {
+  font-family: var(--font-sans);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--color-negro);
+  line-height: 1;
+}
+
+.metricHighlight {
+  color: var(--color-champagne-dark);
+}
+
+.metricSub {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: var(--color-gris);
+}
+
+/* Section */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sectionTitle {
+  font-family: var(--font-serif);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  color: var(--color-negro);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.alertBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 0.4rem;
+  background-color: #c55050;
+  color: var(--color-blanco);
+  border-radius: var(--radius-full);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+/* Low stock alert cards */
+.alertGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.alertCard {
+  background-color: rgba(197, 80, 80, 0.06);
+  border: 1px solid rgba(197, 80, 80, 0.2);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+}
+
+.alertName {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-negro);
+  margin-bottom: 0.25rem;
+}
+
+.alertStock {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: var(--color-gris);
+}
+
+.alertQty {
+  font-weight: 700;
+  color: #c55050;
+}
+
+/* Payments table */
+.emptyState {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-gris);
+  padding: 1.5rem;
+  text-align: center;
+  background-color: var(--color-blanco);
+  border: 1px solid var(--color-gris-claro);
+  border-radius: var(--radius-md);
+}
+
+.tableWrapper {
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-gris-claro);
+  background-color: var(--color-blanco);
+  box-shadow: var(--shadow-sm);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+}
+
+.th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-gris);
+  border-bottom: 1px solid var(--color-gris-claro);
+  white-space: nowrap;
+  background-color: var(--color-bg-alt);
+}
+
+.thRight {
+  text-align: right;
+}
+
+.tr:hover {
+  background-color: var(--color-bg-alt);
+}
+
+.td {
+  padding: 0.7rem 1rem;
+  color: var(--color-negro);
+  border-bottom: 1px solid rgba(210, 211, 211, 0.5);
+  white-space: nowrap;
+}
+
+.tdRight {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.tr:last-child .td {
+  border-bottom: none;
+}
