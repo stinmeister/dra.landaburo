@@ -63,7 +63,9 @@ export default function TreatmentFAQ({ faqs = defaultFAQs }: Props) {
               </span>
             </button>
             <div className={styles.panel}>
-              <p className={styles.answer}>{item.answer}</p>
+              <div className={styles.panelInner}>
+                <p className={styles.answer}>{item.answer}</p>
+              </div>
             </div>
           </div>
         ))}

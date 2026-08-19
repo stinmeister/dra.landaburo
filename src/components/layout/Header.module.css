@@ -170,31 +170,36 @@
 .ctaBtn {
   display: none;
   padding: 0.55rem 1.25rem;
+  background-color: var(--color-champagne);
   border: 1px solid var(--color-champagne);
-  color: var(--color-blanco);
+  color: var(--color-negro);
   font-family: var(--font-sans);
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   text-decoration: none;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  border-radius: 6px;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
   white-space: nowrap;
 }
 
 .ctaBtn:hover {
-  background-color: var(--color-champagne);
+  background-color: var(--color-champagne-dark, #a8875f);
+  border-color: var(--color-champagne-dark, #a8875f);
   color: var(--color-blanco);
 }
 
 .scrolled .ctaBtn,
 .lightPage .ctaBtn {
+  background-color: var(--color-champagne);
+  border-color: var(--color-champagne);
   color: var(--color-negro);
-  border-color: var(--color-negro);
 }
 
 .scrolled .ctaBtn:hover,
 .lightPage .ctaBtn:hover {
-  background-color: var(--color-negro);
+  background-color: var(--color-champagne-dark, #a8875f);
+  border-color: var(--color-champagne-dark, #a8875f);
   color: var(--color-blanco);
 }
 

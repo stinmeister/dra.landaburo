@@ -13,9 +13,8 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
-  // Pages with dark hero backgrounds where white text is needed
-  const darkHeroPages = ['/', '/tratamientos'];
-  const hasDarkHero = darkHeroPages.includes(pathname) || pathname.startsWith('/tratamientos/');
+  // Only Home has a guaranteed dark hero — all other pages use dark text from the start
+  const hasDarkHero = pathname === '/';
 
   useEffect(() => {
     const handleScroll = () => {

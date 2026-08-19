@@ -7,7 +7,6 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import WhatsAppButton from '@/components/layout/WhatsAppButton';
 import { Button } from '@/components/ui/Button';
-import Typewriter from '@/components/ui/Typewriter';
 import TreatmentFAQ from '@/components/tratamientos/TreatmentFAQ';
 import { treatments, getTreatmentBySlug } from '@/data/treatments';
 import styles from './page.module.css';
@@ -21,8 +20,6 @@ const CATEGORY_LABELS: Record<string, string> = {
   corporal: 'Corporal',
   capilar: 'Capilar',
 };
-
-const TYPEWRITER_WORDS = ['armonía natural', 'salud cutánea', 'confianza', 'resultados reales'];
 
 export async function generateStaticParams() {
   return treatments.map((t) => ({ slug: t.slug }));
@@ -119,11 +116,6 @@ export default async function TreatmentDetailPage({ params }: Props) {
                 {treatment.description && (
                   <p className={styles.description}>{treatment.description}</p>
                 )}
-                {/* TASK-010: Typewriter */}
-                <p className={styles.typewriterLine}>
-                  Buscamos:{' '}
-                  <Typewriter words={TYPEWRITER_WORDS} className={styles.typewriter} />
-                </p>
               </div>
             </div>
           </header>

@@ -52,7 +52,7 @@
   transition: transform 0.25s ease;
 }
 
-/* Animated panel */
+/* Animated panel — panelInner carries overflow:hidden so padding isn't clipped */
 .panel {
   display: grid;
   grid-template-rows: 0fr;
@@ -63,8 +63,12 @@
   grid-template-rows: 1fr;
 }
 
-.answer {
+.panelInner {
   overflow: hidden;
+  min-height: 0;
+}
+
+.answer {
   font-family: var(--font-body), sans-serif;
   font-size: 0.95rem;
   color: var(--color-gray, #848484);
