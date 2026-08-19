@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronDown, Menu } from 'lucide-react';
+import { ChevronDown, Menu, ShoppingBag } from 'lucide-react';
 import styles from './Header.module.css';
 import { navigation } from '@/data/navigation';
 import MobileMenu from './MobileMenu';
@@ -38,10 +38,12 @@ export default function Header() {
     <>
       <header className={headerClasses}>
         <div className={styles.container}>
+          {/* Columna izquierda: Logo */}
           <Link href="/" className={styles.logo}>
             Dra. Landaburo
           </Link>
 
+          {/* Columna central: Navegación */}
           <nav className={styles.desktopNav}>
             {navigation.map((item) => {
               if (item.children) {
@@ -78,13 +80,22 @@ export default function Header() {
             })}
           </nav>
 
-          <button
-            className={styles.mobileMenuBtn}
-            onClick={() => setMobileMenuOpen(true)}
-            aria-label="Menu"
-          >
-            <Menu size={28} />
-          </button>
+          {/* Columna derecha: CTA + Carrito + Burger mobile */}
+          <div className={styles.headerRight}>
+            <Link href="/contacto" className={styles.ctaBtn}>
+              Agendar consulta
+            </Link>
+            <button className={styles.cartBtn} aria-label="Carrito">
+              <ShoppingBag size={20} />
+            </button>
+            <button
+              className={styles.mobileMenuBtn}
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label="Menu"
+            >
+              <Menu size={26} />
+            </button>
+          </div>
         </div>
       </header>
 
