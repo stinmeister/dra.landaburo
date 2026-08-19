@@ -15,15 +15,15 @@
 
 ---
 
-### TASK-002 — Hero principal con fotografía destacada de la Dra. Paula Landaburo
-- Fuente: Screenshot Homepage
+### TASK-002 — Hero principal con fotografía destacada de la Dra. Paula Landaburo y Ticker de Tratamientos
+- Fuente: Screenshot Homepage + Mockup aprobado (hero-mockup.html) / Research UX (T-08)
 - Categoría: Diseño/UX
-- Qué pidió Agustín: "Hero con la cara de la doctora, utilizar la misma imagen"
-- Qué muestra la referencia: Sección Hero superior con imagen portrait destacada de la profesional superpuesta sobre el fondo con tipografía serif.
-- Cómo se aplicaría acá: Configurar la sección Hero.tsx para utilizar la fotografía oficial de la Dra. Landaburo (WhatsApp-Image-2025-12-02-at-07.57.55_6c32d005.jpg) como fondo/elemento visual protagónico.
-- Chequeo de marca: OK
+- Qué pidió Agustín: "Hero con la cara de la doctora, utilizar la misma imagen. Actualizar el hero de la homepage manteniendo el sistema visual actual (paleta crema/negro/champagne, tipografía serif) con foto de expresión humana cálida, ticker/listado horizontal de tratamientos en el borde inferior con scroll continuo sutil, y formato full-bleed."
+- Qué muestra la referencia: Sección Hero full-bleed con fotografía portrait cálida de la Dra. Landaburo (o paciente con expresión natural), tipografía serif elegante con bajada y botón de acción, y en la base un ticker interactivo continuo con la lista de tratamientos (Toxina Botulínica, Ácido Hialurónico, Nordlys, etc.).
+- Cómo se aplicaría acá: Actualizar `src/components/home/Hero.tsx` y `Hero.module.css`: (1) Estructura full-bleed responsive cuidando la altura en mobile para no empujar contenido fuera del primer scroll. (2) Integrar fotografía de alta calidad con expresión cálida y natural. (3) Agregar ticker horizontal infinito en la base del hero con scroll continuo sutil que liste los tratamientos con enlace directo a sus páginas. (4) CTA principal visible y alineado a la nueva jerarquía. Ver estructura en `hero-mockup.html`.
+- Chequeo de marca: OK — Paleta oficial (#1C1C1C, #848484, #D2D3D3, #FFFFFF, #C5A47E).
 - Prioridad sugerida: Alto
-- Complejidad técnica estimada: Baja
+- Complejidad técnica estimada: Alta
 - Estado: Nuevo
 
 ---
@@ -237,11 +237,11 @@
 ---
 
 ### TASK-019 — BUG: Navbar invisible en páginas con fondo blanco (letras blancas sobre blanco)
-- Fuente: Bug detectado en inspección visual — Screenshot de /tratamientos (19/08/2026)
-- Categoría: Diseño/UX
-- Qué pidió Agustín: "Arreglar el menu (navbar) cuando salimos de la home, no se ve porque son letras blancas sobre fondo blanco. La solución creo que es poner letras oscuras, siguiendo el design system."
-- Qué muestra la referencia: [VERIFICADO] Screenshot de /tratamientos: header completamente invisible — barra blanca vacía donde deberían estar logo y links. Solo se distingue un rectángulo con borde champagne en la esquina superior derecha. [VERIFICADO] Header.tsx define `darkHeroPages = ['/', '/tratamientos']` — clasifica /tratamientos como página de hero oscuro y renderiza texto blanco. El problema es que /tratamientos tiene un hero con imagen pero al hacer scroll el header queda sobre fondo blanco con texto blanco encima.
-- Cómo se aplicaría acá: Corregir lógica en Header.tsx y Header.module.css. Regla correcta: cuando `scrolled === true` el texto debe ser `--color-negro: #1C1C1C` independientemente de la página, porque el fondo del header es siempre blanco al scrollear. Solo aplica texto blanco cuando `scrolled === false` Y la página tiene hero oscuro visible en el viewport inicial. Implementar: (1) En la clase `.scrolled` del CSS agregar `color: var(--color-negro)`. (2) Verificar que cubra todos los casos: Home scrolled, /tratamientos scrolled, /tratamientos/[slug], /contacto, /sobre-mi, /blog. (3) Testear visualmente cada ruta antes de deployar.
+- Fuente: Bug detectado en inspección visual — Screenshots de /tratamientos y páginas individuales de tratamiento (Ácido Hialurónico) — 19/08/2026 (T-01)
+- Categoría: Diseño/UX / Funcionalidad
+- Qué pidió Agustín: "Arreglar el menu (navbar) cuando salimos de la home, no se ve porque son letras blancas sobre fondo blanco. La solución creo que es poner letras oscuras, siguiendo el design system. El navbar renderiza con texto blanco sobre fondo blanco/transparente, dejándolo completamente ilegible. Solo se distingue el borde fino del botón Agendar consulta."
+- Qué muestra la referencia: [VERIFICADO] Screenshots de /tratamientos y /tratamientos/acido-hialuronico: el header es invisible — barra blanca/transparente donde logo y enlaces no contrastan. Solo se aprecia el borde fino del botón outline "Agendar consulta". [VERIFICADO] Header.tsx define `darkHeroPages = ['/', '/tratamientos']` — clasifica /tratamientos como página de hero oscuro y renderiza texto blanco. Al scrollear o en páginas internas con fondo claro, el navbar queda blanco con texto blanco encima.
+- Cómo se aplicaría acá: Corregir lógica en `Header.tsx` y `Header.module.css`. Regla universal: (1) Cuando `scrolled === true`, el fondo del header es blanco sólido, por lo tanto el texto y logo DEBEN forzarse a `--color-negro: #1C1C1C` en TODAS las páginas. (2) Cuando `scrolled === false`, únicamente se muestra texto blanco si la página actual tiene un hero oscuro en el primer viewport (ej. Home). En páginas con fondo claro inicial (/contacto, /sobre-mi, /blog, /tienda), el texto debe ser oscuro desde el primer frame. (3) Criterio de aceptación: Contraste y legibilidad 100% garantizados en todas las páginas del sitio, tanto en viewport inicial como con scroll.
 - Chequeo de marca: OK — Paleta define `--color-negro: #1C1C1C` como color de texto sobre fondos claros.
 - Prioridad sugerida: Alto
 - Complejidad técnica estimada: Baja
@@ -285,3 +285,82 @@
 - Prioridad sugerida: Medio
 - Complejidad técnica estimada: Alta
 - Estado: Nuevo
+
+---
+
+### TASK-023 — BUG: Texto de placeholder/debug visible en hero de tratamientos ("Buscamos: confianza")
+- Fuente: Screenshot de página de tratamiento (Ácido Hialurónico) — 19/08/2026 (T-02)
+- Categoría: Contenido/Comunicación
+- Qué pidió Agustín: "Debajo del subtítulo del hero, en la página de detalle de tratamiento, aparece el texto 'Buscamos: confianza' con el cursor de edición visible — parece un campo de CMS (brief interno de tono/emoción) que quedó expuesto en el frontend en lugar de ocultarse."
+- Qué muestra la referencia: En la cabecera de la página individual de Ácido Hialurónico se observa el texto `Buscamos: confianza` con un cursor parpadeante o de edición activo, lo que denota un componente Typewriter o string de debug/placeholder renderizado públicamente.
+- Cómo se aplicaría acá: Auditar la plantilla `src/app/tratamientos/[slug]/page.tsx` y el componente `Typewriter.tsx`. Remover cualquier campo de placeholder, debug o texto de brief interno en todas las páginas de tratamiento (las 10 páginas comparten plantilla). Asegurar que únicamente se rendericen títulos, bajadas y descripciones médicas aprobadas.
+- Chequeo de marca: OK — Eliminar texto de debug protege la seriedad y elegancia médica de la clínica.
+- Prioridad sugerida: Alto
+- Complejidad técnica estimada: Baja
+- Estado: Nuevo
+
+---
+
+### TASK-024 — BUG: Acordeón de FAQ corta el texto de las respuestas (overflow/max-height)
+- Fuente: Screenshot de página de tratamiento (Ácido Hialurónico) — 19/08/2026 (T-03)
+- Categoría: Funcionalidad / Diseño-UX
+- Qué pidió Agustín: "En el acordeón de 'Preguntas frecuentes', cada respuesta se corta a mitad de oración (ej. '...En la consulta inicial la', '...cremas anestésicas cuando resulta') con una línea subrayada debajo, como si el contenedor no colapsara/expandiera correctamente."
+- Qué muestra la referencia: Las respuestas desplegadas en el módulo FAQ de tratamientos aparecen truncadas horizontal o verticalmente por un contenedor con `max-height` restrictivo o `overflow: hidden` mal calculado, impidiendo leer el texto médico completo.
+- Cómo se aplicaría acá: Corregir `src/components/tratamientos/TreatmentFAQ.tsx` y `TreatmentFAQ.module.css`. Eliminar `max-height` fijos o usar `grid-template-rows: 1fr` / auto-height dinámico para que el contenido desplegado se expanda al 100% de la altura de su texto sin truncar, garantizando que funcione en las 10 páginas de tratamientos y en todos los viewports (desktop, tablet, mobile).
+- Chequeo de marca: OK — Claridad informativa total para el paciente.
+- Prioridad sugerida: Alto
+- Complejidad técnica estimada: Media
+- Estado: Nuevo
+
+---
+
+### TASK-025 — BUG/CONTENIDO: Estadísticas inconsistentes entre Home y Sobre Mí
+- Fuente: Screenshots de Home y Sobre Mí — 19/08/2026 (T-04)
+- Categoría: Contenido/Comunicación
+- Qué pidió Agustín: "El bloque de estadísticas muestra números distintos en cada página: Home: 6+ años / 537+ pacientes / 10+ certificaciones / 67% enfoque humano vs Sobre Mí: 10+ años / 800+ pacientes / 15+ certificaciones / 100% enfoque humano. Definir los números reales y que sean idénticos en todas las páginas."
+- Qué muestra la referencia: Inconsistencia entre los contadores numéricos de `StatsCounter` en la Home y la página `/sobre-mi`, afectando la credibilidad institucional.
+- Cómo se aplicaría acá: Centralizar los datos de estadísticas en `src/data/site-content.ts` (o archivo dedicado) como única fuente de verdad consumida por `StatsCounter.tsx` en Home y `/sobre-mi`. Confirmar con Agustín / Dra. Landaburo el set de datos real (ej: 10+ Años cuidando la piel, 800+ Pacientes acompañados, 15+ Certificaciones, 100% Enfoque humano) y asegurar que nunca más existan valores hardcodeados divergentes.
+- Chequeo de marca: OK — Datos precisos y sin falsas promesas.
+- Prioridad sugerida: Alto
+- Complejidad técnica estimada: Baja
+- Estado: Nuevo
+
+---
+
+### TASK-026 — BUG/DISEÑO: Tarjetas de tratamiento con borde superior inconsistente en /tratamientos
+- Fuente: Screenshot de listado de Tratamientos — 19/08/2026 (T-05)
+- Categoría: Diseño/UX
+- Qué pidió Agustín: "De las 9 tarjetas en el grid de 'Tratamientos', dos ('Ácido Hialurónico' y 'Biostimuladores de Colágeno') tienen un borde superior color terracota que las otras 7 no tienen. Definir si es intencional o bug."
+- Qué muestra la referencia: El catálogo de `/tratamientos` presenta 2 tarjetas con borde superior decorativo terracota/champagne y 7 sin él, generando un aspecto visual dispar.
+- Cómo se aplicaría acá: Auditar `src/app/tratamientos/page.tsx` y `page.module.css`. Si Agustín/diseño decide destacar tratamientos populares, normalizar la lógica con una propiedad formal en `treatments.ts` (`isFeatured?: boolean`) y una etiqueta visible ("Destacado") con estilo uniforme; de lo contrario, remover la clase condicional para que las 10 tarjetas compartan exactamente el mismo diseño base.
+- Chequeo de marca: OK — Consistencia visual en el catálogo.
+- Prioridad sugerida: Medio
+- Complejidad técnica estimada: Baja
+- Estado: Nuevo
+
+---
+
+### TASK-027 — MEJORA UX: Jerarquía visual de botones (1 CTA sólido principal por vista + Navbar sólido)
+- Fuente: Análisis general de todas las páginas — 19/08/2026 (T-06)
+- Categoría: Diseño/UX
+- Qué pidió Agustín: "Actualmente casi todos los CTA usan estilo outline, compitiendo en peso visual entre sí. Definir un solo botón sólido (relleno color champagne/terracota) por vista para la acción prioritaria, y el resto en estilo outline. El CTA 'Agendar consulta' del navbar debería pasar a sólido de forma consistente en todo el sitio."
+- Qué muestra la referencia: Ausencia de jerarquía visual entre acciones primarias y secundarias en las diferentes vistas.
+- Cómo se aplicaría acá: Actualizar `src/components/ui/Button.tsx` y los módulos de layout/páginas: (1) Establecer el botón "Agendar consulta" en el Navbar con variante sólida (fondo `--color-champagne: #C5A47E`, texto `#1C1C1C` o `#FFFFFF`) en todo el sitio. (2) En cada pantalla/sección, garantizar que como máximo exista un único botón sólido en el primer viewport para guiar la conversión principal, dejando las opciones complementarias como `secondary` (outline) o `ghost`.
+- Chequeo de marca: OK — Uso exclusivo de paleta oficial (#C5A47E, #1C1C1C, #FFFFFF).
+- Prioridad sugerida: Medio
+- Complejidad técnica estimada: Media
+- Estado: Nuevo
+
+---
+
+### TASK-028 — DISEÑO: Radio de redondeo suave en botones (`border-radius: 6px`)
+- Fuente: Decisión de diseño / Research NN/g — 19/08/2026 (T-07)
+- Categoría: Diseño/UX
+- Qué pidió Agustín: "Los botones actuales tienen esquinas completamente rectas. Cambiar a un radio suave (6px aprox.) — ni completamente recto ni tipo píldora — para alinear con la identidad cálida/editorial de la marca sin perder la formalidad clínica."
+- Qué muestra la referencia: Botones con esquinas vivas en 90° que lucen excesivamente rígidos frente a la tipografía serif y las curvas sutiles del diseño editorial.
+- Cómo se aplicaría acá: Modificar `src/components/ui/Button.module.css` (y los estilos de botones en Header, Hero, Footer, Tarjetas) aplicando `border-radius: 6px` a todas las variantes de botones del sitio.
+- Chequeo de marca: OK — Alineado con identidad cálida y profesional de la Dra. Landaburo.
+- Prioridad sugerida: Medio
+- Complejidad técnica estimada: Baja
+- Estado: Nuevo
+
