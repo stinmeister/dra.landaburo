@@ -233,3 +233,55 @@
 - Prioridad sugerida: Alto
 - Complejidad técnica estimada: Media
 - Estado: Nuevo
+
+---
+
+### TASK-019 — BUG: Navbar invisible en páginas con fondo blanco (letras blancas sobre blanco)
+- Fuente: Bug detectado en inspección visual — Screenshot de /tratamientos (19/08/2026)
+- Categoría: Diseño/UX
+- Qué pidió Agustín: "Arreglar el menu (navbar) cuando salimos de la home, no se ve porque son letras blancas sobre fondo blanco. La solución creo que es poner letras oscuras, siguiendo el design system."
+- Qué muestra la referencia: [VERIFICADO] Screenshot de /tratamientos: header completamente invisible — barra blanca vacía donde deberían estar logo y links. Solo se distingue un rectángulo con borde champagne en la esquina superior derecha. [VERIFICADO] Header.tsx define `darkHeroPages = ['/', '/tratamientos']` — clasifica /tratamientos como página de hero oscuro y renderiza texto blanco. El problema es que /tratamientos tiene un hero con imagen pero al hacer scroll el header queda sobre fondo blanco con texto blanco encima.
+- Cómo se aplicaría acá: Corregir lógica en Header.tsx y Header.module.css. Regla correcta: cuando `scrolled === true` el texto debe ser `--color-negro: #1C1C1C` independientemente de la página, porque el fondo del header es siempre blanco al scrollear. Solo aplica texto blanco cuando `scrolled === false` Y la página tiene hero oscuro visible en el viewport inicial. Implementar: (1) En la clase `.scrolled` del CSS agregar `color: var(--color-negro)`. (2) Verificar que cubra todos los casos: Home scrolled, /tratamientos scrolled, /tratamientos/[slug], /contacto, /sobre-mi, /blog. (3) Testear visualmente cada ruta antes de deployar.
+- Chequeo de marca: OK — Paleta define `--color-negro: #1C1C1C` como color de texto sobre fondos claros.
+- Prioridad sugerida: Alto
+- Complejidad técnica estimada: Baja
+- Estado: Nuevo
+
+---
+
+### TASK-020 — GAP: E-commerce / Tienda — Página 404, ruta no existe
+- Fuente: Bug detectado en inspección visual — Screenshot de /tienda (19/08/2026)
+- Categoría: Funcionalidad
+- Qué pidió Agustín: "No anda el e-commerce, fijarse por qué y revisar la especificación funcional que existía para saber si falló la documentación o el desarrollo."
+- Qué muestra la referencia: [VERIFICADO] http://54.94.94.20:3000/tienda devuelve 404 "This page could not be found." [VERIFICADO] Rutas existentes en EC2: solo /, /blog, /contacto, /sobre-mi, /tratamientos, /tratamientos/[slug]. No hay src/app/tienda/. [INFERIDO] El header contiene un link "Tienda" que apunta a una ruta inexistente. [INFERIDO] El equipo externo no implementó esta ruta.
+- Cómo se aplicaría acá: Crear `src/app/tienda/page.tsx` y `src/app/tienda/page.module.css`. Incluye: (1) Grid de productos dermocosméticos con imagen, nombre, descripción corta, precio en ARS y botón "Agregar". (2) Crear `src/data/products.ts` con catálogo de 24 productos (slugs, nombres, precios, imágenes desde /public/images/products/). (3) Estado de carrito con React Context o Zustand persistido en localStorage. (4) Icono de carrito en header derecho con badge de cantidad. (5) Página de carrito `/tienda/carrito/page.tsx` con resumen y botón de checkout. (6) Integración MercadoPago Checkout Pro — Sandbox para pruebas con MP_ACCESS_TOKEN en .env.local. (7) Webhook en `src/app/api/webhook/mercadopago/route.ts` que actualice estado en Supabase tabla `orders`. Sin descuentos ni urgencia artificial. Siempre "pacientes", nunca "clientes".
+- Chequeo de marca: OK — Venta de dermocosmética coherente con posicionamiento médico. Sin descuentos ni urgencia artificial.
+- Prioridad sugerida: Alto
+- Complejidad técnica estimada: Alta
+- Estado: Nuevo
+
+---
+
+### TASK-021 — GAP: Sistema de autenticación y login — No existe en el proyecto
+- Fuente: Scope original no implementado — reportado por Agustín (19/08/2026)
+- Categoría: Funcionalidad
+- Qué pidió Agustín: "No tengo ningún botón para conectarme, no sé si falló la docu o el desarrollo."
+- Qué muestra la referencia: [VERIFICADO] No existen rutas de auth: sin src/app/login/, src/app/auth/ ni src/app/signup/. [VERIFICADO] Sin botón de login en el header actual. [VERIFICADO] @supabase/supabase-js está instalado y credenciales en .env.local pero ningún componente las usa para auth. [INFERIDO] El equipo externo no implementó este módulo.
+- Cómo se aplicaría acá: (1) Crear src/lib/supabase.ts con cliente browser (NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_ANON_KEY). (2) Crear src/lib/supabase-server.ts con cliente server (SUPABASE_SERVICE_ROLE_KEY). (3) Crear src/app/login/page.tsx con formulario email + contraseña, link "¿Olvidaste tu contraseña?" y link a registro. (4) Crear src/app/register/page.tsx para nuevos pacientes (rol por defecto: paciente). (5) Crear src/middleware.ts que proteja /dashboard/* y /portal/* redirigiendo a /login sin sesión activa. (6) Agregar botón "Ingresar" en header derecho visible sin sesión; con sesión mostrar iniciales del usuario con dropdown (Mi perfil / Cerrar sesión). (7) Post-login redirigir según profiles.role: admin → /dashboard/ejecutivo, medico/operativo → /dashboard/operativo, paciente → /portal/paciente. Migraciones SQL en supabase/migrations/. Esquema de tablas documentado en esquema_base_de_datos_supabase.md.
+- Chequeo de marca: OK — Login es funcionalidad interna, no afecta identidad visual pública.
+- Prioridad sugerida: Alto
+- Complejidad técnica estimada: Alta
+- Estado: Nuevo
+
+---
+
+### TASK-022 — GAP: Dashboards Ejecutivo, Operativo y Portal Paciente — No implementados
+- Fuente: Scope original no implementado — reportado por Agustín (19/08/2026)
+- Categoría: Funcionalidad
+- Qué pidió Agustín: "No hay dashboard, no sé si no está o no se puede acceder."
+- Qué muestra la referencia: [VERIFICADO] No existen rutas de dashboard: sin src/app/dashboard/ ni src/app/portal/. [INFERIDO] No es problema de acceso — las rutas no existen. Prerequisito: TASK-021 (autenticación) debe estar completo antes de implementar los dashboards.
+- Cómo se aplicaría acá: Implementar tres áreas privadas diferenciadas por rol. **Dashboard Ejecutivo (/dashboard/ejecutivo) — solo rol admin:** (a) Panel financiero: facturación ARS/USD, desglose por medio de pago, evolución mensual desde tabla payments. Usar Recharts o Tremor para gráficos. (b) Comisiones: ingresos Dra. Landaburo vs Mercedes (30% cosmetología) filtrando por professional_profile_id. (c) Inventario: stock actual (products.stock_quantity), alertas cuando stock_quantity < min_stock_alert, lotes con vencimiento próximo (product_batches). (d) KPIs de pacientes: distribución por rfm_segment de tabla patients. **Dashboard Operativo (/dashboard/operativo) — roles admin, medico, operativo:** (a) Tareas del día asignadas al usuario autenticado desde employee_tasks, con checkbox para completar. (b) Buscador de 102 tratamientos con filtro por categoría y profesional. (c) Guías operativas en formato de lectura (Guía Doris, Ceci, Laura). **Portal Paciente (/portal/paciente) — solo rol paciente:** historial de turnos (appointments), compras (orders), gift cards activas (gift_cards). Todas las consultas deben usar cliente Supabase con RLS activo (anon key, no service role). Diseño: fondo blanco, texto #1C1C1C, acento champagne #C5A47E. Sin dark mode toggle.
+- Chequeo de marca: OK — Dashboards internos siguiendo paleta del design system.
+- Prioridad sugerida: Medio
+- Complejidad técnica estimada: Alta
+- Estado: Nuevo
