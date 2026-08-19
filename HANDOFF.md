@@ -64,18 +64,22 @@ npm run build
 
 ---
 
-## 📋 Gestión del Backlog de Tareas
+## 📋 Gestión del Backlog y Especificaciones Funcionales
 
-Las tareas del proyecto se gestionan en **dos lugares sincronizados**:
-1. **Archivo Local `tasks.md`:** Vive en la raíz del repositorio. Contiene los tickets estructurados (`TASK-001` a `TASK-018`).
-2. **Notion Workspace (Grow OS / Dra. Landaburo):** Base de datos/sección de tareas donde se registra el estado vivo de cada desarrollo.
+Las tareas y especificaciones del proyecto se gestionan en:
+1. **Especificación Funcional (`ESPECIFICACION_FUNCIONAL.md`):** Documento oficial con estado actual, requerimientos técnicos, rutas de prueba y criterios de aceptación para los tickets de desarrollo prioritarios (`FS-019` a `FS-N02`).
+2. **Archivo Maestro `tasks.md`:** Vive en la raíz del repositorio. Contiene los 30 tickets estructurados bajo el estándar de 9 campos (`TASK-001` a `TASK-030`).
+3. **Documento de Auditoría QA (`backlog_qa_claude.md`):** Reporte de auditoría y checklist en vivo para validaciones con Claude en Chrome.
+4. **Notion Workspace (Dra. Landaburo):** Página principal `🌐 Reconstrucción Web — dralandaburo.com` sincronizada con el estado del backlog.
 
 ### Workflow para un nuevo Ticket:
-1. Tomar un ticket de `tasks.md` o Notion.
+1. Tomar un ticket de `ESPECIFICACION_FUNCIONAL.md` / `tasks.md`.
 2. Cambiar el estado de `🆕 Nuevo` a `🔄 En Progreso`.
-3. Desarrollar la funcionalidad en una rama de Git o en `master`.
-4. Verificar con `npm run build`.
-5. Cambiar el estado a `✅ Completado` en `tasks.md` y Notion.
+3. Desarrollar la funcionalidad en local.
+4. Verificar compilación limpia con `npm run build`.
+5. Hacer commit y push a `https://github.com/stinmeister/dra.landaburo.git` (`master`).
+6. Desplegar en EC2 (`54.94.94.20:3000`) o solicitar deploy a Antigravity.
+7. Verificar en staging que cumpla los criterios de aceptación del ticket.
 
 ---
 
@@ -83,21 +87,21 @@ Las tareas del proyecto se gestionan en **dos lugares sincronizados**:
 
 El servidor EC2 cuenta con un script automatizado de deploy `/opt/dra-landaburo/deploy.sh`.
 
-Para desplegar cambios en vivo a producción:
+Para desplegar cambios en vivo al staging:
 ```bash
-# 1. Hacer push a la rama de producción
-git push production master
+# 1. Hacer push a GitHub
+git push origin master
 
-# 2. El script del servidor ejecutará automáticamente:
-# npm ci -> npm run build -> cp static files -> pm2 restart
+# 2. En el servidor EC2 (vía SSH bitnami@54.94.94.20):
+cd /opt/dra-landaburo && git pull origin master && bash deploy.sh
 ```
 
 ---
 
-## 📚 Documentación de Referencia en Notion
+## 📚 Documentación de Referencia en el Repositorio
 
-Para consultar la visión completa del proyecto, arquitectura y guías de tono:
-* **`00 README AI`** (Punto de entrada obligatorio)
-* **`01 Project Context`** (Estructura del proyecto)
-* **`02 Brand System`** (Identidad y guías de marca)
-* **`Workflow Registry`** (Integraciones n8n WF-01 a WF-07)
+* **`ESPECIFICACION_FUNCIONAL.md`** — Requerimientos funcionales, técnicos y criterios de aceptación v1.0.
+* **`tasks.md`** — Backlog consolidado de 30 tickets (`TASK-001` a `TASK-030`).
+* **`esquema_base_de_datos_supabase.md`** — Blueprint de arquitectura de datos y tablas de Supabase.
+* **`backlog_qa_claude.md`** — Checklist de navegación y pruebas para auditoría en Chrome.
+
