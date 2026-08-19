@@ -1,0 +1,46 @@
+/* CartIcon — botón de carrito con badge de conteo.
+   Hereda el color del Header (blanco/negro según scroll) vía `currentColor`,
+   igual que el <button cartBtn> que reemplaza. */
+
+.cartLink {
+  position: relative;
+  display: none; /* oculto en mobile, visible en ≥768px (igual que el cartBtn original) */
+  align-items: center;
+  justify-content: center;
+  color: inherit; /* hereda color del Header (blanco o negro) */
+  text-decoration: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  transition: color 0.2s ease, background-color 0.2s ease;
+  line-height: 1;
+}
+
+.cartLink:hover {
+  color: var(--color-champagne);
+}
+
+@media (min-width: 768px) {
+  .cartLink {
+    display: flex;
+  }
+}
+
+.badge {
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  background-color: var(--color-champagne);
+  color: var(--color-blanco);
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  font-family: var(--font-body);
+  line-height: 1;
+}

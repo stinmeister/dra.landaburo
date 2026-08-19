@@ -1,0 +1,39 @@
+.btn {
+  width: 100%;
+  padding: 0.9rem 1.5rem;
+  background-color: var(--color-negro);
+  color: var(--color-blanco);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border: 1px solid var(--color-negro);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.btn:hover:not(:disabled) {
+  background-color: var(--color-champagne);
+  border-color: var(--color-champagne);
+  color: var(--color-blanco);
+}
+
+.btnAdded {
+  background-color: #27ae60;
+  border-color: #27ae60;
+  color: var(--color-blanco);
+}
+
+.btnAdded:hover {
+  background-color: #27ae60 !important;
+  border-color: #27ae60 !important;
+}
+
+.btn:disabled {
+  background-color: var(--color-gris-claro);
+  border-color: var(--color-gris-claro);
+  color: var(--color-gris);
+  cursor: not-allowed;
+}

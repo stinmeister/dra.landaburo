@@ -1,9 +1,10 @@
 // Dashboard Ejecutivo — acceso exclusivo rol `admin`.
 // Server Component: queries run at request time, no client-side loading states.
-// Shows monthly financials (ARS/USD + commissions) and low-stock alerts.
+// Shows monthly financials (ARS/USD + commissions), low-stock alerts, and MP config.
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
+import MPConfigForm from '@/components/dashboard/MPConfigForm';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
@@ -231,6 +232,9 @@ export default async function EjecutivoPage() {
           </div>
         )}
       </section>
+
+      {/* Configuración de MercadoPago — Client Component */}
+      <MPConfigForm />
     </div>
   );
 }

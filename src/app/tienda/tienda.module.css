@@ -1,0 +1,106 @@
+.main {
+  padding-top: var(--header-height);
+  min-height: 100vh;
+  background-color: var(--color-bg);
+}
+
+.container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: var(--space-3xl) var(--space-xl);
+}
+
+.pageHeader {
+  margin-bottom: var(--space-2xl);
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: var(--text-4xl);
+  font-weight: 400;
+  color: var(--color-negro);
+  margin: 0 0 var(--space-sm);
+  letter-spacing: var(--tracking-tight);
+}
+
+.subtitle {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  color: var(--color-gris);
+  margin: 0;
+  max-width: 540px;
+  line-height: var(--leading-normal);
+}
+
+/* Filtros de categoría */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-2xl);
+  padding-bottom: var(--space-lg);
+  border-bottom: 1px solid var(--color-gris-claro);
+}
+
+.filterBtn {
+  display: inline-block;
+  padding: 0.4rem 1rem;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-gris);
+  background-color: transparent;
+  border: 1px solid var(--color-gris-claro);
+  border-radius: 20px;
+  text-decoration: none;
+  transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+  white-space: nowrap;
+}
+
+.filterBtn:hover {
+  color: var(--color-negro);
+  border-color: var(--color-gris);
+}
+
+.filterBtnActive {
+  color: var(--color-negro);
+  border-color: var(--color-champagne);
+  background-color: var(--color-champagne-light);
+}
+
+/* Grid de productos: 3 col → 2 col → 1 col */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-xl);
+}
+
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.error {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  color: #c0392b;
+  padding: var(--space-lg);
+  background-color: #fdf0ef;
+  border-radius: var(--radius-md);
+  border: 1px solid #f5c6c2;
+}
+
+.emptyState {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  color: var(--color-gris);
+  padding: var(--space-3xl) 0;
+  text-align: center;
+}

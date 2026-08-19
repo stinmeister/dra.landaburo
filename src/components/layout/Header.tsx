@@ -3,11 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronDown, Menu, ShoppingBag } from 'lucide-react';
+import { ChevronDown, Menu } from 'lucide-react';
 import styles from './Header.module.css';
 import { navigation } from '@/data/navigation';
 import MobileMenu from './MobileMenu';
 import UserMenu from './UserMenu';
+import CartIcon from '@/components/tienda/CartIcon';
 
 export default function Header() {
   const [scrolled, setScrolled] = useState(false);
@@ -86,9 +87,7 @@ export default function Header() {
               Agendar consulta
             </Link>
             <UserMenu />
-            <button className={styles.cartBtn} aria-label="Carrito">
-              <ShoppingBag size={20} />
-            </button>
+            <CartIcon />
             <button
               className={styles.mobileMenuBtn}
               onClick={() => setMobileMenuOpen(true)}
