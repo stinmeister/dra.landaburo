@@ -1,262 +1,208 @@
-# 📑 Especificación Funcional — Sitio Dra. Landaburo (dralandaburo.com)
-
-**Versión:** 1.0  
-**Fecha:** 19/08/2026  
-**Origen:** Backlog QA (Agustín + Claude) → Merge Antigravity → Validación en vivo (EC2: 54.94.94.20:3000)  
-**Destinatario:** Equipo de desarrollo externo  
-**Ambiente de Staging / QA:** [http://54.94.94.20:3000](http://54.94.94.20:3000)  
-**Repositorio GitHub:** `https://github.com/stinmeister/dra.landaburo.git` (rama `master`)
+# Especificación Funcional — Sitio Dra. Landaburo (dralandaburo.com)
+**Versión:** 2.0 · **Fecha:** 20/08/2026  
+**Origen:** Auditoría QA + Estabilización DB + Requerimientos Fase 2 (Agustín + Antigravity)  
+**Destinatario:** Equipo de desarrollo externo / Claude Code  
+**Ambiente Staging:** [http://54.94.94.20:3000](http://54.94.94.20:3000)  
+**Repositorio GitHub:** `https://github.com/stinmeister/dra.landaburo.git` (`master`)
 
 ---
 
-## 📌 Nota de Proceso
+## 📑 Índice de Requerimientos
 
-Cada ticket incluye:
-* Estado actual verificado empíricamente.
-* Comportamiento esperado.
-* Requerimientos funcionales y técnicos concretos.
-* Criterios de aceptación verificables.
-
-> **Nota:** Los tickets marcados como *"Verificado — sin acción"* se incluyen para dejar constancia de que fueron auditados y están correctos en el estado actual; no requieren desarrollo inmediato.
-
----
-
-## 🧭 Índice de Especificaciones
-
-| ID Especificación | ID Backlog | Título | Prioridad | Estado |
-|---|---|---|---|---|
-| [**FS-019**](#fs-019) | `TASK-019` | Navbar sin contraste garantizado | 🔴 Alta | Abierto / Bloqueante |
-| [**FS-023**](#fs-023) | `TASK-023` | Texto de debug expuesto en hero de tratamiento | 🔴 Alta | Abierto |
-| [**FS-024**](#fs-024) | `TASK-024` | Acordeón de FAQ corta el contenido (overflow) | 🔴 Alta | Abierto |
-| [**FS-025**](#fs-025) | `TASK-025` | Estadísticas sin fuente única de verdad | 🔴 Alta | Abierto |
-| [**FS-027**](#fs-027) | `TASK-027` | Jerarquía visual de CTAs (1 sólido principal por vista) | 🟡 Media | Abierto |
-| [**FS-028**](#fs-028) | `TASK-028` | Radio de borde en botones (`border-radius: 6px`) | 🟡 Media | Abierto |
-| [**FS-N01**](#fs-n01) | `TASK-029` | Elemento flotante mal posicionado sobre tarjeta de perfil | 🟡 Media | Abierto |
-| [**FS-N02**](#fs-n02) | `TASK-030` | Confirmar alcance del widget de chat flotante | 🟢 Baja | A confirmar con Agustín |
-| [**FS-026**](#fs-026) | `TASK-026` | Borde superior dispar en tarjetas de tratamiento | — | Verificado — sin acción |
-| [**FS-020/021/022**](#fs-020-021-022) | `TASK-020/021/022` | Rutas no construidas (tienda, login, dashboards) | — | Verificado — sin acción |
+| ID | Módulo / Título | Prioridad | Estado |
+|---|---|---|---|
+| **FS-019** | Navbar sin contraste garantizado | Alta | ✅ Resuelto en v1.0 |
+| **FS-023** | Texto de debug en hero de tratamientos | Alta | ✅ Resuelto en v1.0 |
+| **FS-024** | Acordeón FAQ corta respuestas | Alta | ✅ Resuelto en v1.0 |
+| **FS-025** | Unificación de fuente única en estadísticas | Alta | ⏳ Pendiente |
+| **FS-027** | Jerarquía visual de CTAs | Media | ✅ Resuelto en v1.0 |
+| **FS-028** | Radio de borde en botones (`border-radius: 6px`) | Media | ✅ Resuelto en v1.0 |
+| **FS-N01** | Input flotante huérfano en sidebar de tratamientos | Media | ⏳ Pendiente |
+| **FS-N02** | Widget flotante de WhatsApp | Baja | ⏳ Pendiente |
+| **FS-031** | **Gestión de Usuarios y Alta de Staff** | **Alta** | 🆕 **Nuevo (Fase 2)** |
+| **FS-032** | **Navegación Dinámica en Dashboard por Rol** | **Alta** | 🆕 **Nuevo (Fase 2)** |
+| **FS-033** | **Menú de Usuario Contextual en Header (Avatar)** | **Alta** | 🆕 **Nuevo (Fase 2)** |
+| **FS-034** | **Gestión de Productos e Inventario (`/dashboard/productos`)** | **Alta** | 🆕 **Nuevo (Fase 2)** |
+| **FS-035** | **CMS de Blog y Contenidos Dinámicos (`/dashboard/blog`)** | **Alta** | 🆕 **Nuevo (Fase 2)** |
+| **FS-036** | **Fix de Autofill de Navegador y Contraste en Login** | **Media** | 🆕 **Nuevo (Fase 2)** |
 
 ---
 
-<a name="fs-019"></a>
-## 🔴 FS-019 — Navbar sin contraste garantizado
-* **ID Backlog:** `TASK-019`
-* **Prioridad:** Alta (bloquea navegación)
-* **Categoría:** Funcionalidad / Frontend
-* **Rutas afectadas confirmadas:** `/tratamientos` (estado inicial, antes de scroll), `/tratamientos/acido-hialuronico` (estado inicial). Afecta cualquier vista donde el fondo detrás del navbar sea claro sin overlay oscuro.
+## 🎨 Reglas de Marca y Diseño Inviolables
 
-### 1. Estado Actual
-El navbar usa texto de color claro (blanco) de forma fija, asumiendo que siempre habrá un fondo oscuro o un overlay detrás. Cuando el contenido bajo el navbar es claro (por ejemplo, el espacio en blanco antes de que cargue la imagen del hero, o el fondo blanco general de la página), el texto y el logo quedan invisibles. Solo permanece visible el borde del botón *"Agendar consulta"* (que tiene `border` pero no `background-color`).
-
-### 2. Comportamiento Esperado
-El navbar debe ser legible en el 100% de los estados posibles: al cargar cualquier página, en cualquier punto del scroll, y sobre cualquier tipo de contenido (imagen clara, imagen oscura, fondo de color sólido, fondo blanco).
-
-### 3. Requerimientos Funcionales
-1. El navbar debe tener un fondo propio garantizado — no depender del contenido de la página para tener contraste. Opciones válidas: fondo sólido siempre presente, o fondo con blur + opacidad suficiente (mínimo 85%) para garantizar contraste independientemente de lo que haya detrás.
-2. El color del texto/logo del navbar debe mantener una relación de contraste mínima de 4.5:1 contra su propio fondo (estándar WCAG AA), no contra el contenido de la página.
-3. El botón *"Agendar consulta"* en el navbar debe tener `background-color` visible en todos los estados (ver también FS-027, que además pide que sea el CTA sólido principal).
-4. Este comportamiento debe verificarse en el estado inicial de carga (sin scroll) y en el estado con scroll, en las rutas principales: `/`, `/tratamientos`, `/tratamientos/[slug]` (las 10 páginas de tratamiento), `/sobre-mi`, `/contacto`, `/blog`.
-
-### 4. Criterios de Aceptación
-- [ ] El navbar es legible (texto y logo con contraste suficiente) al cargar cada una de las rutas listadas, sin necesidad de hacer scroll.
-- [ ] El navbar permanece legible durante todo el scroll de la página, incluyendo transiciones entre secciones con fondos de distinto color.
-- [ ] El botón *"Agendar consulta"* es visualmente distinguible (con relleno de color) en todos los estados.
+1. **Paleta Oficial:**
+   * Negro texto/fondo: `#1C1C1C` (`var(--color-negro)`)
+   * Gris medio: `#848484` (`var(--color-gris)`)
+   * Gris claro: `#D2D3D3` (`var(--color-gris-claro)`)
+   * Blanco: `#FFFFFF` (`var(--color-blanco)`)
+   * Champagne (acento): `#C5A47E` (`var(--color-champagne)`)
+   * Champagne oscuro (hover): `#A8875F` (`var(--color-champagne-dark)`)
+2. **Terminología Médica:** NUNCA usar *"clientes"*; usar siempre **"pacientes"**.
+3. **Ética y Tono:** CERO descuentos agresivos, CERO urgencia artificial, CERO promesas milagrosas.
+4. **Sin Dark Mode Toggle:** El diseño es monocromático fijo.
+5. **Estilos:** CSS Modules (`*.module.css`) exclusivamente. **NO usar Tailwind CSS**.
 
 ---
 
-<a name="fs-023"></a>
-## 🔴 FS-023 — Texto de debug expuesto en hero de tratamiento
-* **ID Backlog:** `TASK-023`
+## 🆕 Detalle de Nuevos Requerimientos (Fase 2)
+
+---
+
+### FS-031: Módulo de Gestión de Usuarios y Alta de Staff
 * **Prioridad:** Alta
-* **Categoría:** Contenido / Frontend
-* **Rutas afectadas confirmadas:** `/tratamientos/acido-hialuronico`. A verificar: las 10 páginas de tratamiento, ya que comparten la misma plantilla.
-
-### 1. Estado Actual
-Debajo del subtítulo del hero, en la página de detalle de tratamiento, se renderiza públicamente el texto `"Buscamos: [palabra]"` seguido de un cursor de edición visible (aparente efecto de tipeo/typewriter mal implementado, o un campo de brief interno de tono/emoción que no debería mostrarse al paciente final).
-
-### 2. Comportamiento Esperado
-El hero de cada página de tratamiento debe mostrar únicamente: categoría (ej. `"FACIAL"`), título del tratamiento, y la descripción/subtítulo médica destinada al público. Ningún campo de configuración interna, brief, o placeholder de desarrollo debe ser visible.
-
-### 3. Requerimientos Funcionales
-1. Localizar el componente/campo que genera el texto `"Buscamos: [x]"` en la plantilla de tratamiento (`src/app/tratamientos/[slug]/page.tsx` o `src/components/ui/Typewriter.tsx`).
-2. Determinar si es: (a) un campo de CMS/mock que se está renderizando por error y debe ocultarse, o (b) un efecto de animación de texto (typewriter) mal configurado que quedó con datos de prueba — en cuyo caso remover el texto de prueba y dejar solo contenido aprobado.
-3. Remover o corregir el elemento en la plantilla compartida, de forma que el fix aplique automáticamente a las 10 páginas de tratamiento.
-
-### 4. Criterios de Aceptación
-- [ ] Ninguna página de tratamiento muestra el texto `"Buscamos:"` ni ningún otro campo de brief/debug en el hero.
-- [ ] Verificado visualmente en las 10 páginas de tratamiento, no solo en Ácido Hialurónico.
+* **Ruta:** `/dashboard/usuarios` (Protegida, solo rol `admin`).
+* **Comportamiento esperado:**
+  1. **Tabla de Usuarios:**
+     * Columnas: Nombre completo, Email, Rol actual (Badge coloreado), Fecha de registro, Acciones.
+     * Selector de Rol interactivo por fila: Dropdown con opciones `admin`, `medico`, `operativo`, `cosmetologa`, `paciente`. Al cambiar la opción, ejecuta un Server Action o endpoint que actualiza `public.profiles.role` en Supabase y refresca la vista.
+     * Protección: Un usuario administrador no puede degradarse a sí mismo si es el único admin registrado.
+  2. **Alta de Miembros del Equipo:**
+     * Botón *"Nuevo Miembro del Equipo"* que abre un modal o formulario.
+     * Campos: Nombre completo, Email, Contraseña temporal, Rol a asignar (`Médico`, `Operativo`, `Cosmetóloga`, `Admin`).
+     * Utiliza la API de administración de Supabase (`supabase.auth.admin.createUser`) desde el servidor para crear el usuario sin requerir confirmación por email manual y crear su perfil automáticamente.
+  3. **Restricción en Registro Público (`/registro`):**
+     * El formulario público de `/registro` es **exclusivo para Pacientes**. No expone ningún selector de rol y guarda siempre `role = 'paciente'`.
+* **Criterios de Aceptación:**
+  * [ ] Solo usuarios con rol `admin` pueden acceder a `/dashboard/usuarios`.
+  * [ ] El cambio de rol en la tabla impacta en tiempo real en Supabase `profiles`.
+  * [ ] El alta de staff crea el usuario con su rol correspondiente en un solo paso.
+  * [ ] El registro público en `/registro` nunca permite crear usuarios con rol diferente a `paciente`.
 
 ---
 
-<a name="fs-024"></a>
-## 🔴 FS-024 — Acordeón de FAQ corta el contenido
-* **ID Backlog:** `TASK-024`
+### FS-032: Navegación Dinámica en Dashboard por Rol
 * **Prioridad:** Alta
-* **Categoría:** Funcionalidad / Frontend
-* **Rutas afectadas confirmadas:** `/tratamientos/acido-hialuronico`, sección *"Preguntas frecuentes"*. A verificar: las 10 páginas de tratamiento.
-
-### 1. Estado Actual
-Al desplegar cada pregunta del acordeón de FAQ, la respuesta se corta a mitad de oración (ejemplos observados: *"...En la consulta inicial la"*, *"...cremas anestésicas cuando resulta"*, *"...La Dra. Landaburo"*), con una línea subrayada visible debajo del texto cortado — indicio de que el contenedor no está expandiéndose a la altura real del contenido.
-
-### 2. Comportamiento Esperado
-Al hacer clic en cualquier pregunta del FAQ, la respuesta completa debe mostrarse sin truncarse, con el contenedor expandiéndose a la altura necesaria para mostrar todo el texto.
-
-### 3. Requerimientos Funcionales
-1. Revisar la implementación del acordeón (`TreatmentFAQ.tsx` y `TreatmentFAQ.module.css`): el problema se origina en un `max-height` fijo (en píxeles) en el estado abierto que no se ajusta a la longitud real de cada respuesta, o un `overflow: hidden` que no se remueve al expandir.
-2. Reemplazar por una solución que se adapte al contenido real (ej. `grid-template-rows: 0fr` → `1fr` con transición en CSS Grid, que no requiere altura fija).
-3. Verificar que la transición de apertura/cierre siga siendo suave (no debe perderse la animación al corregir el bug).
-
-### 4. Criterios de Aceptación
-- [ ] Todas las respuestas del FAQ se muestran completas al expandir cada pregunta, sin texto cortado ni líneas subrayadas residuales.
-- [ ] Verificado en las 10 páginas de tratamiento.
-- [ ] La animación de apertura/cierre del acordeón sigue funcionando de forma fluida.
+* **Archivos:** `src/app/dashboard/layout.tsx`, `src/middleware.ts`.
+* **Comportamiento esperado:**
+  1. **Sidebar Contextual:**
+     * Si el usuario es `admin`:
+       * Muestra los enlaces: `Ejecutivo` (`/dashboard/ejecutivo`), `Operativo` (`/dashboard/operativo`), `Usuarios` (`/dashboard/usuarios`), `Productos` (`/dashboard/productos`), `Blog` (`/dashboard/blog`).
+     * Si el usuario es `medico`, `operativo` o `cosmetologa`:
+       * Muestra únicamente el enlace: `Operativo` (`/dashboard/operativo`). No ve ningún otro ítem en el menú.
+     * Si el usuario es `paciente`:
+       * No tiene acceso al layout del dashboard; es redirigido a `/portal/paciente`.
+  2. **Protección de Rutas (Server-side & Middleware):**
+     * Si un usuario con rol `medico` o `paciente` intenta ingresar manualmente a `/dashboard/ejecutivo`, `/dashboard/usuarios`, `/dashboard/productos` o `/dashboard/blog`, el servidor lo redirige inmediatamente a su vista autorizada o a `/` con código 403.
+* **Criterios de Aceptación:**
+  * [ ] Cada rol ve en el sidebar estrictamente los módulos permitidos.
+  * [ ] El acceso por URL directa a rutas no autorizadas está bloqueado por el servidor.
 
 ---
 
-<a name="fs-025"></a>
-## 🔴 FS-025 — Estadísticas sin fuente única de verdad
-* **ID Backlog:** `TASK-025`
-* **Prioridad:** Alta (afecta credibilidad de marca)
-* **Categoría:** Contenido / Arquitectura de datos
-* **Rutas afectadas confirmadas:** `/` (Home) y `/sobre-mi` — ambas muestran el mismo bloque de 4 estadísticas (años de experiencia, pacientes acompañados, certificaciones, % enfoque humano) con valores distintos.
-
-### 1. Estado Actual
-Los valores difieren entre páginas y cambiaron entre rondas de verificación:
-* **Ronda 1 (screenshots iniciales):** Home = `6+ / 537+ / 10+ / 67%` vs Sobre Mí = `10+ / 800+ / 15+ / 100%`.
-* **Ronda 2 (auditoría en vivo, 19/08):** Home = `10+ / 800+ / 15+ / 100%` vs Sobre Mí = `9+ / 770+ / 14+ / 96%`.
-
-### 2. Comportamiento Esperado
-Los 4 valores (años cuidando la piel, pacientes acompañados, certificaciones, % enfoque humano) deben ser idénticos en cualquier página donde se muestren, y deben provenir de una única fuente de configuración.
-
-### 3. Requerimientos Funcionales
-1. Confirmar con la Dra. Landaburo / Agustín los valores reales y oficiales definitivos.
-2. Centralizar estos 4 valores en un único lugar de configuración (`src/data/site-content.ts` o módulo dedicado) y hacer que todas las instancias del componente (`StatsCounter.tsx`) lean de esa misma fuente.
-3. Eliminar cualquier valor hardcodeado duplicado en componentes individuales de página.
-4. **Nota técnica:** El bloque de estadísticas tiene una animación de *conteo ascendente* (arranca en 0 y sube hasta el valor final al entrar en viewport). Esto es intencional y debe conservarse.
-
-### 4. Criterios de Aceptación
-- [ ] Los 4 valores del bloque de estadísticas son idénticos en `/` y `/sobre-mi` (y en cualquier otra página futura).
-- [ ] Los valores provienen de una única fuente de configuración centralizada.
-- [ ] Se documenta dónde se edita esta fuente única en el proyecto.
+### FS-033: Menú de Usuario Contextual en Header (`UserMenu.tsx`)
+* **Prioridad:** Alta
+* **Archivos:** `src/components/layout/UserMenu.tsx`, `UserMenu.module.css`.
+* **Comportamiento esperado:**
+  * Al hacer clic en el avatar del usuario conectado (círculo con inicial en el Header), el menú desplegable debe ser inteligente según su rol:
+    * **Para rol `admin`:**
+      1. Nombre completo + badge *"Administrador"*.
+      2. Enlace 📊 *"Panel de Control"* → `/dashboard/ejecutivo`.
+      3. Enlace 👤 *"Mi Portal (Paciente)"* → `/portal/paciente` (para consultar sus turnos o compras personales).
+      4. Botón 🚪 *"Cerrar sesión"*.
+    * **Para roles `medico` / `operativo` / `cosmetologa`:**
+      1. Nombre completo + badge con su rol.
+      2. Enlace 📋 *"Panel Operativo"* → `/dashboard/operativo`.
+      3. Enlace 👤 *"Mi Portal (Paciente)"* → `/portal/paciente`.
+      4. Botón 🚪 *"Cerrar sesión"*.
+    * **Para rol `paciente`:**
+      1. Nombre completo + badge *"Paciente"*.
+      2. Enlace 🛍️ *"Mis Turnos y Compras"* → `/portal/paciente`.
+      3. Botón 🚪 *"Cerrar sesión"*.
+* **Criterios de Aceptación:**
+  * [ ] El dropdown nunca muestra opciones rotas o ambiguas.
+  * [ ] El Administrador tiene acceso directo en 1 clic al panel general.
+  * [ ] El cierre de sesión limpia la sesión de Supabase y redirige a la Home.
 
 ---
 
-<a name="fs-027"></a>
-## 🟡 FS-027 — Jerarquía visual de CTAs
-* **ID Backlog:** `TASK-027`
+### FS-034: Módulo de Gestión de Productos e Inventario
+* **Prioridad:** Alta
+* **Ruta:** `/dashboard/productos` (Protegida, solo rol `admin`).
+* **Comportamiento esperado:**
+  1. **Tabla de Catálogo e Inventario:**
+     * Lista de productos de la tabla `public.products` con: Miniatura de foto, Nombre, Marca, Categoría, Precio ARS, Stock disponible, Switch de Activo/Pausado, Botón Editar.
+     * Alerta visual: Filas con stock `< 5` unidades resaltadas con indicador de advertencia.
+  2. **Creación y Edición de Producto:**
+     * Formulario / Modal con los campos:
+       * Nombre del producto.
+       * Slug (generado automáticamente a partir del nombre).
+       * Marca (`brand_type` o texto libre).
+       * Categoría (Dropdown con: `Limpieza`, `Hidratación`, `Protección solar`, `Sérum`, `Contorno de ojos`, `Tratamiento específico`, `Post-tratamiento`).
+       * Precio ARS (`price_ars`) y Precio Comparativo (`compare_price_ars`).
+       * Descripción médica y modo de uso.
+       * Stock inicial (`stock_quantity`).
+       * Subida de imagen: Carga directa al bucket de Supabase Storage `products` o campo de URL de imagen.
+  3. **Acciones Rápidas:**
+     * Modificar stock directamente con botones `+` / `-` o campo editable en la tabla.
+     * Toggle para activar/desactivar producto (si está inactivo, no aparece en `/tienda`).
+* **Criterios de Aceptación:**
+  * [ ] Crear un producto desde el dashboard hace que aparezca de inmediato en `/tienda`.
+  * [ ] Editar precio o stock se refleja instantáneamente en la tienda y en el carrito.
+  * [ ] Desactivar un producto lo oculta de la tienda pública sin borrarlo de la base de datos.
+
+---
+
+### FS-035: CMS de Blog y Publicación de Contenidos
+* **Prioridad:** Alta
+* **Rutas:** `/dashboard/blog` (Admin CMS), `/blog` (Listado público), `/blog/[slug]` (Artículo individual).
+* **Comportamiento esperado:**
+  1. **Base de Datos (Tabla `public.posts` en Supabase):**
+     * Columnas: `id` (uuid), `slug` (text unique), `title` (text), `excerpt` (text), `content` (text/markdown), `cover_image_url` (text), `category` (text), `author_profile_id` (uuid FK profiles), `is_published` (boolean), `published_at` (timestamptz), `created_at` (timestamptz), `updated_at` (timestamptz).
+  2. **Panel CMS (`/dashboard/blog`):**
+     * Listado de artículos con título, autor, fecha, categoría y estado (Borrador / Publicado).
+     * Editor de posts: Título, generación de slug, selector de categoría, resumen (excerpt), editor de contenido, subida de foto de portada y toggle *"Publicar / Guardar Borrador"*.
+  3. **Vistas Públicas:**
+     * `/blog`: Grilla editorial de artículos publicados con imagen de portada, fecha, categoría y tiempo estimado de lectura.
+     * `/blog/[slug]`: Vista de lectura individual con estética premium, tipografía serif en títulos, fecha, firma de la Dra. Landaburo y CTA inferior para agendar consulta.
+* **Criterios de Aceptación:**
+  * [ ] Un post guardado como borrador NO es visible en `/blog`.
+  * [ ] Un post publicado aparece inmediatamente en `/blog` y su ruta `/blog/[slug]` es accesible y optimizada para SEO con Server-Side Rendering (SSR).
+
+---
+
+### FS-036: Fix de Autofill de Navegador y Contraste en Login / Registro
 * **Prioridad:** Media
-* **Categoría:** Diseño / UX
-* **Alcance:** Todo el sitio
-
-### 1. Estado Actual
-La mayoría de los botones de llamada a la acción, incluido *"Agendar consulta"* en el navbar, usan estilo outline (borde fino, sin relleno). No hay un único botón "sólido" que se destaque como la acción prioritaria de cada vista.
-
-### 2. Comportamiento Esperado
-En cada página, debe existir como máximo un botón con estilo sólido (relleno de color), reservado para la acción de conversión principal de esa vista. El resto de los CTAs deben usar estilo outline o ghost.
-
-### 3. Requerimientos Funcionales
-1. El botón *"Agendar consulta"* del navbar debe pasar a estilo sólido (fondo color champagne del sistema de diseño `--color-champagne: #C5A47E`, texto `#1C1C1C` o `#FFFFFF`) de forma consistente en todas las páginas.
-2. Revisar el resto de páginas para identificar dónde hay más de un botón sólido compitiendo visualmente en la misma vista, y ajustar a la regla de "un sólido por vista".
-3. Los botones ya sólidos que están correctamente implementados (ej. *"Agendá tu consulta"* al final de las páginas de tratamiento) se mantienen como están.
-
-### 4. Criterios de Aceptación
-- [ ] El botón *"Agendar consulta"* del navbar tiene fondo sólido en todas las páginas.
-- [ ] En cada vista del sitio, hay como máximo un botón con estilo sólido visible en el viewport inicial.
-
----
-
-<a name="fs-028"></a>
-## 🟡 FS-028 — Radio de borde en botones
-* **ID Backlog:** `TASK-028`
-* **Prioridad:** Media
-* **Categoría:** Diseño / UX
-* **Alcance:** Todo el sitio
-
-### 1. Estado Actual
-Todos los botones (sólidos y outline) tienen esquinas completamente rectas (`0px` de radio).
-
-### 2. Comportamiento Esperado
-Los botones deben tener un radio de esquina suave, ni completamente recto ni tipo píldora — consistente con la identidad cálida/editorial de la marca (paleta crema/negro/champagne, tipografía serif).
-
-### 3. Requerimientos Funcionales
-1. Aplicar `border-radius: 6px` a todos los botones sólidos y outline del sitio, de forma consistente vía la clase/componente base `Button.module.css` (no por instancia individual).
-2. **Nota de contexto:** Decisión validada con investigación de NN/g y Baymard Institute como refuerzo de identidad visual sin impacto adverso en conversión.
-
-### 4. Criterios de Aceptación
-- [ ] Todos los botones del sitio (sólidos y outline) tienen el mismo `border-radius: 6px` consistente.
-- [ ] El cambio se aplica a nivel de componente/clase base en `Button.module.css`.
+* **Archivos:** `src/components/auth/LoginForm.module.css`, `RegisterForm.module.css`.
+* **Comportamiento esperado:**
+  1. **Autofill de Navegadores (Chrome, Safari, Edge):**
+     * Aplicar las reglas CSS necesarias sobre pseudo-clases de autofill para evitar que el gestor de contraseñas pinte el fondo de blanco/celeste:
+       ```css
+       .input:-webkit-autofill,
+       .input:-webkit-autofill:hover, 
+       .input:-webkit-autofill:focus {
+         -webkit-text-fill-color: var(--color-blanco) !important;
+         -webkit-box-shadow: 0 0 0px 1000px #222 inset !important;
+         transition: background-color 5000s ease-in-out 0s;
+       }
+       ```
+  2. **Botón de Submit (`.submitBtn`):**
+     * Fondo champagne `#C5A47E` sólido con texto negro `#1C1C1C` y `font-weight: 600`.
+     * En estado `disabled` (cargando), mantener contraste legible con spinner o texto claro.
+* **Criterios de Aceptación:**
+  * [ ] Al autocompletar credenciales en Chrome, los campos mantienen texto blanco sobre fondo oscuro perfectamente legible.
+  * [ ] El botón de envío nunca se funde con el fondo ni desaparece.
 
 ---
 
-<a name="fs-n01"></a>
-## 🟡 FS-N01 — Elemento flotante mal posicionado sobre tarjeta de perfil
-* **ID Backlog:** `TASK-029`
-* **Prioridad:** Media
-* **Categoría:** Funcionalidad / Frontend
-* **Ruta confirmada:** `/tratamientos/acido-hialuronico`, al hacer scroll hasta la sección de FAQ / tarjeta "Dra. Paula Landaburo" en la barra lateral.
+## 🛠️ Script de Base de Datos para el Blog (Ejecutar en Supabase)
 
-### 1. Estado Actual
-Aparece un recuadro vacío con borde, similar a un campo de input de formulario, superpuesto sobre la tarjeta de perfil de la doctora en la barra lateral derecha al hacer scroll.
+```sql
+-- Tabla de artículos de Blog
+CREATE TABLE IF NOT EXISTS public.posts (
+  id                 uuid        NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug               text        NOT NULL UNIQUE,
+  title              text        NOT NULL,
+  excerpt            text        NOT NULL DEFAULT '',
+  content            text        NOT NULL DEFAULT '',
+  cover_image_url    text,
+  category           text        NOT NULL DEFAULT 'Dermatología',
+  author_profile_id  uuid        REFERENCES public.profiles(id) ON DELETE SET NULL,
+  is_published       boolean     NOT NULL DEFAULT false,
+  published_at       timestamptz,
+  created_at         timestamptz NOT NULL DEFAULT now(),
+  updated_at         timestamptz NOT NULL DEFAULT now()
+);
 
-### 2. Comportamiento Esperado
-No debe haber ningún elemento flotante ni superpuesto sobre el contenido de la barra lateral en ningún punto del scroll.
-
-### 3. Requerimientos Funcionales
-1. Identificar el elemento en `src/app/tratamientos/[slug]/page.tsx` — verificar si es un componente con posicionamiento `fixed` o `sticky` con coordenadas mal calculadas o un elemento huérfano.
-2. Corregir el posicionamiento o eliminar el elemento del DOM si carece de función activa.
-
-### 4. Criterios de Aceptación
-- [ ] No aparece ningún elemento flotante superpuesto sobre la tarjeta de perfil ni sobre otro contenido en ningún punto del scroll.
-
----
-
-<a name="fs-n02"></a>
-## 🟢 FS-N02 — Confirmar alcance del widget de chat flotante
-* **ID Backlog:** `TASK-030`
-* **Prioridad:** Baja (pendiente de definición con cliente)
-* **Categoría:** Funcionalidad / UX
-* **Alcance:** Visible en Home, Tratamientos, Sobre Mí.
-
-### 1. Estado Actual
-Hay un botón circular de chat (ícono de burbuja) flotando en la esquina inferior derecha.
-
-### 2. Acción Requerida
-1. Confirmar con Agustín el propósito y destino del widget (`wa.me/5491169684062`).
-2. Una vez confirmado, ajustar espaciados responsive en `WhatsAppButton.module.css` para evitar solapamientos con botones cercanos (ej. botón *"Más sobre mí"*).
-
-### 3. Criterios de Aceptación
-- [ ] Confirmado con el cliente el propósito del widget antes de cambios mayores.
-- [ ] Si se mantiene, su posición no interfiere visualmente con otros elementos interactivos.
-
----
-
-<a name="fs-026"></a>
-## ⚪ FS-026 — Borde superior dispar en tarjetas de tratamiento (Verificado — sin acción)
-* **ID Backlog:** `TASK-026`
-* **Estado:** En la auditoría en vivo del 19/08, las tarjetas visibles en `/tratamientos` se veían uniformes, sin borde superior diferenciado.
-* **Acción requerida:** Ninguna en este momento. Confirmar antes de cierre formal con Agustín.
-
----
-
-<a name="fs-020-021-022"></a>
-## ⚪ FS-020 / FS-021 / FS-022 — Rutas no construidas (Verificado — sin acción)
-* **ID Backlog:** `TASK-020`, `TASK-021`, `TASK-022`
-* **Estado:** Verificado en vivo. Las siguientes rutas devuelven correctamente 404:
-  - `/tienda`
-  - `/login`, `/register`
-  - `/dashboard/ejecutivo`, `/dashboard/operativo`, `/portal/paciente`
-* **Acción requerida:** Ninguna. Se documenta como evidencia de que no hay funcionalidad expuesta a medias. Si en el futuro se planea desarrollar estas secciones, requerirán su propia especificación funcional separada.
-
----
-
-## 📌 Guía Rápida para el Desarrollador Externo
-
-1. **Orden de Prioridad:**
-   `FS-019` → `FS-023` → `FS-024` → `FS-025` (Bugs de alta prioridad)  
-   → `FS-N01` (`TASK-029`)  
-   → `FS-027` → `FS-028` (Mejoras de diseño)  
-   → `FS-N02` (`TASK-030`) (Definición pendiente).
-
-2. **Plantilla Compartida:** Las 10 páginas de tratamientos (`/tratamientos/[slug]`) comparten `src/app/tratamientos/[slug]/page.tsx`. Cualquier cambio en `FS-023`, `FS-024` o `FS-N01` impacta a todas las rutas.
-3. **Design System:** Paleta oficial: Negro `#1C1C1C`, Gris `#848484`, Gris Claro `#D2D3D3`, Blanco `#FFFFFF`, Champagne `#C5A47E`.
-4. **Deploy a Staging:** Cada cambio pusheado a `master` se despliega en EC2 (`54.94.94.20:3000`) ejecutando el script `deploy.sh`.
+CREATE INDEX IF NOT EXISTS idx_posts_slug ON public.posts(slug);
+CREATE INDEX IF NOT EXISTS idx_posts_published ON public.posts(is_published, published_at);
+```

@@ -1,4 +1,4 @@
-# 🚀 Prompt Maestro de Instrucciones y Handoff — Claude Code
+# 🚀 Prompt Maestro de Instrucciones y Handoff v2.0 — Claude Code
 **Proyecto:** Reconstrucción Web Oficial — Dra. Paula Landaburo (Medicina Estética & Dermatología)  
 **Sitio:** `dralandaburo.com`  
 **Ambiente Staging:** [http://54.94.94.20:3000](http://54.94.94.20:3000)  
@@ -8,119 +8,90 @@
 
 ## 🎯 Tu Rol y Objetivo
 
-Sos **Claude Code**, el agente de desarrollo principal de este proyecto. Tu misión es:
-1. **Corregir con máxima prioridad los bugs críticos y de diseño** identificados durante la auditoría QA en vivo.
-2. **Implementar los módulos del alcance original que quedaron pendientes** (E-commerce / Tienda, Autenticación de Usuarios y Dashboards / Portales por Rol).
-3. **Mantener la integridad del build y de la identidad de marca** en cada commit.
+Sos **Claude Code**, el agente de desarrollo principal a cargo de este proyecto. Tu misión en esta fase es:
+1. **Implementar los nuevos paneles de administración y control por rol:**
+   * **FS-031:** Módulo de Gestión de Usuarios y Alta de Staff en `/dashboard/usuarios` (y forzar `/registro` exclusivo para Pacientes).
+   * **FS-032:** Navegación dinámica y Sidebar en Dashboard condicional según rol (`Admin` vs `Staff` vs `Paciente`).
+   * **FS-033:** Menú contextual en el Header (`UserMenu.tsx`) con accesos directos por rol.
+   * **FS-034:** Módulo de Gestión de Productos e Inventario en `/dashboard/productos`.
+   * **FS-035:** CMS de Blog en `/dashboard/blog` y conexión de páginas públicas `/blog` y `/blog/[slug]`.
+   * **FS-036:** Fix de autofill en inputs y contraste en botones de Login/Registro.
+2. **Resolver los tickets menores pendientes de Fase 1:**
+   * **FS-025:** Unificar estadísticas en `src/data/site-content.ts` para Home y `/sobre-mi`.
+   * **FS-N01:** Limpiar elemento flotante huérfano en sidebar de tratamientos.
+   * **FS-N02:** Ajustar espaciado responsive del botón flotante de WhatsApp.
 
 ---
 
-## 📚 Documentación Técnica Disponible en el Repo
+## 📚 Documentación Técnica en el Repositorio
 
-Antes de escribir código, leé estos archivos clave ya presentes en la raíz del repositorio:
-1. **`ESPECIFICACION_FUNCIONAL.md` (v1.0):** Especificación detallada de requerimientos, comportamiento esperado y criterios de aceptación para los tickets `FS-019` a `FS-N02`.
-2. **`HANDOFF.md`:** Arquitectura del proyecto, stack, convenciones y protocolo de despliegue.
-3. **`esquema_base_de_datos_supabase.md`:** Blueprint del modelo de datos de Supabase (tablas `profiles`, `patients`, `products`, `orders`, `payments`, `appointments`, `employee_tasks`, etc.).
-4. **`tasks.md`:** Backlog consolidado de tickets.
-
----
-
-## 🎨 Reglas Inviolables de Marca y Diseño
-
-Cualquier componente, vista o estilo que generes DEBE cumplir estrictamente:
-* **Paleta Oficial (Monocromática + Champagne):**
-  * Negro texto/fondo: `#1C1C1C` (`var(--color-negro)`)
-  * Gris medio: `#848484` (`var(--color-gris)`)
-  * Gris claro: `#D2D3D3` (`var(--color-gris-claro)`)
-  * Blanco: `#FFFFFF` (`var(--color-blanco)`)
-  * Champagne (acento): `#C5A47E` (`var(--color-champagne)`)
-* **Terminología Médica:** NUNCA usar *"clientes"* ni *"usuarios"*; usar siempre **"pacientes"**.
-* **Ética y Tono:** CERO descuentos, CERO urgencia artificial (sin countdowns ni cupones), CERO promesas de resultados milagrosos.
-* **Sin Dark Mode Toggle:** El sitio es monocromático fijo.
+Hacé `git pull origin master` y consultá estos archivos antes de codificar:
+1. **`ESPECIFICACION_FUNCIONAL.md` (v2.0):** Requerimientos técnicos y criterios de aceptación completos de todos los tickets.
+2. **`esquema_base_de_datos_supabase.md`:** Modelo de datos de Supabase.
+3. **`HANDOFF.md`:** Arquitectura del proyecto y protocolos de build.
 
 ---
 
-## 🛠️ Stack Tecnológico y Reglas de Código
-
-* **Framework:** Next.js `16.2.11` (App Router con Turbopack y React 19).
+## 🎨 Reglas de Marca Inviolables
+* **Paleta Oficial:** Negro `#1C1C1C` (`var(--color-negro)`), Gris `#848484`, Gris claro `#D2D3D3`, Blanco `#FFFFFF`, Champagne `#C5A47E` (`var(--color-champagne)`), Champagne oscuro `#A8875F`.
+* **Terminología:** NUNCA "clientes" ni "usuarios" → siempre **"pacientes"**.
+* **Ética Médica:** CERO descuentos agresivos, CERO urgencia artificial, CERO promesas milagrosas.
+* **Sin dark mode toggle** (identidad fija).
 * **Estilos:** CSS Modules (`*.module.css`) + variables en `src/app/globals.css`. **NO usar Tailwind CSS**.
-* **Iconos:** `lucide-react` (⚠️ **Importante:** verificar que el icono exista en la versión instalada antes de importar; el icono `Instagram` no existe en esta versión, usar SVG inline o alternativas).
-* **Base de Datos & Auth:** `@supabase/supabase-js` (credenciales disponibles en `.env.local`).
-* **Verificación:** SIEMPRE ejecutar `npm run build` localmente antes de hacer push para asegurar que no hay errores de TypeScript o Turbopack.
+* **Iconos:** `lucide-react` (⚠️ **Importante:** verificar que el icono exista; no importar `Instagram` de lucide, usar SVG inline).
 
 ---
 
-## 📋 Plan de Trabajo por Fases (Roadmap de Ejecución)
+## 📋 Plan de Desarrollo Detallado (Fase 2)
 
-### 🔴 FASE 1: Bugs Críticos de Frontend y Maquetación (Prioridad Inmediata)
+### 1. 👥 FS-031: Gestión de Usuarios (`/dashboard/usuarios`)
+* Crear `src/app/dashboard/usuarios/page.tsx` y `page.module.css`.
+* Tabla con: Nombre, Email, Fecha de creación y Selector de Rol (`admin`, `medico`, `operativo`, `cosmetologa`, `paciente`).
+* Al cambiar el rol en el selector, ejecutar un Server Action que actualice `public.profiles.role`.
+* Modal / Formulario para crear miembros del staff usando `supabase.auth.admin.createUser` desde Server Action.
+* Asegurar que `/registro` público solo permita registrar usuarios con rol `paciente`.
 
-1. **FS-019 — Navbar sin contraste / invisible sobre fondo claro:**
-   * **Archivo:** `src/components/layout/Header.tsx` y `Header.module.css`.
-   * **Problema:** En `/tratamientos` y páginas de tratamiento, el navbar renderiza letras blancas sobre fondo claro.
-   * **Fix:** Asegurar que el header tenga un fondo propio garantizado con blur opaco (`backdrop-filter: blur(12px)`, `background: rgba(255,255,255,0.92)`) al scrollear o en páginas claras, forzando texto y logo a `#1C1C1C`. Solo usar texto blanco cuando `scrolled === false` sobre heroes oscuros comprobados.
-2. **FS-023 — Eliminar texto de debug en hero de tratamientos:**
-   * **Archivo:** `src/app/tratamientos/[slug]/page.tsx` y `src/components/ui/Typewriter.tsx`.
-   * **Problema:** Aparece el texto `"Buscamos: confianza"` con cursor de edición en el hero.
-   * **Fix:** Remover este texto de placeholder de la plantilla para que las 10 páginas de tratamientos muestren solo información médica aprobada.
-3. **FS-024 — Acordeón de FAQ corta respuestas a la mitad:**
-   * **Archivo:** `src/components/tratamientos/TreatmentFAQ.tsx` y `TreatmentFAQ.module.css`.
-   * **Problema:** Al expandir una pregunta, la respuesta se trunca por `max-height` fijo o `overflow: hidden`.
-   * **Fix:** Utilizar `grid-template-rows: 0fr` → `1fr` o auto-height fluido para que la respuesta se despliegue al 100% de su contenido con transición suave.
-4. **FS-N01 — Elemento fantasma/input flotando sobre el sidebar:**
-   * **Archivo:** `src/app/tratamientos/[slug]/page.tsx`.
-   * **Problema:** En `/tratamientos/acido-hialuronico`, al scrollear al FAQ, aparece un recuadro vacío sobre la tarjeta de la doctora.
-   * **Fix:** Auditar posicionamiento `sticky`/`fixed` y limpiar elementos huérfanos del DOM.
-5. **FS-025 — Unificar Estadísticas en Fuente Única:**
-   * **Archivo:** `src/data/site-content.ts` y `src/components/home/StatsCounter.tsx`.
-   * **Fix:** Centralizar los 4 valores oficiales (`10+` Años cuidando la piel, `800+` Pacientes acompañados, `15+` Certificaciones, `100%` Enfoque humano) y consumirlos idénticos en Home y `/sobre-mi`.
+### 2. 🛡️ FS-032: Navegación Dinámica en Dashboard
+* Modificar `src/app/dashboard/layout.tsx` para que obtenga el rol del usuario conectado desde `profiles`.
+* Si `role === 'admin'`: mostrar enlaces `Ejecutivo`, `Operativo`, `Usuarios`, `Productos`, `Blog`.
+* Si `role === 'medico' | 'operativo' | 'cosmetologa'`: mostrar únicamente `Operativo`.
+* Si `role === 'paciente'`: redirigir a `/portal/paciente`.
+* Proteger subrutas en Server Components para rechazar accesos directos no autorizados con `redirect('/')`.
 
----
+### 3. 🔄 FS-033: Menú de Usuario Contextual en Header
+* Modificar `src/components/layout/UserMenu.tsx`:
+  * Si es `admin`: Mostrar *"Panel de Control"* (`/dashboard/ejecutivo`) + *"Mi Portal (Paciente)"* (`/portal/paciente`) + *"Cerrar sesión"*.
+  * Si es `medico`/`operativo`: Mostrar *"Panel Operativo"* (`/dashboard/operativo`) + *"Mi Portal (Paciente)"* (`/portal/paciente`) + *"Cerrar sesión"*.
+  * Si es `paciente`: Mostrar *"Mis Turnos y Compras"* (`/portal/paciente`) + *"Cerrar sesión"*.
 
-### 🟡 FASE 2: Ajustes de Diseño y Consistencia Visual
+### 4. 🛍️ FS-034: Gestión de Productos (`/dashboard/productos`)
+* Crear `src/app/dashboard/productos/page.tsx` y `page.module.css`.
+* Grilla/tabla de productos con imagen, nombre, marca, categoría, precio ARS, stock y toggle Activo/Inactivo.
+* Formulario de alta/edición de producto: subida de imagen, campos de precio, descripción y stock.
+* Modificación rápida de stock desde la tabla.
 
-1. **FS-027 — Jerarquía de CTAs:**
-   * **Archivo:** `src/components/layout/Header.tsx`, `Header.module.css`, `src/components/ui/Button.tsx`.
-   * **Fix:** El botón *"Agendar consulta"* del navbar debe tener fondo sólido champagne (`#C5A47E`) con texto `#1C1C1C` o `#FFFFFF` en todo el sitio. En cada vista, máximo 1 botón sólido en el viewport inicial.
-2. **FS-028 — Esquinas redondeadas en botones (`border-radius: 6px`):**
-   * **Archivo:** `src/components/ui/Button.module.css` (y botones en Header, Footer, Hero, Tarjetas).
-   * **Fix:** Aplicar `border-radius: 6px` a todas las variantes de botones.
-3. **FS-N02 — Widget flotante de WhatsApp:**
-   * **Archivo:** `src/components/layout/WhatsAppButton.module.css`.
-   * **Fix:** Ajustar `bottom`/`right` seguro y z-index para evitar solapamientos con botones al pie.
+### 5. ✍️ FS-035: CMS de Blog (`/dashboard/blog` + `/blog` dinámico)
+* Crear `src/app/dashboard/blog/page.tsx` (listado y editor de artículos).
+* Tabla `public.posts` en Supabase (`id`, `slug`, `title`, `excerpt`, `content`, `cover_image_url`, `category`, `is_published`, `published_at`).
+* Conectar `src/app/blog/page.tsx` para listar posts publicados desde Supabase.
+* Conectar `src/app/blog/[slug]/page.tsx` para renderizar el artículo completo con SSR y metadata SEO.
 
----
-
-### 🟢 FASE 3: Módulos Pendientes del Alcance Original
-
-1. **E-commerce / Tienda Dermocosmética (`/tienda`):**
-   * **Archivos a crear:**
-     * `src/data/products.ts` (catálogo de los 24 productos dermocosméticos con nombre, slug, precio en ARS, descripción e imagen).
-     * `src/app/tienda/page.tsx` y `page.module.css` (grilla de productos con filtro por categoría y botón *"Agregar al carrito"*).
-     * `src/context/CartContext.tsx` o Zustand (estado global del carrito persistido en `localStorage`).
-     * `src/app/tienda/carrito/page.tsx` (resumen de pedido y botón de checkout).
-     * Integración con **MercadoPago Checkout Pro** (Sandbox para pruebas) y webhook en `src/app/api/webhook/mercadopago/route.ts` para registrar pedidos en Supabase tabla `orders`.
-     * Badge numérico de items en el ícono del carrito en el header.
-2. **Sistema de Autenticación & Control de Acceso (Supabase Auth):**
-   * **Archivos a crear:**
-     * `src/lib/supabase.ts` (cliente browser con `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`).
-     * `src/lib/supabase-server.ts` (cliente server).
-     * `src/app/login/page.tsx` (formulario de inicio de sesión con email y contraseña).
-     * `src/app/register/page.tsx` (registro de pacientes con rol por defecto `paciente`).
-     * `src/middleware.ts` (protección de rutas `/dashboard/*` y `/portal/*` redirigiendo a `/login` si no hay sesión).
-     * Botón *"Ingresar"* en el header derecho (muestra iniciales/avatar + dropdown *"Mi Perfil"* / *"Cerrar sesión"* si está autenticado).
-3. **Dashboards y Portales Privados por Rol:**
-   * **Dashboard Ejecutivo (`/dashboard/ejecutivo` — solo rol `admin`):** Métricas financieras (facturación ARS/USD desde tabla `payments`), comisiones Dra. vs Mercedes (30%), stock de productos con alertas `< 5 un.`, KPIs de pacientes RFM.
-   * **Dashboard Operativo (`/dashboard/operativo` — roles `admin`, `medico`, `operativo`):** Tareas del día asignadas (`employee_tasks`), buscador de tratamientos, manuales de equipo.
-   * **Portal Paciente (`/portal/paciente` — rol `paciente`):** Historial de turnos (`appointments`), compras de productos y gift cards activas.
+### 6. 🎨 FS-036: Fix Autofill y Contraste en Login
+* Modificar `src/components/auth/LoginForm.module.css` y `RegisterForm.module.css` agregando:
+  ```css
+  .input:-webkit-autofill,
+  .input:-webkit-autofill:hover, 
+  .input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--color-blanco) !important;
+    -webkit-box-shadow: 0 0 0px 1000px #222 inset !important;
+    transition: background-color 5000s ease-in-out 0s;
+  }
+  ```
+* Asegurar que `.submitBtn` tenga contraste champagne sólido permanente con texto legible en cualquier estado.
 
 ---
 
-## 🚀 Flujo de Trabajo y Entrega
-
-1. **Pull inicial:** `git pull origin master` para asegurarte de tener la última versión.
-2. **Desarrollo por rama o directo en master con commits atómicos:**
-   * Ej: `fix(navbar): guarantee background blur and contrast on light pages (FS-019)`
-   * Ej: `feat(shop): implement /tienda catalog and cart context (FS-020)`
-3. **Compilación limpia:** `npm run build` debe dar código de salida `0` con 0 errores.
-4. **Push a GitHub:** `git push origin master`.
-5. **Aviso:** Una vez pusheado, notificar para que Antigravity o el pipeline ejecute `deploy.sh` en el servidor EC2.
+## ⚠️ Reglas Obligatorias de Entrega
+1. Ejecutar `npm run build` localmente y verificar que termine con **0 errores** antes de cada commit.
+2. Hacer commits atómicos claros (ej: `feat(users): add /dashboard/usuarios staff management (FS-031)`).
+3. Pushear a `origin master` (`https://github.com/stinmeister/dra.landaburo.git`).
