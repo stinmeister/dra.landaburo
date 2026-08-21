@@ -81,17 +81,6 @@
   margin-bottom: 1rem;
 }
 
-/* TASK-010 */
-.typewriterLine {
-  font-family: var(--font-body), sans-serif;
-  font-size: 0.9rem;
-  color: rgba(255,255,255,0.5);
-  letter-spacing: 0.04em;
-  margin: 0;
-}
-
-.typewriter { color: var(--color-champagne); }
-
 /* ── Content ── */
 .contentSection { padding: 5rem 0; }
 

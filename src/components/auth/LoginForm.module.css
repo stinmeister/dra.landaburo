@@ -48,6 +48,15 @@
   color: var(--color-gris);
 }
 
+/* Evita que el autofill del navegador pinte fondo blanco/celeste sobre el input oscuro */
+.input:-webkit-autofill,
+.input:-webkit-autofill:hover,
+.input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--color-blanco) !important;
+  -webkit-box-shadow: 0 0 0px 1000px #222 inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
 .input:focus {
   border-color: var(--color-champagne);
   background-color: rgba(255, 255, 255, 0.09);

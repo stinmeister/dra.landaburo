@@ -85,18 +85,30 @@
   flex-direction: column;
 }
 
-.dropdownName {
-  padding: 0.6rem 1rem;
-  font-family: var(--font-sans);
-  font-size: var(--text-xs);
-  font-weight: 500;
-  color: var(--color-gris);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+.dropdownHeader {
+  padding: 0.65rem 1rem 0.55rem;
   border-bottom: 1px solid var(--color-gris-claro);
+}
+
+.dropdownName {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-negro);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin: 0 0 0.2rem;
+}
+
+.dropdownBadge {
+  display: inline-block;
+  font-family: var(--font-sans);
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-champagne);
 }
 
 .dropdownItem {
@@ -117,4 +129,14 @@
 .dropdownItem:hover {
   background-color: rgba(197, 164, 126, 0.08);
   color: var(--color-champagne-dark);
+}
+
+.dropdownSignOut {
+  border-top: 1px solid var(--color-gris-claro);
+  color: var(--color-gris);
+}
+
+.dropdownSignOut:hover {
+  background-color: rgba(197, 80, 80, 0.06);
+  color: #c55050;
 }

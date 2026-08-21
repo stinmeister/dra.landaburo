@@ -1,0 +1,119 @@
+.page { display: flex; flex-direction: column; gap: 2.5rem; }
+
+.header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+
+.title {
+  font-family: var(--font-serif);
+  font-size: 1.75rem;
+  font-weight: 400;
+  color: var(--color-negro);
+  margin: 0 0 0.25rem;
+}
+
+.subtitle { font-family: var(--font-sans); font-size: var(--text-sm); color: var(--color-gris); }
+
+/* ── Tabla ── */
+.tableWrap { overflow-x: auto; border: 1px solid var(--color-gris-claro); border-radius: var(--radius-md); }
+
+.table { width: 100%; border-collapse: collapse; font-family: var(--font-sans); font-size: var(--text-sm); }
+
+.table th {
+  text-align: left; padding: 0.75rem 1rem;
+  font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--color-gris); border-bottom: 1px solid var(--color-gris-claro);
+  white-space: nowrap; background: #fafafa;
+}
+
+.table td {
+  padding: 0.8rem 1rem;
+  color: var(--color-negro);
+  border-bottom: 1px solid var(--color-gris-claro);
+  vertical-align: middle;
+}
+
+.table tr:last-child td { border-bottom: none; }
+
+.rowInactive td { opacity: 0.5; }
+
+.nameCell { font-weight: 500; }
+.productName { display: block; }
+.catCell, .priceCell { color: var(--color-gris); white-space: nowrap; }
+.emptyCell { text-align: center; color: var(--color-gris); padding: 2rem !important; }
+
+.stockOk { color: var(--color-negro); white-space: nowrap; }
+.stockLow { color: #c55050; font-weight: 600; white-space: nowrap; display: flex; align-items: center; gap: 0.4rem; }
+
+.alertDot {
+  display: inline-block; width: 7px; height: 7px;
+  background-color: #c55050; border-radius: 50%;
+}
+
+/* Toggle active/pause */
+.activeBtn, .pauseBtn {
+  padding: 0.3rem 0.7rem;
+  border: none; border-radius: 999px;
+  font-family: var(--font-sans); font-size: 0.7rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  cursor: pointer; transition: opacity 0.2s;
+}
+.activeBtn { background: rgba(80, 170, 120, 0.15); color: #267a56; }
+.pauseBtn  { background: rgba(150,150,150,0.12); color: var(--color-gris); }
+.activeBtn:hover, .pauseBtn:hover { opacity: 0.75; }
+
+/* Stock +/- */
+.stockRow { display: flex; gap: 0.35rem; }
+
+.deltaBtn {
+  width: 28px; height: 28px;
+  border: 1px solid var(--color-gris-claro); border-radius: var(--radius-md);
+  background: var(--color-blanco); font-size: 1rem; font-weight: 600;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+.deltaBtn:hover:not(:disabled) { border-color: var(--color-champagne); color: var(--color-champagne); }
+.deltaBtn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* ── Nuevo producto ── */
+.newProduct {
+  background: var(--color-blanco);
+  border: 1px solid var(--color-gris-claro);
+  border-radius: var(--radius-md);
+  padding: 1.75rem;
+}
+
+.sectionTitle { font-family: var(--font-serif); font-size: 1.25rem; font-weight: 400; color: var(--color-negro); margin: 0 0 1.25rem; }
+
+.newForm { display: flex; flex-direction: column; gap: 1.25rem; }
+
+.formGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+@media (max-width: 600px) { .formGrid { grid-template-columns: 1fr; } }
+
+.colSpan2 { grid-column: span 2; }
+@media (max-width: 600px) { .colSpan2 { grid-column: span 1; } }
+
+.field { display: flex; flex-direction: column; gap: 0.35rem; }
+
+.label {
+  font-family: var(--font-sans);
+  font-size: 0.7rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--color-gris);
+}
+
+.input {
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--color-gris-claro); border-radius: var(--radius-md);
+  font-family: var(--font-sans); font-size: var(--text-sm);
+  color: var(--color-negro); background: var(--color-blanco);
+  outline: none; transition: border-color var(--transition-fast);
+}
+.input:focus { border-color: var(--color-champagne); }
+
+.createBtn {
+  align-self: flex-start;
+  padding: 0.7rem 1.5rem;
+  background-color: var(--color-negro); border: none; border-radius: var(--radius-md);
+  font-family: var(--font-sans); font-size: var(--text-sm); font-weight: 600;
+  color: var(--color-blanco); cursor: pointer; transition: background-color var(--transition-fast);
+}
+.createBtn:hover { background-color: #333; }

@@ -1,0 +1,181 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: 1.75rem;
+  font-weight: 400;
+  color: var(--color-negro);
+  margin: 0 0 0.25rem;
+}
+
+.subtitle {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-gris);
+}
+
+/* ── Tabla ── */
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-gris-claro);
+  border-radius: var(--radius-md);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+}
+
+.table th {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-gris);
+  border-bottom: 1px solid var(--color-gris-claro);
+  white-space: nowrap;
+  background-color: #fafafa;
+}
+
+.table td {
+  padding: 0.8rem 1rem;
+  color: var(--color-negro);
+  border-bottom: 1px solid var(--color-gris-claro);
+  vertical-align: middle;
+}
+
+.table tr:last-child td { border-bottom: none; }
+
+.nameCell { font-weight: 500; }
+.emailCell { color: var(--color-gris); }
+.dateCell  { color: var(--color-gris); white-space: nowrap; }
+.emptyCell { text-align: center; color: var(--color-gris); padding: 2rem !important; }
+
+/* Role badge */
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.badge_admin       { background: rgba(197, 164, 126, 0.15); color: #8b6d42; }
+.badge_medico      { background: rgba(80, 150, 197, 0.12); color: #2a6fa8; }
+.badge_operativo   { background: rgba(80, 170, 120, 0.12); color: #267a56; }
+.badge_cosmetologa { background: rgba(180, 80, 197, 0.12); color: #8b3a9f; }
+.badge_paciente    { background: rgba(150, 150, 150, 0.12); color: var(--color-gris); }
+
+/* Role change inline form */
+.roleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.roleSelect {
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--color-gris-claro);
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-negro);
+  background: var(--color-blanco);
+  cursor: pointer;
+}
+
+.saveBtn {
+  padding: 0.35rem 0.75rem;
+  background-color: var(--color-champagne);
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-negro);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--transition-fast);
+}
+.saveBtn:hover { background-color: var(--color-champagne-dark); color: var(--color-blanco); }
+
+/* ── Nuevo miembro ── */
+.newMember {
+  background: var(--color-blanco);
+  border: 1px solid var(--color-gris-claro);
+  border-radius: var(--radius-md);
+  padding: 1.75rem;
+}
+
+.sectionTitle {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-weight: 400;
+  color: var(--color-negro);
+  margin: 0 0 1.25rem;
+}
+
+.newForm { display: flex; flex-direction: column; gap: 1.25rem; }
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 600px) { .formGrid { grid-template-columns: 1fr; } }
+
+.field { display: flex; flex-direction: column; gap: 0.35rem; }
+
+.label {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-gris);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.7rem;
+}
+
+.input {
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--color-gris-claro);
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-negro);
+  background: var(--color-blanco);
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+.input:focus { border-color: var(--color-champagne); }
+
+.createBtn {
+  align-self: flex-start;
+  padding: 0.7rem 1.5rem;
+  background-color: var(--color-negro);
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-blanco);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+.createBtn:hover { background-color: #333; }

@@ -1,0 +1,104 @@
+.main { min-height: 100vh; background-color: var(--color-blanco, #fff); }
+
+/* Hero */
+.hero {
+  position: relative;
+  min-height: 420px;
+  background-color: var(--color-negro);
+  display: flex; align-items: flex-end;
+  overflow: hidden;
+}
+
+.heroBg { object-fit: cover; object-position: center; filter: brightness(0.55); }
+
+.heroOverlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(28,28,28,0.92) 0%, rgba(28,28,28,0.3) 60%, transparent 100%);
+  z-index: 1;
+}
+
+.heroContainer {
+  position: relative; z-index: 2;
+  max-width: 800px; margin: 0 auto;
+  padding: 0 2rem 3.5rem;
+  display: flex; flex-direction: column; gap: 0.75rem;
+}
+
+.backLink {
+  font-family: var(--font-body), sans-serif;
+  font-size: 0.8rem; color: rgba(255,255,255,0.6);
+  text-decoration: none; text-transform: uppercase; letter-spacing: 0.08em;
+  transition: color 0.2s;
+}
+.backLink:hover { color: var(--color-champagne); }
+
+.category {
+  font-family: var(--font-body), sans-serif;
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--color-champagne);
+}
+
+.title {
+  font-family: var(--font-heading), serif;
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  color: var(--color-blanco); font-weight: 400; line-height: 1.2;
+  margin: 0;
+}
+
+.excerpt {
+  font-family: var(--font-body), sans-serif;
+  font-size: 1.05rem; color: rgba(255,255,255,0.7); line-height: 1.55;
+  margin: 0;
+}
+
+.date {
+  font-family: var(--font-body), sans-serif;
+  font-size: 0.8rem; color: rgba(255,255,255,0.5);
+}
+
+/* Article */
+.article { padding: 4rem 0 6rem; }
+
+.container { max-width: 800px; margin: 0 auto; padding: 0 2rem; }
+
+.content {
+  font-family: var(--font-body), sans-serif;
+  font-size: 1.05rem; color: var(--color-negro); line-height: 1.8;
+  display: flex; flex-direction: column; gap: 1.25rem;
+  margin-bottom: 3rem;
+}
+
+/* Firma */
+.signature {
+  padding: 1.5rem 0;
+  border-top: 1px solid var(--color-gris-claro);
+  border-bottom: 1px solid var(--color-gris-claro);
+  margin-bottom: 3rem;
+}
+
+.signatureName {
+  font-family: var(--font-heading), serif;
+  font-size: 1.1rem; font-weight: 400;
+  color: var(--color-negro); margin: 0 0 0.2rem;
+}
+
+.signatureRole {
+  font-family: var(--font-body), sans-serif;
+  font-size: 0.85rem; color: var(--color-gris); margin: 0;
+}
+
+/* CTA */
+.cta {
+  background: #f7f7f7; padding: 2.5rem; text-align: center;
+}
+
+.cta h2 {
+  font-family: var(--font-heading), serif;
+  font-size: 1.5rem; font-weight: 400;
+  color: var(--color-negro); margin: 0 0 0.5rem;
+}
+
+.cta p {
+  font-family: var(--font-body), sans-serif;
+  color: var(--color-gris); margin: 0 0 1.5rem;
+}
