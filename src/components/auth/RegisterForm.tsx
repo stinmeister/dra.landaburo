@@ -36,11 +36,17 @@ export default function RegisterForm() {
 
     const supabase = createClient();
 
+    const emailRedirectTo =
+      typeof window !== 'undefined'
+        ? `${window.location.origin}/auth/callback?next=/portal/paciente`
+        : undefined;
+
     const { error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { full_name: fullName },
+        emailRedirectTo,
       },
     });
 
