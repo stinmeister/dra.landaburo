@@ -24,7 +24,7 @@ export default async function ProductosPage() {
   const admin = createAdminClient();
   const { data: products } = await admin
     .from('products')
-    .select('id, name, category, price_ars, stock_quantity, min_stock_alert, is_active, image_url')
+    .select('id, name, category, price_ars, stock_quantity, is_active, image_url')
     .order('created_at', { ascending: false });
 
   const rows = products ?? [];
@@ -58,7 +58,7 @@ export default async function ProductosPage() {
               </tr>
             )}
             {rows.map((p) => {
-              const lowStock = (p.stock_quantity ?? 0) < (p.min_stock_alert ?? 5);
+              const lowStock = (p.stock_quantity ?? 0) < 5;
               return (
                 <tr key={p.id} className={!p.is_active ? styles.rowInactive : ''}>
                   <td className={styles.nameCell}>
