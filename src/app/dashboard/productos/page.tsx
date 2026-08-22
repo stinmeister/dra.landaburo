@@ -1,8 +1,9 @@
 // /dashboard/productos — Solo admin. Catálogo e inventario de dermocosméticos.
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
-import { createClient as createAdminClient } from '@supabase/supabase-js';
+
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createProduct, toggleProduct, updateStock } from './actions';
 import styles from './page.module.css';
 
@@ -20,11 +21,7 @@ export default async function ProductosPage() {
   const { data: selfProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
   if (selfProfile?.role !== 'admin') redirect('/dashboard/operativo');
 
-  const admin = createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
+  const admin = createAdminClient();
   const { data: products } = await admin
     .from('products')
     .select('id, name, category, price_ars, stock_quantity, min_stock_alert, is_active, image_url')

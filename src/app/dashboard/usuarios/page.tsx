@@ -2,7 +2,7 @@
 // Permite crear nuevos miembros del equipo (staff) via modal.
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
-import { createClient as createAdminClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { changeUserRole, createStaffUser } from './actions';
 import styles from './page.module.css';
@@ -34,11 +34,7 @@ export default async function UsuariosPage() {
   if (selfProfile?.role !== 'admin') redirect('/dashboard/operativo');
 
   // Leer todos los profiles con admin client para bypasear RLS
-  const admin = createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
+  const admin = createAdminClient();
   const { data: profiles } = await admin
     .from('profiles')
     .select('id, email, full_name, role, created_at')

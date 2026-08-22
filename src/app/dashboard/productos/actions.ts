@@ -1,16 +1,10 @@
 'use server';
 import { revalidatePath } from 'next/cache';
-import { createClient as createAdminClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
-function getAdminClient() {
-  return createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
+
 
 async function assertAdmin() {
   const supabase = await createClient();
@@ -44,7 +38,7 @@ export async function createProduct(formData: FormData) {
   if (!name || !category || isNaN(price_ars)) return;
 
   const slug = slugify(name);
-  const admin = getAdminClient();
+  const admin = createAdminClient();
 
   await admin.from('products').insert({
     name, slug, category, price_ars,
@@ -64,7 +58,7 @@ export async function toggleProduct(formData: FormData) {
 
   if (!id) return;
 
-  const admin = getAdminClient();
+  const admin = createAdminClient();
   await admin.from('products').update({ is_active: !isActive }).eq('id', id);
 
   revalidatePath('/dashboard/productos');
@@ -79,7 +73,7 @@ export async function updateStock(formData: FormData) {
 
   if (!id || isNaN(delta)) return;
 
-  const admin = getAdminClient();
+  const admin = createAdminClient();
   const { data } = await admin.from('products').select('stock_quantity').eq('id', id).single();
   if (!data) return;
 

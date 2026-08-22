@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { createClient as createAdminClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { deletePost } from './actions';
 import styles from './page.module.css';
@@ -17,11 +17,7 @@ export default async function BlogDashPage() {
   const { data: selfProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
   if (selfProfile?.role !== 'admin') redirect('/dashboard/operativo');
 
-  const admin = createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
+  const admin = createAdminClient();
   const { data: posts } = await admin
     .from('posts')
     .select('id, slug, title, category, is_published, published_at, created_at')

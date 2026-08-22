@@ -1,20 +1,8 @@
 'use server';
-// Server Actions para gestión de usuarios — solo ejecutables desde el servidor.
-// Requieren SUPABASE_SERVICE_ROLE_KEY (admin client) para:
-//   - Cambiar roles de profiles (bypasea RLS de "solo admin puede actualizar").
-//   - Crear usuarios de staff via auth.admin.createUser (no requiere email confirmation).
 import { revalidatePath } from 'next/cache';
-import { createClient as createAdminClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-
-function getAdminClient() {
-  return createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
 
 async function assertAdmin() {
   const supabase = await createClient();
@@ -38,9 +26,8 @@ export async function changeUserRole(formData: FormData) {
   const validRoles = ['admin', 'medico', 'operativo', 'cosmetologa', 'paciente'];
   if (!userId || !validRoles.includes(newRole)) return;
 
-  const admin = getAdminClient();
+  const admin = createAdminClient();
 
-  // Verificar que no se está degradando el único admin
   if (newRole !== 'admin') {
     const { count } = await admin
       .from('profiles')
@@ -69,9 +56,8 @@ export async function createStaffUser(formData: FormData) {
   const staffRoles = ['admin', 'medico', 'operativo', 'cosmetologa'];
   if (!fullName || !email || !password || !staffRoles.includes(role)) return;
 
-  const admin = getAdminClient();
+  const admin = createAdminClient();
 
-  // Crea el usuario en auth sin requerir confirmación de email
   const { data: authData, error: authError } = await admin.auth.admin.createUser({
     email,
     password,
@@ -81,12 +67,15 @@ export async function createStaffUser(formData: FormData) {
 
   if (authError || !authData.user) return;
 
-  // El trigger handle_new_user ya crea el profile con role='paciente'.
-  // Actualizamos el role y full_name al valor deseado.
+  // Upsert profile con email incluido (la tabla profiles tiene email NOT NULL)
   await admin
     .from('profiles')
-    .update({ role, full_name: fullName })
-    .eq('id', authData.user.id);
+    .upsert({
+      id: authData.user.id,
+      email,
+      full_name: fullName,
+      role,
+    });
 
   revalidatePath('/dashboard/usuarios');
 }

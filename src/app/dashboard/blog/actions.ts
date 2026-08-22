@@ -1,16 +1,10 @@
 'use server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { createClient as createAdminClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 
-function getAdminClient() {
-  return createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
+
 
 async function assertAdmin() {
   const supabase = await createClient();
@@ -46,7 +40,7 @@ export async function savePost(formData: FormData) {
 
   if (!title) return;
 
-  const admin = getAdminClient();
+  const admin = createAdminClient();
   const now = new Date().toISOString();
 
   if (id) {
@@ -74,7 +68,7 @@ export async function deletePost(formData: FormData) {
   await assertAdmin();
   const id = formData.get('id') as string;
   if (!id) return;
-  const admin = getAdminClient();
+  const admin = createAdminClient();
   await admin.from('posts').delete().eq('id', id);
   revalidatePath('/blog');
   revalidatePath('/dashboard/blog');
