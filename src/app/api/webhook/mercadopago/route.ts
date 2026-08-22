@@ -18,7 +18,8 @@ const MP_STATUS_MAP: Record<string, string> = {
 };
 
 function verifySignature(
-  rawBody: string,
+  paymentId: string | number,
+  requestId: string,
   signature: string | null,
   secret: string
 ): boolean {
@@ -30,7 +31,9 @@ function verifySignature(
 
   const ts = tsMatch[1];
   const expectedHash = v1Match[1];
-  const payload = `id:${rawBody};request-id:;ts:${ts};`;
+  // Formato correcto según docs de MP:
+  // id:<payment_id>;request-id:<x-request-id>;ts:<timestamp>;
+  const payload = `id:${paymentId};request-id:${requestId};ts:${ts};`;
   const computed = createHmac('sha256', secret).update(payload).digest('hex');
   return computed === expectedHash;
 }
@@ -73,10 +76,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Configuración incompleta.' }, { status: 503 });
   }
 
-  // Verificar firma si hay secret configurado
+  // Verificar firma si hay secret configurado.
+  // Usamos paymentId y x-request-id (no el rawBody) según el formato correcto de MP.
   if (settings.mp_webhook_secret) {
     const signature = req.headers.get('x-signature');
-    if (!verifySignature(rawBody, signature, settings.mp_webhook_secret)) {
+    const requestId = req.headers.get('x-request-id') ?? '';
+    if (!verifySignature(paymentId, requestId, signature, settings.mp_webhook_secret)) {
       console.warn('[Webhook/MP] Firma inválida — posible request no legítimo.');
       return NextResponse.json({ error: 'Firma inválida.' }, { status: 401 });
     }

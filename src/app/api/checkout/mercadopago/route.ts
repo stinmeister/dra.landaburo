@@ -65,6 +65,22 @@ export async function POST(req: NextRequest) {
     }
   );
 
+  // SEGURIDAD: nunca confiar en el precio enviado por el cliente.
+  // Buscamos el precio real de cada producto directamente en la BD.
+  const productIds = items.map((i) => i.id);
+  const { data: dbProducts, error: productsError } = await supabase
+    .from('products')
+    .select('id, price_ars')
+    .in('id', productIds);
+
+  if (productsError || !dbProducts || dbProducts.length !== productIds.length) {
+    console.error('[Checkout/MP] No se pudieron verificar precios de productos:', productsError);
+    return NextResponse.json({ error: 'Producto no encontrado.' }, { status: 400 });
+  }
+
+  // Construimos un mapa id → price_ars para acceso O(1) al armar los items
+  const priceMap = new Map<string, number>(dbProducts.map((p) => [p.id, p.price_ars]));
+
   // Leer configuración de MercadoPago desde app_settings
   const { data: settings, error: settingsError } = await supabase
     .from('app_settings')
@@ -79,8 +95,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Calcular total
-  const totalARS = items.reduce((sum, i) => sum + i.price_ars * i.quantity, 0);
+  // Calcular total usando precios de la BD, no del cliente
+  const totalARS = items.reduce((sum, i) => sum + priceMap.get(i.id)! * i.quantity, 0);
 
   // Crear orden en Supabase
   const { data: order, error: orderError } = await supabase
@@ -102,14 +118,17 @@ export async function POST(req: NextRequest) {
   }
 
   // Insertar items de la orden
-  const orderItems = items.map((i) => ({
-    order_id: order.id,
-    product_id: i.id,
-    product_name: i.name,
-    quantity: i.quantity,
-    unit_price_ars: i.price_ars,
-    subtotal_ars: i.price_ars * i.quantity,
-  }));
+  const orderItems = items.map((i) => {
+    const unitPrice = priceMap.get(i.id)!;
+    return {
+      order_id: order.id,
+      product_id: i.id,
+      product_name: i.name,
+      quantity: i.quantity,
+      unit_price_ars: unitPrice,
+      subtotal_ars: unitPrice * i.quantity,
+    };
+  });
 
   const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
   if (itemsError) {
@@ -125,7 +144,7 @@ export async function POST(req: NextRequest) {
       id: i.id,
       title: i.name,
       quantity: i.quantity,
-      unit_price: i.price_ars,
+      unit_price: priceMap.get(i.id)!, // precio verificado desde la BD
       currency_id: 'ARS',
     })),
     payer: {
