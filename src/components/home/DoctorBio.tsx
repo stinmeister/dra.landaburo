@@ -24,8 +24,8 @@ export default function DoctorBio() {
         <ScrollAnimation animation="fade-in" delay={0.2} className={styles.imageContent}>
           <div className={styles.imageWrapper}>
             <Image
-              src="/images/WhatsApp-Image-2025-12-02-at-07.57.55_6c32d005.jpg"
-              alt="Dra. Landaburo"
+              src="/images/Dra.Landaburo.png"
+              alt="Dra. Paula Landaburo"
               fill
               className={styles.image}
               sizes="(max-width: 768px) 100vw, 55vw"

@@ -146,7 +146,7 @@ export default async function TreatmentDetailPage({ params }: Props) {
                   <div className={styles.doctorCard}>
                     <div className={styles.doctorPhoto}>
                       <Image
-                        src="/images/WhatsApp-Image-2025-12-02-at-07.57.55_6c32d005.jpg"
+                        src="/images/Dra.Landaburo.png"
                         alt="Dra. Paula Landaburo"
                         fill
                         className={styles.doctorImg}

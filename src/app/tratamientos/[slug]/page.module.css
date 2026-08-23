@@ -139,11 +139,11 @@
 
 .doctorPhoto {
   position: relative;
-  height: 220px;
+  height: 240px;
   background-color: var(--color-gris-claro);
 }
 
-.doctorImg { object-fit: cover; object-position: top center; }
+.doctorImg { object-fit: cover; object-position: center 20%; }
 
 .doctorInfo { padding: 1.5rem; }
 

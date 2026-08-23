@@ -28,10 +28,10 @@ export default function SobreMiPage() {
               <div className={styles.imageContainer}>
                 <div className={styles.imageWrapper}>
                   <Image 
-                    src="/images/WhatsApp-Image-2025-12-02-at-07.57.55_6c32d005.jpg"
+                    src="/images/Dra.Landaburo.png"
                     alt="Dra. Paula Landaburo"
                     fill
-                    style={{ objectFit: 'cover' }}
+                    style={{ objectFit: 'cover', objectPosition: 'center 20%' }}
                     priority
                   />
                 </div>
