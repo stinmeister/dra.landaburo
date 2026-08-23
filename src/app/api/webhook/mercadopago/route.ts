@@ -53,10 +53,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  const paymentId = (notification.data as Record<string, unknown>)?.id ?? notification.id;
-  if (!paymentId) {
+  const rawPaymentId = (notification.data as Record<string, unknown>)?.id ?? notification.id;
+  if (!rawPaymentId) {
     return NextResponse.json({ error: 'payment_id faltante.' }, { status: 400 });
   }
+  const paymentId = String(rawPaymentId);
 
   // Supabase con service role para actualizar órdenes
   const supabase = createServerClient(
