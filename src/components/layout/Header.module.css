@@ -37,12 +37,48 @@
 }
 
 .logo {
-  font-family: var(--font-serif);
-  font-size: 1.5rem;
-  font-weight: 400;
-  color: var(--color-blanco);
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
   text-decoration: none;
+  color: var(--color-blanco);
   transition: color 0.3s ease;
+}
+
+.logoIcon {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+  transition: filter 0.3s ease;
+}
+
+.scrolled .logoIcon,
+.header.lightPage .logoIcon {
+  filter: none;
+}
+
+.logoTextGroup {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.logoTitle {
+  font-family: var(--font-serif);
+  font-size: 1.3rem;
+  font-weight: 400;
+  color: inherit;
+  letter-spacing: -0.01em;
+}
+
+.logoSubtitle {
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: inherit;
+  opacity: 0.85;
 }
 
 .scrolled .logo {

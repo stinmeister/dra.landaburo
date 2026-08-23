@@ -26,11 +26,38 @@
 }
 
 .logo {
-  font-family: var(--font-playfair, serif);
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--color-negro, #000000);
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
   text-decoration: none;
+  color: var(--color-negro, #000000);
+}
+
+.logoIcon {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+
+.logoTextGroup {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.logoTitle {
+  font-family: var(--font-serif, serif);
+  font-size: 1.3rem;
+  font-weight: 400;
+  color: var(--color-negro, #000000);
+}
+
+.logoSubtitle {
+  font-family: var(--font-sans, sans-serif);
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--color-gris, #848484);
 }
 
 .closeBtn {

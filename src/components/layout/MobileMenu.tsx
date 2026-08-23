@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import Image from 'next/image';
 import { X, Phone, Mail } from 'lucide-react';
 import styles from './MobileMenu.module.css';
 import { navigation } from '@/data/navigation';
@@ -20,7 +21,17 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
     <div className={`${styles.overlay} ${isOpen ? styles.overlayOpen : ''}`}>
       <div className={styles.header}>
         <Link href="/" className={styles.logo} onClick={onClose}>
-          Dra. Landaburo
+          <Image
+            src="/images/cropped-ISO_LOGO-Editado-Editado.png"
+            alt="Logo Dra. Landaburo"
+            width={30}
+            height={30}
+            className={styles.logoIcon}
+          />
+          <div className={styles.logoTextGroup}>
+            <span className={styles.logoTitle}>Dra. Landaburo</span>
+            <span className={styles.logoSubtitle}>Dermatóloga</span>
+          </div>
         </Link>
         <button className={styles.closeBtn} onClick={onClose} aria-label="Cerrar menú">
           <X size={28} />

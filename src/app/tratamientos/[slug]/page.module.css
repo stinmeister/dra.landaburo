@@ -16,8 +16,8 @@
 
 .heroBg {
   object-fit: cover;
-  object-position: center 30%;
-  filter: brightness(0.6);
+  object-position: center 25%;
+  filter: brightness(0.65);
 }
 
 .heroOverlay {

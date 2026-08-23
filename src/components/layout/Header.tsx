@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import Image from 'next/image';
 import { ChevronDown, Menu } from 'lucide-react';
 import styles from './Header.module.css';
 import { navigation } from '@/data/navigation';
@@ -41,7 +42,18 @@ export default function Header() {
         <div className={styles.container}>
           {/* Columna izquierda: Logo */}
           <Link href="/" className={styles.logo}>
-            Dra. Landaburo
+            <Image
+              src="/images/cropped-ISO_LOGO-Editado-Editado.png"
+              alt="Logo Dra. Landaburo"
+              width={34}
+              height={34}
+              className={styles.logoIcon}
+              priority
+            />
+            <div className={styles.logoTextGroup}>
+              <span className={styles.logoTitle}>Dra. Landaburo</span>
+              <span className={styles.logoSubtitle}>Dermatóloga</span>
+            </div>
           </Link>
 
           {/* Columna central: Navegación */}

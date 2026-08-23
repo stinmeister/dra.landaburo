@@ -13,9 +13,9 @@
 .hero {
   padding: 8rem 0 6rem;
   text-align: center;
-  background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('/images/paciente-sometido-procedimiento-de-microagujas.jpg');
+  background-image: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('/images/Dra.Landaburo.png');
   background-size: cover;
-  background-position: center;
+  background-position: center 30%;
   background-attachment: fixed;
 }
 

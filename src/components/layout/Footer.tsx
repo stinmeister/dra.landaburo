@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { MapPin, Clock, Phone, Mail } from 'lucide-react';
 import styles from './Footer.module.css';
 
@@ -26,7 +27,17 @@ export default function Footer() {
         {/* Col 1 */}
         <div className={styles.col}>
           <Link href="/" className={styles.logo}>
-            Dra. Landaburo
+            <Image
+              src="/images/cropped-ISO_LOGO-Editado-Editado.png"
+              alt="Logo Dra. Landaburo"
+              width={34}
+              height={34}
+              className={styles.logoIcon}
+            />
+            <div className={styles.logoTextGroup}>
+              <span className={styles.logoTitle}>Dra. Landaburo</span>
+              <span className={styles.logoSubtitle}>Dermatóloga</span>
+            </div>
           </Link>
           <p className={styles.description}>
             Medicina estética avanzada. Tratamientos personalizados para pacientes, buscando resaltar la belleza natural con la más alta tecnología.
