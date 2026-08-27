@@ -4,13 +4,8 @@ export const siteContent = {
   siteUrl: 'https://www.dralandaburo.com',
 
   hero: {
-    badge: 'BIENVENIDOS',
-    title: 'MEDICINA ESTÉTICA CON ELEGANCIA Y CONFIANZA',
-    text: 'En mi consultorio encontrarás un espacio dedicado a realzar tu belleza de manera natural, con tratamientos médico-estéticos diseñados para acompañar cada etapa de tu vida. Mi compromiso es ofrecerte resultados personalizados, seguros y en armonía con tu esencia.',
-    cta: 'Conocé más sobre el consultorio',
-    ctaHref: '/sobre-mi',
-    secondaryCta: 'Conocé los tratamientos',
-    secondaryCtaHref: '/tratamientos',
+    title: 'Cada paciente es único y merece un acompañamiento profesional y humano.',
+    subtitle: 'Dra. Paula Landaburo — Medicina Estética',
   },
 
   welcome: {

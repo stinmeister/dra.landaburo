@@ -6,57 +6,47 @@ import { ChevronDown } from 'lucide-react';
 import ScrollAnimation from '@/components/ui/ScrollAnimation';
 
 export default function Hero() {
-  const { badge, title, text, cta, ctaHref, secondaryCta, secondaryCtaHref } = siteContent.hero;
+  const { title, subtitle } = siteContent.hero;
 
   return (
     <section className={styles.hero}>
-      {/* ── Columna izquierda: Foto del consultorio (Recepción y pared de madera) ── */}
-      <div className={styles.imageSide}>
-        <div className={styles.imageFrame}>
-          <Image
-            src="/images/consultorio-hero.jpg"
-            alt="Consultorio Dra. Paula Landaburo — Medicina Estética"
-            fill
-            priority
-            className={styles.consultorioImg}
-            sizes="(max-width: 992px) 100vw, 50vw"
-          />
-        </div>
-      </div>
-
-      {/* ── Columna derecha: Texto y llamada a la acción ── */}
+      {/* ── Columna izquierda: texto ── */}
       <div className={styles.textSide}>
         <div className={styles.shimmer} />
         <div className={styles.content}>
           <ScrollAnimation animation="fade-up" delay={0}>
-            <span className={styles.badge}>{badge || 'BIENVENIDOS'}</span>
+            <div className={styles.decorativeLine} />
+            <p className={styles.subtitle}>{subtitle}</p>
           </ScrollAnimation>
 
-          <ScrollAnimation animation="fade-up" delay={0.15}>
+          <ScrollAnimation animation="fade-up" delay={0.2}>
             <h1 className={styles.title}>{title}</h1>
           </ScrollAnimation>
 
-          <ScrollAnimation animation="fade-up" delay={0.3}>
-            <p className={styles.description}>{text}</p>
-          </ScrollAnimation>
-
-          <ScrollAnimation animation="fade-up" delay={0.45}>
+          <ScrollAnimation animation="fade-up" delay={0.4}>
             <div className={styles.actions}>
-              <Link href={ctaHref || '/sobre-mi'} className={styles.cta}>
-                {cta || 'Conocé más sobre el consultorio'}
+              <Link href="/tratamientos" className={styles.cta}>
+                Conocé los tratamientos
               </Link>
-              {secondaryCta && (
-                <Link href={secondaryCtaHref || '/tratamientos'} className={styles.secondaryCta}>
-                  {secondaryCta}
-                </Link>
-              )}
             </div>
           </ScrollAnimation>
         </div>
 
         <div className={styles.scrollIndicator}>
-          <ChevronDown className={styles.bounce} size={26} />
+          <ChevronDown className={styles.bounce} size={28} />
         </div>
+      </div>
+
+      {/* ── Columna derecha: foto del consultorio (pared de madera visible) ── */}
+      <div className={styles.imageSide}>
+        <Image
+          src="/images/WhatsApp-Image-2025-12-02-at-07.57.54_6715502b.jpg"
+          alt="Consultorio Dra. Paula Landaburo — Medicina Estética"
+          fill
+          priority
+          className={styles.portrait}
+        />
+        <div className={styles.imageOverlay} />
       </div>
 
       <div className={styles.waveContainer}>
