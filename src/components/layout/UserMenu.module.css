@@ -19,17 +19,23 @@
   color: var(--color-champagne);
 }
 
-/* When header is scrolled/light, adapt colours */
+/* When header is scrolled or on light pages, adapt colours to dark text */
+:global(header[class*="scrolled"]) .loginBtn,
+:global(header[class*="lightPage"]) .loginBtn,
 :global(.scrolled) .loginBtn,
 :global(.lightPage) .loginBtn {
-  color: var(--color-negro);
-  border-color: var(--color-gris);
+  color: var(--color-negro, #1C1C1C) !important;
+  border-color: rgba(28, 28, 28, 0.3) !important;
+  background-color: rgba(28, 28, 28, 0.04);
 }
 
+:global(header[class*="scrolled"]) .loginBtn:hover,
+:global(header[class*="lightPage"]) .loginBtn:hover,
 :global(.scrolled) .loginBtn:hover,
 :global(.lightPage) .loginBtn:hover {
-  border-color: var(--color-champagne);
-  color: var(--color-champagne-dark);
+  border-color: var(--color-champagne) !important;
+  color: var(--color-champagne-dark) !important;
+  background-color: rgba(197, 164, 126, 0.12);
 }
 
 /* Avatar button */

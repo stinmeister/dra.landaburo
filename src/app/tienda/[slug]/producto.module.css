@@ -65,13 +65,19 @@
   position: relative;
   width: 100%;
   aspect-ratio: 3 / 4;
-  background-color: var(--color-bg-alt);
+  background-color: #ffffff;
   border-radius: var(--radius-md);
+  border: 1px solid var(--color-gris-claro);
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
 }
 
 .mainImage {
-  object-fit: cover;
+  object-fit: contain;
+  mix-blend-mode: multiply;
 }
 
 .imageFallback {

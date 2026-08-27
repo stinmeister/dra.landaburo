@@ -48,6 +48,11 @@ export const metadata: Metadata = {
     description:
       'Consultorio de medicina estética en Gualeguaychú. Tratamientos personalizados de armonización facial y corporal.',
   },
+  icons: {
+    icon: '/images/cropped-ISO_LOGO-Editado-Editado.png',
+    shortcut: '/images/cropped-ISO_LOGO-Editado-Editado.png',
+    apple: '/images/cropped-ISO_LOGO-Editado-Editado.png',
+  },
   robots: {
     index: true,
     follow: true,

@@ -23,17 +23,22 @@
   position: relative;
   width: 100%;
   aspect-ratio: 3 / 4;
-  background-color: var(--color-bg-alt);
+  background-color: #ffffff;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
 }
 
 .image {
-  object-fit: cover;
+  object-fit: contain;
+  mix-blend-mode: multiply;
   transition: transform 0.4s ease;
 }
 
 .card:hover .image {
-  transform: scale(1.03);
+  transform: scale(1.05);
 }
 
 .imageFallback {

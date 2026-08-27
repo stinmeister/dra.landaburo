@@ -3,7 +3,7 @@ import { MapPin, Phone, Mail, Clock } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import WhatsAppButton from '@/components/layout/WhatsAppButton';
-import { Button } from '@/components/ui/Button';
+import ContactForm from '@/components/contacto/ContactForm';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
@@ -28,34 +28,7 @@ export default function ContactoPage() {
         <section className={styles.contactSection}>
           <div className={styles.container}>
             <div className={styles.grid}>
-              <div className={styles.formContainer}>
-                <h2 className={styles.sectionTitle}>Envianos un mensaje</h2>
-                <form className={styles.form}>
-                  <div className={styles.formGroup}>
-                    <label htmlFor="name" className={styles.label}>Nombre completo</label>
-                    <input type="text" id="name" className={styles.input} required />
-                  </div>
-                  
-                  <div className={styles.formGroup}>
-                    <label htmlFor="email" className={styles.label}>Email</label>
-                    <input type="email" id="email" className={styles.input} required />
-                  </div>
-                  
-                  <div className={styles.formGroup}>
-                    <label htmlFor="phone" className={styles.label}>Teléfono</label>
-                    <input type="tel" id="phone" className={styles.input} />
-                  </div>
-                  
-                  <div className={styles.formGroup}>
-                    <label htmlFor="message" className={styles.label}>Mensaje</label>
-                    <textarea id="message" rows={5} className={styles.textarea} required></textarea>
-                  </div>
-                  
-                  <Button type="button" variant="primary" size="lg" className={styles.submitBtn}>
-                    Enviar mensaje
-                  </Button>
-                </form>
-              </div>
+              <ContactForm />
 
               <div className={styles.infoContainer}>
                 <h2 className={styles.sectionTitle}>Información de contacto</h2>
