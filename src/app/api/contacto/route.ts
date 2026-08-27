@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       remitente: `${name} <${email}>`,
       telefono: phone || 'No especificado',
       tratamiento: treatment || 'Consulta general',
-      mensaje,
+      mensaje: message,
       fecha: new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' }),
     });
 
