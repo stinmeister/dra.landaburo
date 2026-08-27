@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
 export async function POST(req: NextRequest) {
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
           full_name: name,
           email,
           phone: phone || null,
-          notes: [Contacto Web] Tratamiento: \nMensaje: ,
+          notes: `[Contacto Web] Tratamiento: ${treatment || 'General'}\nMensaje: ${message}`,
           status: 'nuevo',
           created_at: new Date().toISOString(),
         },
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     // 2. Logging estructurado para dralandaburo@gmail.com
     console.log('[Contacto Web -> dralandaburo@gmail.com]', {
       destinatario: 'dralandaburo@gmail.com',
-      remitente: ${name} <>,
+      remitente: `${name} <${email}>`,
       telefono: phone || 'No especificado',
       tratamiento: treatment || 'Consulta general',
       mensaje,

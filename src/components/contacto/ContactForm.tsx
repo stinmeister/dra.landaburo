@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState } from 'react';
 import styles from '@/app/contacto/page.module.css';
@@ -81,70 +81,70 @@ export default function ContactForm() {
 
       <form className={styles.form} onSubmit={handleSubmit}>
         <div className={styles.formGroup}>
-          <label htmlFor= name className={styles.label}>Nombre completo *</label>
+          <label htmlFor="name" className={styles.label}>Nombre completo *</label>
           <input
-            type=text
-            id=name
+            type="text"
+            id="name"
             className={styles.input}
             required
             value={formData.name}
             onChange={handleChange}
-            placeholder=Tu nombre y apellido
+            placeholder="Tu nombre y apellido"
           />
         </div>
         
         <div className={styles.formGroup}>
-          <label htmlFor=email className={styles.label}>Email *</label>
+          <label htmlFor="email" className={styles.label}>Email *</label>
           <input
-            type=email
-            id=email
+            type="email"
+            id="email"
             className={styles.input}
             required
             value={formData.email}
             onChange={handleChange}
-            placeholder=ejemplo@correo.com
+            placeholder="ejemplo@correo.com"
           />
         </div>
         
         <div className={styles.formGroup}>
-          <label htmlFor=phone className={styles.label}>Teléfono / WhatsApp</label>
+          <label htmlFor="phone" className={styles.label}>Teléfono / WhatsApp</label>
           <input
-            type=tel
-            id=phone
+            type="tel"
+            id="phone"
             className={styles.input}
             value={formData.phone}
             onChange={handleChange}
-            placeholder=+54 9 11 1234-5678
+            placeholder="+54 9 11 1234-5678"
           />
         </div>
 
         <div className={styles.formGroup}>
-          <label htmlFor=treatment className={styles.label}>Tratamiento de interés</label>
+          <label htmlFor="treatment" className={styles.label}>Tratamiento de interés</label>
           <input
-            type=text
-            id=treatment
+            type="text"
+            id="treatment"
             className={styles.input}
             value={formData.treatment}
             onChange={handleChange}
-            placeholder=Ej: Armonización facial, Toxina botulínica, Consulta médica...
+            placeholder="Ej: Armonización facial, Toxina botulínica, Consulta médica..."
           />
         </div>
         
         <div className={styles.formGroup}>
-          <label htmlFor=message className={styles.label}>Mensaje *</label>
+          <label htmlFor="message" className={styles.label}>Mensaje *</label>
           <textarea
-            id=message
+            id="message"
             rows={5}
             className={styles.textarea}
             required
             value={formData.message}
             onChange={handleChange}
-            placeholder=Contanos tus dudas o qué tratamiento te gustaría realizarte...
+            placeholder="Contanos tus dudas o qué tratamiento te gustaría realizarte..."
           ></textarea>
         </div>
         
         <button
-          type=submit
+          type="submit"
           className={styles.submitBtn}
           disabled={loading}
           style={{
