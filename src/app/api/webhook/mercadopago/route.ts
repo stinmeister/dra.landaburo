@@ -1,12 +1,11 @@
-// Webhook de MercadoPago — actualiza el estado de pago de la orden.
+// Webhook de MercadoPago — actualiza el estado de pago de la orden O de la gift card.
 // MP envía notificaciones con topic=payment cuando el estado cambia.
 // Verificamos la firma HMAC-SHA256 usando mp_webhook_secret de app_settings.
-// Si el secret no está configurado, aceptamos pero logueamos advertencia.
+// Identificamos gift cards por external_reference que comienza con "giftcard:"
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { createHmac } from 'crypto';
 
-// Mapeo de estados de MP a nuestros estados internos
 const MP_STATUS_MAP: Record<string, string> = {
   approved: 'paid',
   pending: 'pending',
@@ -24,15 +23,11 @@ function verifySignature(
   secret: string
 ): boolean {
   if (!signature) return false;
-  // MP signature format: "ts=<timestamp>,v1=<hash>"
   const tsMatch = signature.match(/ts=(\d+)/);
   const v1Match = signature.match(/v1=([a-f0-9]+)/);
   if (!tsMatch || !v1Match) return false;
-
   const ts = tsMatch[1];
   const expectedHash = v1Match[1];
-  // Formato correcto según docs de MP:
-  // id:<payment_id>;request-id:<x-request-id>;ts:<timestamp>;
   const payload = `id:${paymentId};request-id:${requestId};ts:${ts};`;
   const computed = createHmac('sha256', secret).update(payload).digest('hex');
   return computed === expectedHash;
@@ -48,7 +43,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Cuerpo inválido.' }, { status: 400 });
   }
 
-  // Solo procesamos notificaciones de tipo "payment"
   if (notification.topic !== 'payment' && notification.type !== 'payment') {
     return NextResponse.json({ ok: true });
   }
@@ -59,14 +53,12 @@ export async function POST(req: NextRequest) {
   }
   const paymentId = String(rawPaymentId);
 
-  // Supabase con service role para actualizar órdenes
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { cookies: { getAll: () => [], setAll: () => {} } }
   );
 
-  // Leer config de MP (access token + webhook secret)
   const { data: settings } = await supabase
     .from('app_settings')
     .select('mp_access_token, mp_webhook_secret')
@@ -77,8 +69,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Configuración incompleta.' }, { status: 503 });
   }
 
-  // Verificar firma si hay secret configurado.
-  // Usamos paymentId y x-request-id (no el rawBody) según el formato correcto de MP.
   if (settings.mp_webhook_secret) {
     const signature = req.headers.get('x-signature');
     const requestId = req.headers.get('x-request-id') ?? '';
@@ -87,11 +77,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Firma inválida.' }, { status: 401 });
     }
   } else {
-    // Sin secret configurado: procesamos igual pero avisamos en logs
     console.warn('[Webhook/MP] mp_webhook_secret no configurado — saltando verificación de firma.');
   }
 
-  // Consultar el estado del pago a la API de MP
+  // Consult MP for the actual payment data
   let mpPayment: Record<string, unknown>;
   try {
     const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
@@ -115,9 +104,87 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  // ----- GIFT CARD FLOW -----
+  if (externalRef.startsWith('giftcard:')) {
+    const giftCardId = externalRef.replace('giftcard:', '');
+
+    if (mpStatus === 'approved') {
+      const expirationDate = new Date();
+      expirationDate.setDate(expirationDate.getDate() + 180);
+
+      const { data: card, error: updateError } = await supabase
+        .from('gift_cards')
+        .update({
+          status: 'active',
+          mp_payment_id: String(paymentId),
+          expiration_date: expirationDate.toISOString(),
+        })
+        .eq('id', giftCardId)
+        .select('id, code, amount_ars, sender_name, sender_email, recipient_name, dedication, delivery_method')
+        .single();
+
+      if (updateError) {
+        console.error('[Webhook/MP] Error activating gift card:', giftCardId, updateError);
+      } else if (card) {
+        // If delivery_method === 'fisica', create an event-driven task in staff_tasks for Ceci
+        if (card.delivery_method === 'fisica') {
+          try {
+            // Find Ceci's profile ID or default staff operative
+            const { data: ceciProfile } = await supabase
+              .from('profiles')
+              .select('id')
+              .or('full_name.ilike.%Ceci%,role.eq.operativo')
+              .limit(1)
+              .maybeSingle();
+
+            if (ceciProfile) {
+              const todayAR = new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'America/Argentina/Buenos_Aires',
+              }).format(new Date());
+
+              await supabase.from('staff_tasks').insert({
+                assigned_profile_id: ceciProfile.id,
+                task_type: 'gift_card',
+                title: `Preparar Gift Card Física: ${card.code}`,
+                description: `Preparar tarjeta física para ${card.recipient_name || 'Agasajado/a'} (De parte de: ${card.sender_name}).`,
+                due_date: todayAR,
+                related_entity_type: 'gift_card',
+                related_entity_id: card.id,
+                status: 'pendiente',
+              });
+            }
+          } catch (taskErr) {
+            console.error('[Webhook/MP] Error creating physical gift card staff task:', taskErr);
+          }
+        }
+
+        const formatARS = (n: number) =>
+          new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n);
+
+        console.log('[GiftCard/Dispatch Email → sender]', {
+          to: card.sender_email,
+          subject: 'Tu Gift Card está lista — Dra. Landaburo',
+          code: card.code,
+          amount: formatARS(card.amount_ars),
+          recipient: card.recipient_name || 'Agasajado/a',
+          dedication: card.dedication,
+          delivery_method: card.delivery_method,
+          expiration: expirationDate.toLocaleDateString('es-AR'),
+        });
+      }
+    } else if (mpStatus === 'rejected' || mpStatus === 'cancelled') {
+      await supabase
+        .from('gift_cards')
+        .update({ status: 'cancelled', mp_payment_id: String(paymentId) })
+        .eq('id', giftCardId);
+    }
+
+    return NextResponse.json({ ok: true });
+  }
+
+  // ----- REGULAR ORDER FLOW -----
   const newStatus = MP_STATUS_MAP[mpStatus] ?? 'pending';
 
-  // Actualizar la orden correspondiente
   const { error: updateError } = await supabase
     .from('orders')
     .update({
@@ -129,7 +196,6 @@ export async function POST(req: NextRequest) {
 
   if (updateError) {
     console.error('[Webhook/MP] Error actualizando orden:', externalRef, updateError);
-    // Retornamos 200 de todas formas para que MP no reintente indefinidamente
   }
 
   return NextResponse.json({ ok: true });

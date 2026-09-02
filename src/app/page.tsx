@@ -9,6 +9,8 @@ import DoctorBio from '@/components/home/DoctorBio';
 import StatsCounter from '@/components/home/StatsCounter';
 import InstagramCTA from '@/components/home/InstagramCTA';
 import PartnersMarquee from '@/components/home/PartnersMarquee';
+import TeamSection from '@/components/home/TeamSection';
+import TestimonialsCarousel from '@/components/home/TestimonialsCarousel';
 
 export const metadata: Metadata = {
   title: 'Dra. Paula Landaburo | Medicina Estética',
@@ -26,6 +28,8 @@ export default function HomePage() {
         <PartnersMarquee />
         <DoctorBio />
         <StatsCounter />
+        <TeamSection />
+        <TestimonialsCarousel />
         <InstagramCTA />
       </main>
       <Footer />

@@ -1,0 +1,288 @@
+/* ===== START SCREEN ===== */
+.startScreen {
+  min-height: 100vh;
+  background-color: var(--color-negro);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+.startContent {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  max-width: 480px;
+}
+.logoMark {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(197, 164, 126, 0.1);
+  border: 2px solid var(--color-champagne);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-serif);
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--color-champagne);
+}
+.startTitle {
+  font-family: var(--font-serif);
+  font-size: clamp(2rem, 5vw, 2.8rem);
+  font-weight: 500;
+  color: var(--color-blanco);
+  line-height: 1.2;
+}
+.startSubtitle {
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  color: var(--color-champagne);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.startInstruction {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  color: rgba(255,255,255,0.6);
+  line-height: 1.65;
+}
+.startBtn {
+  margin-top: 1rem;
+  background: var(--color-champagne);
+  color: var(--color-negro);
+  font-family: var(--font-sans);
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 1.1rem 3rem;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+  letter-spacing: 0.03em;
+}
+.startBtn:hover { background: var(--color-champagne-dark); }
+.startNote {
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.35);
+}
+
+/* ===== SUCCESS SCREEN ===== */
+.successScreen {
+  min-height: 100vh;
+  background-color: var(--color-negro);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.successContent {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+.successCheck {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: rgba(197,164,126,0.12);
+  border: 2px solid var(--color-champagne);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  color: var(--color-champagne);
+  animation: popIn 0.4s ease;
+}
+@keyframes popIn {
+  from { transform: scale(0.5); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.successTitle {
+  font-family: var(--font-serif);
+  font-size: 2.5rem;
+  color: var(--color-blanco);
+  font-weight: 500;
+}
+.successText {
+  font-family: var(--font-sans);
+  font-size: 1.1rem;
+  color: rgba(255,255,255,0.65);
+}
+.successReset {
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.3);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+}
+
+/* ===== FORM SCREEN ===== */
+.formScreen {
+  min-height: 100vh;
+  background-color: var(--color-bg-alt);
+  display: flex;
+  flex-direction: column;
+}
+.formHeader {
+  background: var(--color-negro);
+  padding: 1.25rem 2.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.formBrand {
+  font-family: var(--font-serif);
+  font-size: 1.2rem;
+  color: var(--color-champagne);
+  font-weight: 600;
+}
+.formLabel {
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.4);
+}
+.formBody {
+  flex: 1;
+  max-width: 860px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 2.5rem 2rem 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+.formSection {
+  background: var(--color-blanco);
+  border: 1px solid var(--color-border);
+  padding: 2rem;
+}
+.sectionTitle {
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
+  font-weight: 500;
+  color: var(--color-negro);
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.fieldGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+}
+.field { display: flex; flex-direction: column; gap: 0.4rem; }
+.label {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-gris);
+}
+.input {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  color: var(--color-negro);
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  padding: 0.9rem 1rem;
+  outline: none;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+}
+.input:focus {
+  border-color: var(--color-champagne);
+  background: var(--color-blanco);
+}
+.attributionGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+.attributionCard {
+  background: var(--color-bg-alt);
+  border: 2px solid var(--color-border);
+  padding: 1.25rem 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  text-align: center;
+}
+.attributionCard.selected {
+  border-color: var(--color-champagne);
+  background: rgba(197,164,126,0.08);
+}
+.attrIcon { font-size: 2rem; }
+.attrLabel {
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-negro);
+}
+.attrDetail {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  color: var(--color-gris);
+}
+.interestsGrid { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.interestChip {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.65rem 1.25rem;
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--color-negro);
+}
+.interestChip.chipSelected {
+  background: var(--color-negro);
+  color: var(--color-champagne);
+  border-color: var(--color-negro);
+}
+.formFooter {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+.submitBtn {
+  background: var(--color-negro);
+  color: var(--color-champagne);
+  font-family: var(--font-sans);
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 1.1rem 3.5rem;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+  letter-spacing: 0.03em;
+}
+.submitBtn:hover:not(:disabled) {
+  background: var(--color-champagne);
+  color: var(--color-negro);
+}
+.submitBtn:disabled { opacity: 0.6; cursor: wait; }
+.privacyNote {
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  color: var(--color-gris);
+  max-width: 460px;
+  line-height: 1.5;
+}

@@ -29,5 +29,6 @@ export const footerLinks = {
     { label: 'Sobre Mí', href: '/sobre-mi' },
     { label: 'Blog', href: '/blog' },
     { label: 'Tienda', href: '/tienda' },
+    { label: 'Consentimientos', href: '/consentimientos' },
   ],
 };
