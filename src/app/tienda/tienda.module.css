@@ -32,6 +32,67 @@
   line-height: var(--leading-normal);
 }
 
+/* Banner discreto de Gift Cards */
+.giftCardBanner {
+  background: linear-gradient(90deg, rgba(197, 164, 126, 0.12) 0%, rgba(255, 255, 255, 0.9) 100%);
+  border: 1px solid rgba(197, 164, 126, 0.35);
+  border-radius: 4px;
+  padding: 1.25rem 1.75rem;
+  margin-bottom: var(--space-xl);
+}
+
+.giftCardBannerContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.giftCardBannerText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.giftCardBannerEyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-champagne-dark);
+}
+
+.giftCardBannerTitle {
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--color-negro);
+  margin: 0;
+}
+
+.giftCardBannerBtn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.55rem 1.25rem;
+  background-color: var(--color-negro);
+  color: var(--color-blanco);
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  border-radius: 2px;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.giftCardBannerBtn:hover {
+  background-color: var(--color-champagne);
+  color: var(--color-blanco);
+}
+
 /* Filtros de categoría */
 .filters {
   display: flex;

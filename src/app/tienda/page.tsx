@@ -72,6 +72,21 @@ export default async function TiendaPage({
             </p>
           </div>
 
+          {/* Banner discreto de Gift Cards */}
+          <aside className={styles.giftCardBanner} aria-label="Gift Cards">
+            <div className={styles.giftCardBannerContent}>
+              <div className={styles.giftCardBannerText}>
+                <span className={styles.giftCardBannerEyebrow}>¿Buscás un regalo especial?</span>
+                <p className={styles.giftCardBannerTitle}>
+                  Regalá una Gift Card digital o física para tratamientos o productos Sulderm.
+                </p>
+              </div>
+              <Link href="/tienda/gift-cards" className={styles.giftCardBannerBtn}>
+                Ver Gift Cards →
+              </Link>
+            </div>
+          </aside>
+
           {/* Filtros de categoría */}
           <div className={styles.filters} role="navigation" aria-label="Filtrar por categoría">
             <Link
