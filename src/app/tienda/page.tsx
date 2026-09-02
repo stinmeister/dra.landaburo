@@ -35,6 +35,16 @@ export default async function TiendaPage({
   const { category } = await searchParams;
   const supabase = await createClient();
 
+  // Obtenemos las categorías activas únicas directamente de la base de datos
+  const { data: allCategoriesData } = await supabase
+    .from('products')
+    .select('category')
+    .eq('is_active', true);
+
+  const distinctCategories = Array.from(
+    new Set((allCategoriesData || []).map((c) => c.category).filter(Boolean))
+  ).sort() as string[];
+
   // Traemos todos los productos activos ordenados por nombre.
   // El filtro de categoría se aplica en el servidor para evitar enviar datos innecesarios.
   let query = supabase
@@ -70,7 +80,7 @@ export default async function TiendaPage({
             >
               Todos
             </Link>
-            {CATEGORIES.map((cat) => (
+            {distinctCategories.map((cat) => (
               <Link
                 key={cat}
                 href={`/tienda?category=${encodeURIComponent(cat)}`}
