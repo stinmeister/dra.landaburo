@@ -145,7 +145,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.25rem 0.75rem;
+  padding: 0.28rem 0.75rem;
   font-family: var(--font-sans);
   font-size: 0.75rem;
   font-weight: 600;
@@ -154,7 +154,7 @@
   color: var(--color-champagne-dark);
   background: var(--color-champagne-light);
   border: 1px solid var(--color-champagne);
-  border-radius: 9999px;
+  border-radius: 6px;
   text-decoration: none;
   transition: all 0.25s ease;
   white-space: nowrap;
@@ -248,12 +248,13 @@
 
 .ctaBtn {
   display: none;
-  padding: 0.55rem 1.25rem;
+  padding: 0.5rem 1.15rem;
   background-color: var(--color-champagne);
   border: 1px solid var(--color-champagne);
   color: var(--color-negro);
   font-family: var(--font-sans);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   text-decoration: none;
