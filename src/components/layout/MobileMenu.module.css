@@ -123,3 +123,54 @@
   color: var(--color-negro, #000000);
   font-size: 1rem;
 }
+
+/* CTA & Account Sections in Mobile Drawer */
+.ctaSection {
+  padding: 1.25rem 2rem 0;
+}
+
+.mobileCtaBtn {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 0.85rem 1.5rem;
+  background-color: var(--color-champagne);
+  color: var(--color-negro);
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(197, 164, 126, 0.25);
+  transition: background-color 0.2s ease;
+}
+
+.mobileCtaBtn:hover {
+  background-color: var(--color-champagne-dark);
+  color: var(--color-blanco);
+}
+
+.accountSection {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--color-gris-claro);
+}
+
+.accountLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-champagne-dark);
+  text-decoration: none;
+  padding: 0.5rem 0;
+  transition: color 0.2s ease;
+}
+
+.accountLink:hover {
+  color: var(--color-negro);
+}

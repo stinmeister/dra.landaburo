@@ -4,10 +4,11 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
-import { X, Phone, Mail } from 'lucide-react';
+import { X, Phone, Mail, User } from 'lucide-react';
 import styles from './MobileMenu.module.css';
 import { navigation } from '@/data/navigation';
 import { siteContent } from '@/data/site-content';
+import { trackScheduleClick } from '@/lib/tracking';
 
 interface MobileMenuProps {
   isOpen: boolean;
@@ -36,6 +37,19 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
         <button className={styles.closeBtn} onClick={onClose} aria-label="Cerrar menú">
           <X size={28} />
         </button>
+      </div>
+
+      <div className={styles.ctaSection}>
+        <Link
+          href="/contacto"
+          className={styles.mobileCtaBtn}
+          onClick={() => {
+            trackScheduleClick(undefined, 'mobile_menu_cta');
+            onClose();
+          }}
+        >
+          Agendar consulta
+        </Link>
       </div>
 
       <nav className={styles.nav}>
@@ -71,6 +85,17 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
             </Link>
           );
         })}
+
+        <div className={styles.accountSection}>
+          <Link
+            href="/portal/paciente"
+            className={styles.accountLink}
+            onClick={onClose}
+          >
+            <User size={18} />
+            <span>Mi Portal / Iniciar Sesión</span>
+          </Link>
+        </div>
       </nav>
 
       <div className={styles.footer}>

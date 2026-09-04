@@ -106,7 +106,7 @@ export default function Header() {
             })}
           </nav>
 
-          {/* Columna derecha: CTA + UserMenu + Carrito + Burger mobile */}
+          {/* Columna derecha: CTA + UserMenu (desktop) + Carrito + Burger mobile */}
           <div className={styles.headerRight}>
             <Link
               href="/contacto"
@@ -115,7 +115,9 @@ export default function Header() {
             >
               Agendar consulta
             </Link>
-            <UserMenu />
+            <div className={styles.desktopOnly}>
+              <UserMenu />
+            </div>
             <CartIcon />
             <button
               className={styles.mobileMenuBtn}

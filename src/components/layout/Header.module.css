@@ -29,11 +29,12 @@
 }
 
 .container {
-  max-width: 1200px;
+  max-width: 1320px;
   margin: 0 auto;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
+  width: 100%;
 }
 
 .logo {
@@ -43,6 +44,7 @@
   text-decoration: none;
   color: var(--color-blanco);
   transition: color 0.3s ease;
+  flex-shrink: 0;
 }
 
 .logoIcon {
@@ -89,11 +91,14 @@
   display: none;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .desktopNav {
     display: flex;
     align-items: center;
-    gap: 2rem;
+    justify-content: center;
+    gap: 1.25rem;
+    flex: 1;
+    margin: 0 1rem;
   }
 }
 
@@ -228,6 +233,17 @@
   align-items: center;
   justify-content: flex-end;
   gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.desktopOnly {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .desktopOnly {
+    display: block;
+  }
 }
 
 .ctaBtn {
@@ -266,14 +282,13 @@
   color: var(--color-blanco);
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .ctaBtn {
     display: inline-block;
   }
 }
 
 .cartBtn {
-  display: none;
   background: none;
   border: none;
   cursor: pointer;
@@ -281,6 +296,8 @@
   transition: color 0.2s ease;
   padding: 0.25rem;
   line-height: 1;
+  display: flex;
+  align-items: center;
 }
 
 .cartBtn:hover {
@@ -292,13 +309,6 @@
   color: var(--color-negro);
 }
 
-@media (min-width: 768px) {
-  .cartBtn {
-    display: flex;
-    align-items: center;
-  }
-}
-
 .mobileMenuBtn {
   display: flex;
   align-items: center;
@@ -307,13 +317,15 @@
   cursor: pointer;
   color: var(--color-blanco);
   transition: color 0.3s ease;
+  padding: 0.25rem;
 }
 
-.scrolled .mobileMenuBtn {
+.scrolled .mobileMenuBtn,
+.header.lightPage .mobileMenuBtn {
   color: var(--color-negro);
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .mobileMenuBtn {
     display: none;
   }
