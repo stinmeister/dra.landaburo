@@ -31,8 +31,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-const formatARS = (n: number) =>
-  new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n);
+const formatARS = (n: number | string | undefined | null) => {
+  const num = typeof n === 'number' ? n : parseFloat(String(n || 0));
+  if (isNaN(num)) return '$ 0';
+  return `$ ${Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
+};
 
 export default async function ProductoPage({ params }: Props) {
   const { slug } = await params;

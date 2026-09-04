@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server';
 import TaskList from '@/components/dashboard/TaskList';
 import type { TaskItem } from '@/components/dashboard/TaskList';
 import TreatmentSearch from '@/components/dashboard/TreatmentSearch';
+import ConfiguracionOperativa from '@/components/dashboard/ConfiguracionOperativa';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
@@ -93,6 +94,27 @@ export default async function OperativoDashboard() {
     tasks = [];
   }
 
+  // Load staff profiles for assignment configuration
+  const { data: staffProfilesRaw } = await supabase
+    .from('profiles')
+    .select('id, full_name, role')
+    .in('role', ['admin', 'medico', 'operativo', 'cosmetologa'])
+    .order('full_name', { ascending: true });
+
+  const staffProfiles = staffProfilesRaw ?? [];
+
+  // Load app settings for default assignees
+  let appSettings: { default_birthday_assignee?: string; default_giftcard_assignee?: string } | null = null;
+  try {
+    const { data: sData } = await supabase
+      .from('app_settings')
+      .select('default_birthday_assignee, default_giftcard_assignee')
+      .maybeSingle();
+    appSettings = sData;
+  } catch {
+    // ok if table doesn't exist yet
+  }
+
   const dateLabel = new Intl.DateTimeFormat('es-AR', {
     weekday: 'long',
     day: 'numeric',
@@ -126,8 +148,17 @@ export default async function OperativoDashboard() {
           </section>
         </div>
 
-        {/* Right column: guides */}
+        {/* Right column: guides + operational config */}
         <div className={styles.rightCol}>
+          {/* Operational Assignment Config for Admins */}
+          {profile.role === 'admin' && (
+            <ConfiguracionOperativa
+              profiles={staffProfiles}
+              initialBirthdayAssignee={appSettings?.default_birthday_assignee}
+              initialGiftcardAssignee={appSettings?.default_giftcard_assignee}
+            />
+          )}
+
           {/* Google Reviews reminder banner */}
           <section className={styles.reviewsBanner}>
             <div className={styles.reviewsIcon}>🌟</div>

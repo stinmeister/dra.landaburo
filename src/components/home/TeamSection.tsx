@@ -37,7 +37,9 @@ export default function TeamSection() {
                 </div>
                 <p className={styles.bio}>{member.bio}</p>
                 <div className={styles.specialties}>
-                  <p className={styles.specialtiesLabel}>Especialidades</p>
+                  <p className={styles.specialtiesLabel}>
+                    {member.category === 'asistente' ? 'Áreas de Atención' : 'Especialidades'}
+                  </p>
                   <ul className={styles.specialtiesList}>
                     {member.specialties.map((s) => (
                       <li key={s} className={styles.specialty}>

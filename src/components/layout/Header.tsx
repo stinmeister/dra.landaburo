@@ -4,11 +4,12 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
+import UserMenu from './UserMenu';
+import { trackScheduleClick } from '@/lib/tracking';
 import { ChevronDown, Menu } from 'lucide-react';
 import styles from './Header.module.css';
 import { navigation } from '@/data/navigation';
 import MobileMenu from './MobileMenu';
-import UserMenu from './UserMenu';
 import CartIcon from '@/components/tienda/CartIcon';
 
 export default function Header() {
@@ -81,6 +82,18 @@ export default function Header() {
                 );
               }
 
+              if (item.isPill) {
+                return (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    className={`${styles.pillLink} ${pathname === item.href ? styles.pillLinkActive : ''}`}
+                  >
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              }
+
               return (
                 <Link
                   key={item.label}
@@ -95,7 +108,11 @@ export default function Header() {
 
           {/* Columna derecha: CTA + UserMenu + Carrito + Burger mobile */}
           <div className={styles.headerRight}>
-            <Link href="/contacto" className={styles.ctaBtn}>
+            <Link
+              href="/contacto"
+              className={styles.ctaBtn}
+              onClick={() => trackScheduleClick(undefined, 'header_cta')}
+            >
               Agendar consulta
             </Link>
             <UserMenu />

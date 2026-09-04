@@ -52,19 +52,19 @@ export default function Footer() {
 
         {/* Col 2 */}
         <div className={styles.col}>
-          <h3 className={styles.title}>Ubicación y Horarios</h3>
+          <h3 className={styles.title}>Sedes y Horarios</h3>
           <div className={styles.infoItem}>
             <MapPin size={20} />
             <span>
-              Leandro N. Alem 45<br />
-              E2820 Gualeguaychú, Entre Ríos
+              <strong>Gualeguaychú:</strong> Leandro N. Alem 45<br />
+              <strong>Buenos Aires:</strong> Güemes 4832, Palermo
             </span>
           </div>
           <div className={styles.infoItem}>
             <Clock size={20} />
             <span>
-              Lun-Vier: 9am – 5pm<br />
-              Sáb: Solo con cita
+              Lun-Vier: 10:00 – 16:00 hs<br />
+              Sáb: Solo con cita previa
             </span>
           </div>
         </div>

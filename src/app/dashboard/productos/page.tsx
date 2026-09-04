@@ -4,7 +4,8 @@ import type { Metadata } from 'next';
 
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { createProduct, toggleProduct, updateStock } from './actions';
+import ProductTable from './ProductTable';
+import { createProduct } from './actions';
 import styles from './page.module.css';
 
 export const metadata: Metadata = { title: 'Productos | Panel Dra. Landaburo' };
@@ -24,10 +25,10 @@ export default async function ProductosPage() {
   const admin = createAdminClient();
   const { data: products } = await admin
     .from('products')
-    .select('id, name, category, price_ars, stock_quantity, is_active, image_url')
-    .order('created_at', { ascending: false });
+    .select('id, name, category, price_ars, stock_quantity, is_active, image_url, description')
+    .order('name', { ascending: true });
 
-  const rows = products ?? [];
+  const rows = (products ?? []) as any[];
 
   return (
     <div className={styles.page}>
@@ -38,69 +39,8 @@ export default async function ProductosPage() {
         </div>
       </div>
 
-      {/* ── Tabla de productos ── */}
-      <div className={styles.tableWrap}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>Producto</th>
-              <th>Categoría</th>
-              <th>Precio ARS</th>
-              <th>Stock</th>
-              <th>Estado</th>
-              <th>Ajustar stock</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={6} className={styles.emptyCell}>No hay productos aún. Agregá el primero abajo.</td>
-              </tr>
-            )}
-            {rows.map((p) => {
-              const lowStock = (p.stock_quantity ?? 0) < 5;
-              return (
-                <tr key={p.id} className={!p.is_active ? styles.rowInactive : ''}>
-                  <td className={styles.nameCell}>
-                    <span className={styles.productName}>{p.name}</span>
-                  </td>
-                  <td className={styles.catCell}>{p.category}</td>
-                  <td className={styles.priceCell}>
-                    ${Number(p.price_ars).toLocaleString('es-AR', { minimumFractionDigits: 0 })}
-                  </td>
-                  <td className={lowStock ? styles.stockLow : styles.stockOk}>
-                    {p.stock_quantity ?? 0} ud.
-                    {lowStock && <span className={styles.alertDot} title="Stock bajo" />}
-                  </td>
-                  <td>
-                    <form action={toggleProduct}>
-                      <input type="hidden" name="id" value={p.id} />
-                      <input type="hidden" name="is_active" value={String(p.is_active)} />
-                      <button type="submit" className={p.is_active ? styles.activeBtn : styles.pauseBtn}>
-                        {p.is_active ? 'Activo' : 'Pausado'}
-                      </button>
-                    </form>
-                  </td>
-                  <td>
-                    <div className={styles.stockRow}>
-                      <form action={updateStock}>
-                        <input type="hidden" name="id" value={p.id} />
-                        <input type="hidden" name="delta" value="-1" />
-                        <button type="submit" className={styles.deltaBtn} disabled={(p.stock_quantity ?? 0) <= 0}>−</button>
-                      </form>
-                      <form action={updateStock}>
-                        <input type="hidden" name="id" value={p.id} />
-                        <input type="hidden" name="delta" value="1" />
-                        <button type="submit" className={styles.deltaBtn}>+</button>
-                      </form>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      {/* ── Tabla interactiva con edición ── */}
+      <ProductTable products={rows} categories={CATEGORIES} />
 
       {/* ── Formulario nuevo producto ── */}
       <div className={styles.newProduct}>

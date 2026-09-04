@@ -47,3 +47,42 @@ export async function toggleTask(taskId: string, currentValue: boolean) {
 
   revalidatePath('/dashboard/operativo');
 }
+
+export async function updateOperationalAssignments(assignments: {
+  birthdayAssignee: string;
+  giftcardAssignee: string;
+  stockAssignee: string;
+}) {
+  const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, id')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile || profile.role !== 'admin') {
+    throw new Error('Solo administradores pueden modificar asignaciones operativas.');
+  }
+
+  // Try updating app_settings if available
+  try {
+    await supabase.from('app_settings').upsert(
+      {
+        id: 'default',
+        default_birthday_assignee: assignments.birthdayAssignee || null,
+        default_giftcard_assignee: assignments.giftcardAssignee || null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'id' }
+    );
+  } catch (err) {
+    console.warn('[OperationalAssignments] Notice on app_settings upsert:', err);
+  }
+
+  revalidatePath('/dashboard/operativo');
+  revalidatePath('/dashboard/ejecutivo');
+}

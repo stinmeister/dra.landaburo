@@ -81,4 +81,32 @@ export async function updateStock(formData: FormData) {
   await admin.from('products').update({ stock_quantity: newStock }).eq('id', id);
 
   revalidatePath('/dashboard/productos');
+  revalidatePath('/tienda');
+}
+
+export async function updateProduct(formData: FormData) {
+  await assertAdmin();
+
+  const id             = (formData.get('id') as string)?.trim();
+  const name           = (formData.get('name') as string)?.trim();
+  const category       = (formData.get('category') as string)?.trim();
+  const price_ars      = parseFloat(formData.get('price_ars') as string);
+  const stock_quantity = parseInt(formData.get('stock_quantity') as string, 10);
+  const description    = (formData.get('description') as string)?.trim() ?? '';
+  const image_url      = (formData.get('image_url') as string)?.trim() ?? null;
+
+  if (!id || !name || !category || isNaN(price_ars)) return;
+
+  const admin = createAdminClient();
+  await admin.from('products').update({
+    name,
+    category,
+    price_ars,
+    stock_quantity: isNaN(stock_quantity) ? 0 : stock_quantity,
+    description,
+    image_url: image_url || null,
+  }).eq('id', id);
+
+  revalidatePath('/dashboard/productos');
+  revalidatePath('/tienda');
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { trackContactLead } from '@/lib/tracking';
 import styles from '@/app/contacto/page.module.css';
 
 export default function ContactForm() {
@@ -38,6 +39,7 @@ export default function ContactForm() {
       }
 
       setSuccess(data.message || '¡Mensaje enviado con éxito!');
+      trackContactLead(formData.treatment);
       setFormData({ name: '', email: '', phone: '', treatment: '', message: '' });
     } catch (err: any) {
       setError(err.message || 'Ocurrió un error. Por favor intentá nuevamente.');

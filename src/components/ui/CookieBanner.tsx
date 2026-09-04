@@ -1,44 +1,62 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useConsent } from '@/contexts/ConsentContext';
 import styles from './CookieBanner.module.css';
 
-const STORAGE_KEY = 'cookie_consent_v1';
-
 export default function CookieBanner() {
-  const [visible, setVisible] = useState(false);
+  const { consent, isLoaded, setConsent } = useConsent();
 
-  useEffect(() => {
-    // Solo mostramos si no hay decisión guardada
-    if (!localStorage.getItem(STORAGE_KEY)) {
-      setVisible(true);
-    }
-  }, []);
+  // No mostrar mientras carga el estado local o si el paciente ya tomó una decisión
+  if (!isLoaded || consent !== null) {
+    return null;
+  }
 
-  const save = (analytics: boolean, marketing: boolean) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ analytics, marketing, ts: Date.now() }));
-    setVisible(false);
+  const handleAcceptAll = () => {
+    setConsent(true, true);
   };
 
-  if (!visible) return null;
+  const handleRejectNonEssential = () => {
+    setConsent(false, false);
+  };
 
   return (
-    <div className={styles.banner} role="dialog" aria-label="Consentimiento de cookies">
+    <aside
+      className={styles.banner}
+      role="dialog"
+      aria-labelledby="cookie-banner-title"
+      aria-describedby="cookie-banner-desc"
+    >
       <div className={styles.inner}>
-        <p className={styles.text}>
-          Usamos cookies para mejorar tu experiencia y analizar el tráfico del sitio.
-          Podés aceptar todas o solo las esenciales.{' '}
-          <a href="/privacidad" className={styles.link}>Más información</a>.
-        </p>
+        <div className={styles.textBlock}>
+          <p id="cookie-banner-title" className={styles.title}>
+            Tu privacidad y cuidado médico
+          </p>
+          <p id="cookie-banner-desc" className={styles.text}>
+            Utilizamos cookies esenciales para el funcionamiento seguro del sitio. Con tu consentimiento,
+            también utilizamos cookies de analítica y optimización para mejorar la experiencia de nuestras pacientes.
+            Podés aceptar todas o mantener únicamente las necesarias.
+          </p>
+        </div>
+
         <div className={styles.actions}>
-          <button className={styles.btnSecondary} onClick={() => save(false, false)}>
-            Solo esenciales
+          <button
+            type="button"
+            className={styles.btnSecondary}
+            onClick={handleRejectNonEssential}
+            aria-label="Rechazar cookies no esenciales y usar solo las necesarias"
+          >
+            Solo necesarias
           </button>
-          <button className={styles.btnPrimary} onClick={() => save(true, true)}>
+          <button
+            type="button"
+            className={styles.btnPrimary}
+            onClick={handleAcceptAll}
+            aria-label="Aceptar todas las cookies"
+          >
             Aceptar todas
           </button>
         </div>
       </div>
-    </div>
+    </aside>
   );
 }

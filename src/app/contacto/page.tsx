@@ -36,15 +36,18 @@ export default function ContactoPage() {
                   <div className={styles.infoItem}>
                     <MapPin className={styles.icon} size={24} />
                     <div>
-                      <h3>Dirección</h3>
-                      <p>Leandro N. Alem 45<br />E2820 Gualeguaychú, Entre Ríos</p>
+                      <h3>Sedes de Atención</h3>
+                      <p>
+                        <strong>Gualeguaychú:</strong> Leandro N. Alem 45, Entre Ríos<br />
+                        <strong>Buenos Aires:</strong> Güemes 4832, Palermo, CABA
+                      </p>
                     </div>
                   </div>
                   
                   <div className={styles.infoItem}>
                     <Phone className={styles.icon} size={24} />
                     <div>
-                      <h3>Teléfono</h3>
+                      <h3>Teléfono / WhatsApp</h3>
                       <p>+54 9 11 6968-4062</p>
                     </div>
                   </div>
@@ -61,7 +64,10 @@ export default function ContactoPage() {
                     <Clock className={styles.icon} size={24} />
                     <div>
                       <h3>Horarios</h3>
-                      <p>Lun - Vier: 9am – 5pm<br />Sáb: Solo con cita</p>
+                      <p>
+                        Lun - Vier: 10:00 – 16:00 hs<br />
+                        Sáb: Solo con cita previa
+                      </p>
                     </div>
                   </div>
                 </div>

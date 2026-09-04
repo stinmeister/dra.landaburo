@@ -78,7 +78,7 @@ export default async function TiendaPage({
               <div className={styles.giftCardBannerText}>
                 <span className={styles.giftCardBannerEyebrow}>¿Buscás un regalo especial?</span>
                 <p className={styles.giftCardBannerTitle}>
-                  Regalá una Gift Card digital o física para tratamientos o productos Sulderm.
+                  Regalá una Gift Card personalizada para tratamientos o productos de nuestra tienda.
                 </p>
               </div>
               <Link href="/tienda/gift-cards" className={styles.giftCardBannerBtn}>

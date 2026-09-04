@@ -1,0 +1,123 @@
+.card {
+  background-color: var(--color-blanco);
+  border: 1px solid var(--color-gris-claro);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.cardHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.cardTitle {
+  font-family: var(--font-serif);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  color: var(--color-negro);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cardHelper {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: var(--color-gris);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.label {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-negro);
+}
+
+.sublabel {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: var(--color-gris);
+}
+
+.select {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--color-gris-claro);
+  border-radius: var(--radius-sm);
+  background-color: #fff;
+  color: var(--color-negro);
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.select:focus {
+  outline: none;
+  border-color: var(--color-champagne);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.submitBtn {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background-color: var(--color-negro);
+  color: var(--color-champagne);
+  border: 1px solid var(--color-negro);
+  padding: 0.65rem 1.25rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.submitBtn:hover:not(:disabled) {
+  background-color: var(--color-champagne);
+  color: var(--color-negro);
+  border-color: var(--color-champagne);
+}
+
+.submitBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.successMsg {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: #27ae60;
+  font-weight: 600;
+}
+
+.errorMsg {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: #c0392b;
+  font-weight: 600;
+}

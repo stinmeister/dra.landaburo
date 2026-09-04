@@ -136,6 +136,33 @@
   left: 0;
 }
 
+.pillLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.75rem;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-champagne-dark);
+  background: var(--color-champagne-light);
+  border: 1px solid var(--color-champagne);
+  border-radius: 9999px;
+  text-decoration: none;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+
+.pillLink:hover,
+.pillLinkActive {
+  background: var(--color-champagne);
+  color: var(--color-blanco) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(197, 164, 126, 0.3);
+}
+
 .dropdownContainer {
   position: relative;
   display: inline-block;

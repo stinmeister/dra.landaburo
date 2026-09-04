@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
 
     if (mpStatus === 'approved') {
       const expirationDate = new Date();
-      expirationDate.setDate(expirationDate.getDate() + 180);
+      expirationDate.setDate(expirationDate.getDate() + 90);
 
       const { data: card, error: updateError } = await supabase
         .from('gift_cards')

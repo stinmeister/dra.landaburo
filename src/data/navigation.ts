@@ -1,6 +1,7 @@
 export interface NavItem {
   label: string;
   href: string;
+  isPill?: boolean;
   children?: NavItem[];
 }
 
@@ -18,7 +19,8 @@ export const navigation: NavItem[] = [
       { label: 'Mesoterapia', href: '/tratamientos/mesoterapia' },
     ],
   },
-  { label: 'Tienda', href: '/tienda' },
+  { label: 'Shop', href: '/tienda' },
+  { label: 'Gift Card', href: '/tienda/gift-cards', isPill: true },
   { label: 'Blog', href: '/blog' },
   { label: 'Contacto', href: '/contacto' },
 ];

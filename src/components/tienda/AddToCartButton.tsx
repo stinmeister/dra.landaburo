@@ -3,6 +3,7 @@
 // El feedback visual "¡Agregado!" dura 2 segundos para confirmar la acción al usuario.
 import { useState } from 'react';
 import { useCart } from '@/contexts/CartContext';
+import { trackAddToCart } from '@/lib/tracking';
 import type { Product } from '@/lib/types/product';
 import styles from './AddToCartButton.module.css';
 
@@ -19,6 +20,13 @@ export default function AddToCartButton({ product }: { product: Product }) {
       name: product.name,
       price_ars: product.price_ars,
       image_url: product.image_url,
+    });
+    trackAddToCart({
+      id: product.id,
+      name: product.name,
+      price_ars: product.price_ars,
+      category: product.category,
+      quantity: 1,
     });
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);

@@ -1,8 +1,3 @@
-// /tienda/gift-cards — corrección 01/09/2026:
-// El selector es por tratamiento/producto específico, NO por monto libre.
-// El amount_ars se completa automáticamente desde el precio del item elegido.
-// Catálogo acotado: se carga desde la API (filtrado por is_gift_card_eligible = true,
-// o por una lista hardcodeada hasta que Paula confirme cuáles aplican).
 import type { Metadata } from 'next';
 import GiftCardForm from './GiftCardForm';
 import Header from '@/components/layout/Header';
@@ -12,58 +7,52 @@ import { createClient } from '@/lib/supabase/server';
 
 export const metadata: Metadata = {
   title: 'Gift Cards | Dra. Landaburo',
-  description: 'Regalá una experiencia de cuidado. Gift Cards para tratamientos y productos del Consultorio Dra. Paula Landaburo.',
+  description: 'Regalá una experiencia de cuidado. Gift Cards combinables para tratamientos, productos dermocosméticos y saldo libre en Consultorio Dra. Paula Landaburo.',
 };
 
-// Catálogo acotado (poco invasivos y cosmetología) — pendiente confirmación Paula/Agustín.
-// Por ahora se filtra en memoria por nombre.
-const ELIGIBLE_TREATMENT_SLUGS = [
-  'limpieza-facial-profunda',
-  'dermaplaning',
-  'total-glow',
-  'peeling-quimico',
-  'radiofrecuencia',
-  'consulta',
-  'cosmetologia-basica',
-];
-
-export interface GiftCardItem {
+export interface GiftCardCatalogItem {
   id: string;
   type: 'treatment' | 'product';
   name: string;
   price_ars: number;
+  category?: string;
   description?: string;
 }
 
 export default async function GiftCardsPage() {
   const supabase = await createClient();
 
-  // Load eligible treatments
+  // 1. Cargar todos los tratamientos activos desde Supabase
   const { data: treatments } = await supabase
     .from('treatments')
-    .select('id, name, price_ars, slug')
-    .in('slug', ELIGIBLE_TREATMENT_SLUGS)
-    .order('name');
+    .select('id, title, price_ars, category, description')
+    .eq('is_active', true)
+    .order('category')
+    .order('title');
 
-  // Load all active products (skincare — all qualify)
+  // 2. Cargar todos los productos de skincare activos desde Supabase
   const { data: products } = await supabase
     .from('products')
-    .select('id, name, price_ars')
+    .select('id, name, price_ars, category, description')
     .eq('is_active', true)
     .order('name');
 
-  const catalog: GiftCardItem[] = [
+  const catalog: GiftCardCatalogItem[] = [
     ...(treatments ?? []).map((t) => ({
       id: t.id,
       type: 'treatment' as const,
-      name: t.name,
+      name: t.title,
       price_ars: t.price_ars ?? 0,
+      category: t.category,
+      description: t.description,
     })),
     ...(products ?? []).map((p) => ({
       id: p.id,
       type: 'product' as const,
       name: p.name,
       price_ars: p.price_ars ?? 0,
+      category: p.category,
+      description: p.description,
     })),
   ];
 

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { MessageCircle } from 'lucide-react';
+import { trackWhatsAppClick } from '@/lib/tracking';
 import styles from './WhatsAppButton.module.css';
 
 export default function WhatsAppButton() {
@@ -25,6 +26,7 @@ export default function WhatsAppButton() {
       href="https://wa.me/5491169684062" 
       target="_blank" 
       rel="noopener noreferrer"
+      onClick={() => trackWhatsAppClick('floating_button')}
       className={`${styles.whatsappBtn} ${isVisible ? styles.visible : ''}`}
       aria-label="Contactar por WhatsApp"
     >

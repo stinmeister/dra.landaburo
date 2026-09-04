@@ -4,11 +4,15 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCart } from '@/contexts/CartContext';
+import { trackAddToCart } from '@/lib/tracking';
 import type { Product } from '@/lib/types/product';
 import styles from './ProductCard.module.css';
 
-const formatARS = (n: number) =>
-  new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n);
+export const formatARS = (n: number | string | undefined | null) => {
+  const num = typeof n === 'number' ? n : parseFloat(String(n || 0));
+  if (isNaN(num)) return '$ 0';
+  return `$ ${Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
+};
 
 export default function ProductCard({ product }: { product: Product }) {
   const { addItem } = useCart();
@@ -24,6 +28,13 @@ export default function ProductCard({ product }: { product: Product }) {
       name: product.name,
       price_ars: product.price_ars,
       image_url: product.image_url,
+    });
+    trackAddToCart({
+      id: product.id,
+      name: product.name,
+      price_ars: product.price_ars,
+      category: product.category,
+      quantity: 1,
     });
   };
 

@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { Playfair_Display, IBM_Plex_Sans } from 'next/font/google';
 import CookieBanner from '@/components/ui/CookieBanner';
+import TrackingScripts from '@/components/tracking/TrackingScripts';
 import { CartProvider } from '@/contexts/CartContext';
+import { ConsentProvider } from '@/contexts/ConsentContext';
 import './globals.css';
 
 const playfair = Playfair_Display({
@@ -119,11 +122,17 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <CartProvider>
-          {children}
-        </CartProvider>
-        <CookieBanner />
+        <ConsentProvider>
+          <Suspense fallback={null}>
+            <TrackingScripts />
+          </Suspense>
+          <CartProvider>
+            {children}
+          </CartProvider>
+          <CookieBanner />
+        </ConsentProvider>
       </body>
     </html>
   );
 }
+

@@ -8,6 +8,7 @@ import Footer from '@/components/layout/Footer';
 import WhatsAppButton from '@/components/layout/WhatsAppButton';
 import { Button } from '@/components/ui/Button';
 import TreatmentFAQ from '@/components/tratamientos/TreatmentFAQ';
+import TreatmentCTAButton from '@/components/tratamientos/TreatmentCTAButton';
 import { treatments, getTreatmentBySlug } from '@/data/treatments';
 import styles from './page.module.css';
 
@@ -135,9 +136,7 @@ export default async function TreatmentDetailPage({ params }: Props) {
                   <div className={styles.cta}>
                     <h2>¿Consultas sobre este tratamiento?</h2>
                     <p>Agendá una cita para que evaluemos tu caso de forma personalizada.</p>
-                    <Button href="/contacto" variant="primary" size="lg">
-                      Agendá tu consulta
-                    </Button>
+                    <TreatmentCTAButton treatmentTitle={treatment.title} />
                   </div>
                 </div>
 

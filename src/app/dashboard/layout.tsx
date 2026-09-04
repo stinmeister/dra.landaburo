@@ -22,8 +22,9 @@ const STAFF_ROLES = ['admin', 'medico', 'operativo', 'cosmetologa'];
 const ADMIN_NAV = [
   { href: '/dashboard/ejecutivo', label: 'Ejecutivo' },
   { href: '/dashboard/operativo', label: 'Operativo' },
-  { href: '/dashboard/usuarios',  label: 'Usuarios' },
+  { href: '/dashboard/tratamientos', label: 'Tratamientos' },
   { href: '/dashboard/productos', label: 'Productos' },
+  { href: '/dashboard/usuarios',  label: 'Usuarios' },
   { href: '/dashboard/blog',      label: 'Blog' },
 ];
 

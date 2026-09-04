@@ -1,9 +1,10 @@
 // POST /api/gift-cards/checkout
-// Creates a MercadoPago preference for a gift card purchase.
-// Supports specific treatment OR specific product (never arbitrary amount).
-// Price is verified server-side against Supabase DB.
+// Creates a MercadoPago preference for a multi-item or single-item gift card purchase.
+// Supports combinations of treatments, skincare products, and custom ARS amount.
+// Prices and amounts are strictly verified server-side against Supabase DB.
 // Generates unique code DL-XXXX-XXXX server-side.
 // Supports delivery_method: 'digital' | 'fisica'.
+// Sets expiration to 90 days.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
@@ -20,8 +21,29 @@ function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+interface IncomingItem {
+  item_type?: 'treatment' | 'product' | 'custom_amount';
+  treatment_id?: string | null;
+  product_id?: string | null;
+  custom_amount_ars?: number | null;
+  unit_price_ars?: number | null;
+  quantity?: number;
+  title?: string;
+}
+
+interface ValidatedItem {
+  item_type: 'treatment' | 'product' | 'custom_amount';
+  treatment_id: string | null;
+  product_id: string | null;
+  custom_amount_ars: number | null;
+  unit_price: number;
+  quantity: number;
+  title: string;
+}
+
 export async function POST(req: NextRequest) {
   let body: {
+    items?: IncomingItem[];
     treatment_id?: string | null;
     product_id?: string | null;
     sender_name: string;
@@ -38,6 +60,7 @@ export async function POST(req: NextRequest) {
   }
 
   const {
+    items: rawItems,
     treatment_id,
     product_id,
     sender_name,
@@ -47,10 +70,17 @@ export async function POST(req: NextRequest) {
     delivery_method = 'digital',
   } = body;
 
-  // Validate exactly one item type
-  if ((!treatment_id && !product_id) || (treatment_id && product_id)) {
+  // Build items list (supporting new multi-item cart & legacy single item)
+  let incomingItems: IncomingItem[] = [];
+  if (Array.isArray(rawItems) && rawItems.length > 0) {
+    incomingItems = rawItems;
+  } else if (treatment_id) {
+    incomingItems = [{ item_type: 'treatment', treatment_id, quantity: 1 }];
+  } else if (product_id) {
+    incomingItems = [{ item_type: 'product', product_id, quantity: 1 }];
+  } else {
     return NextResponse.json(
-      { error: 'Debes seleccionar exactamente un tratamiento o un producto.' },
+      { error: 'Debes seleccionar al menos un tratamiento, producto o saldo libre.' },
       { status: 400 }
     );
   }
@@ -68,48 +98,125 @@ export async function POST(req: NextRequest) {
     { cookies: { getAll: () => [], setAll: () => {} } }
   );
 
-  // Security: verify price in DB
-  let itemName = '';
-  let itemPrice = 0;
+  // Security: verify price in DB for every item
+  const treatmentIds = incomingItems
+    .filter((i) => i.item_type === 'treatment' || i.treatment_id)
+    .map((i) => i.treatment_id!)
+    .filter(Boolean);
 
-  if (treatment_id) {
-    const { data: treatment, error: tErr } = await supabase
+  const productIds = incomingItems
+    .filter((i) => i.item_type === 'product' || i.product_id)
+    .map((i) => i.product_id!)
+    .filter(Boolean);
+
+  // Fetch treatments if needed
+  const treatmentsMap = new Map<string, { title: string; price_ars: number }>();
+  if (treatmentIds.length > 0) {
+    const { data: dbTreatments, error: tErr } = await supabase
       .from('treatments')
-      .select('name, price_ars')
-      .eq('id', treatment_id)
-      .single();
+      .select('id, title, price_ars')
+      .in('id', treatmentIds);
 
-    if (tErr || !treatment || !treatment.price_ars) {
-      return NextResponse.json({ error: 'Tratamiento no encontrado o sin precio.' }, { status: 404 });
+    if (tErr) {
+      console.error('[GiftCard/Checkout] Error querying treatments:', tErr);
+      return NextResponse.json({ error: 'Error al verificar tratamientos.' }, { status: 500 });
     }
-    itemName = `Tratamiento: ${treatment.name}`;
-    itemPrice = treatment.price_ars;
-  } else if (product_id) {
-    const { data: product, error: pErr } = await supabase
+    dbTreatments?.forEach((t) => {
+      if (t.price_ars) treatmentsMap.set(t.id, { title: t.title, price_ars: Number(t.price_ars) });
+    });
+  }
+
+  // Fetch products if needed
+  const productsMap = new Map<string, { name: string; price_ars: number }>();
+  if (productIds.length > 0) {
+    const { data: dbProducts, error: pErr } = await supabase
       .from('products')
-      .select('name, price_ars')
-      .eq('id', product_id)
-      .single();
+      .select('id, name, price_ars')
+      .in('id', productIds);
 
-    if (pErr || !product || !product.price_ars) {
-      return NextResponse.json({ error: 'Producto no encontrado o sin precio.' }, { status: 404 });
+    if (pErr) {
+      console.error('[GiftCard/Checkout] Error querying products:', pErr);
+      return NextResponse.json({ error: 'Error al verificar productos.' }, { status: 500 });
     }
-    itemName = `Producto: ${product.name}`;
-    itemPrice = product.price_ars;
+    dbProducts?.forEach((p) => {
+      if (p.price_ars) productsMap.set(p.id, { name: p.name, price_ars: Number(p.price_ars) });
+    });
   }
 
-  if (itemPrice <= 0) {
-    return NextResponse.json({ error: 'Precio del item no válido.' }, { status: 400 });
+  const validatedItems: ValidatedItem[] = [];
+
+  for (const item of incomingItems) {
+    const qty = Math.max(1, Math.floor(item.quantity || 1));
+
+    if (item.item_type === 'treatment' || item.treatment_id) {
+      const tId = item.treatment_id!;
+      const dbT = treatmentsMap.get(tId);
+      if (!dbT || !dbT.price_ars || dbT.price_ars <= 0) {
+        return NextResponse.json({ error: 'Uno de los tratamientos no tiene un precio válido.' }, { status: 400 });
+      }
+      validatedItems.push({
+        item_type: 'treatment',
+        treatment_id: tId,
+        product_id: null,
+        custom_amount_ars: null,
+        unit_price: dbT.price_ars,
+        quantity: qty,
+        title: dbT.title,
+      });
+    } else if (item.item_type === 'product' || item.product_id) {
+      const pId = item.product_id!;
+      const dbP = productsMap.get(pId);
+      if (!dbP || !dbP.price_ars || dbP.price_ars <= 0) {
+        return NextResponse.json({ error: 'Uno de los productos no tiene un precio válido.' }, { status: 400 });
+      }
+      validatedItems.push({
+        item_type: 'product',
+        treatment_id: null,
+        product_id: pId,
+        custom_amount_ars: null,
+        unit_price: dbP.price_ars,
+        quantity: qty,
+        title: dbP.name,
+      });
+    } else if (item.item_type === 'custom_amount' || item.custom_amount_ars) {
+      const amount = Number(item.custom_amount_ars);
+      if (isNaN(amount) || amount < 10000) {
+        return NextResponse.json({ error: 'El monto libre mínimo es de $ 10.000 ARS.' }, { status: 400 });
+      }
+      validatedItems.push({
+        item_type: 'custom_amount',
+        treatment_id: null,
+        product_id: null,
+        custom_amount_ars: amount,
+        unit_price: amount,
+        quantity: 1,
+        title: item.title || `Saldo a elección en consultorio`,
+      });
+    }
   }
 
-  // Read MP access token from app_settings
-  const { data: settings, error: settingsError } = await supabase
-    .from('app_settings')
-    .select('mp_access_token')
-    .single();
+  if (validatedItems.length === 0) {
+    return NextResponse.json({ error: 'No se pudieron validar los ítems de la Gift Card.' }, { status: 400 });
+  }
 
-  if (settingsError || !settings?.mp_access_token) {
-    console.error('[GiftCard/Checkout] mp_access_token not found:', settingsError);
+  const totalAmountARS = validatedItems.reduce((sum, i) => sum + i.unit_price * i.quantity, 0);
+
+  // Read MP access token from app_settings or process.env
+  let mpAccessToken = process.env.MP_ACCESS_TOKEN;
+  try {
+    const { data: settings } = await supabase
+      .from('app_settings')
+      .select('mp_access_token')
+      .maybeSingle();
+    if (settings?.mp_access_token) {
+      mpAccessToken = settings.mp_access_token;
+    }
+  } catch {
+    // app_settings may not exist yet
+  }
+
+  if (!mpAccessToken) {
+    console.warn('[GiftCard/Checkout] mp_access_token not found.');
     return NextResponse.json(
       { error: 'El sistema de pagos no está configurado. Contactá al consultorio.' },
       { status: 503 }
@@ -137,21 +244,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Error generando código. Intentá de nuevo.' }, { status: 500 });
   }
 
-  // Set placeholder expiry (1 year out, will be recalculated to +180 days upon webhook approval)
-  const placeholderExpiry = new Date();
-  placeholderExpiry.setFullYear(placeholderExpiry.getFullYear() + 1);
+  // Vigencia de 90 días corridos
+  const expirationDate = new Date();
+  expirationDate.setDate(expirationDate.getDate() + 90);
 
   const { data: giftCard, error: insertError } = await supabase
     .from('gift_cards')
     .insert({
       code,
-      amount_ars: itemPrice,
-      remaining_balance_ars: itemPrice,
-      treatment_id: treatment_id || null,
-      product_id: product_id || null,
+      amount_ars: totalAmountARS,
+      remaining_balance_ars: totalAmountARS,
+      treatment_id: validatedItems.length === 1 && validatedItems[0].treatment_id ? validatedItems[0].treatment_id : null,
+      product_id: validatedItems.length === 1 && validatedItems[0].product_id ? validatedItems[0].product_id : null,
       delivery_method: delivery_method === 'fisica' ? 'fisica' : 'digital',
       status: 'pending_payment',
-      expiration_date: placeholderExpiry.toISOString(),
+      expiration_date: expirationDate.toISOString(),
       sender_name: sender_name.trim(),
       sender_email: sender_email.trim().toLowerCase(),
       recipient_name: recipient_name?.trim() || null,
@@ -161,23 +268,42 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (insertError || !giftCard) {
-    console.error('[GiftCard/Checkout] Insert error:', insertError);
+    console.error('[GiftCard/Checkout] Insert error into gift_cards:', insertError);
     return NextResponse.json({ error: 'Error interno al crear gift card.' }, { status: 500 });
+  }
+
+  // Save items in gift_card_items table if table exists
+  try {
+    const itemsPayload = validatedItems.map((item) => ({
+      gift_card_id: giftCard.id,
+      item_type: item.item_type,
+      treatment_id: item.treatment_id,
+      product_id: item.product_id,
+      custom_amount_ars: item.custom_amount_ars,
+      unit_price_ars: item.unit_price,
+      quantity: item.quantity,
+      subtotal_ars: item.unit_price * item.quantity,
+      item_title: item.title,
+    }));
+
+    await supabase.from('gift_card_items').insert(itemsPayload);
+  } catch (itemsErr) {
+    console.warn('[GiftCard/Checkout] Warning inserting gift_card_items (table might be pending SQL migration):', itemsErr);
   }
 
   // Create MercadoPago preference
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
 
+  const mpItems = validatedItems.map((item, idx) => ({
+    id: `${giftCard.id}_${idx + 1}`,
+    title: `Gift Card — ${item.title}`,
+    quantity: item.quantity,
+    unit_price: item.unit_price,
+    currency_id: 'ARS',
+  }));
+
   const mpBody = {
-    items: [
-      {
-        id: giftCard.id,
-        title: `Gift Card — ${itemName}`,
-        quantity: 1,
-        unit_price: itemPrice,
-        currency_id: 'ARS',
-      },
-    ],
+    items: mpItems,
     payer: {
       name: sender_name.trim(),
       email: sender_email.trim().toLowerCase(),
@@ -199,7 +325,7 @@ export async function POST(req: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${settings.mp_access_token}`,
+        Authorization: `Bearer ${mpAccessToken}`,
       },
       body: JSON.stringify(mpBody),
     });

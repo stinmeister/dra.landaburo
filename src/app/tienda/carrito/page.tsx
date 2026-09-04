@@ -5,6 +5,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useCart } from '@/contexts/CartContext';
+import { trackBeginCheckout } from '@/lib/tracking';
 import styles from './carrito.module.css';
 
 const formatARS = (n: number) =>
@@ -31,6 +32,9 @@ export default function CarritoPage() {
     if (items.length === 0) return;
     setLoading(true);
     setError(null);
+
+    // Medición de inicio de checkout
+    trackBeginCheckout(items, totalARS);
 
     try {
       const res = await fetch('/api/checkout/mercadopago', {

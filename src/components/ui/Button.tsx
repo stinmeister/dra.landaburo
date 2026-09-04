@@ -30,7 +30,7 @@ export const Button = ({
 
   if (href) {
     return (
-      <Link href={href} className={rootClassName}>
+      <Link href={href} className={rootClassName} onClick={onClick}>
         {children}
       </Link>
     );
