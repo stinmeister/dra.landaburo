@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Image from 'next/image';
-import { Edit2, Plus, Minus, X, Check, Image as ImageIcon } from 'lucide-react';
-import { toggleProduct, updateStock, updateProduct } from './actions';
+import { Edit2, Plus, Minus, X, Check, Image as ImageIcon, UploadCloud, Loader2 } from 'lucide-react';
+import { toggleProduct, updateStock, updateProduct, uploadProductImage } from './actions';
 import styles from './page.module.css';
 
 interface Product {
@@ -25,15 +25,52 @@ interface Props {
 export default function ProductTable({ products, categories }: Props) {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [selectedImage, setSelectedImage] = useState<string>('');
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleOpenEdit = (p: Product) => {
     setEditingProduct(p);
     setSelectedImage(p.image_url || '');
+    setUploadError(null);
   };
 
   const handleCloseEdit = () => {
     setEditingProduct(null);
     setSelectedImage('');
+    setUploadError(null);
+  };
+
+  const handleFileUpload = async (file: File) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Por favor seleccioná un archivo de imagen (PNG, JPG o WEBP).');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await uploadProductImage(formData);
+    setIsUploading(false);
+
+    if (res.success && res.url) {
+      setSelectedImage(res.url);
+    } else {
+      setUploadError(res.error || 'Error al subir la imagen.');
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFileUpload(e.dataTransfer.files[0]);
+    }
   };
 
   return (
@@ -90,7 +127,7 @@ export default function ProductTable({ products, categories }: Props) {
                   </td>
                   <td className={lowStock ? styles.stockLow : styles.stockOk}>
                     {p.stock_quantity ?? 0} ud.
-                    {lowStock && <span className={styles.alertDot} title="Stock bajo" />}
+                    {lowStock && <span className={styles.alertDot} title="Stock bajo (menos de 5 unidades)" />}
                   </td>
                   <td>
                     <form action={toggleProduct}>
@@ -212,8 +249,50 @@ export default function ProductTable({ products, categories }: Props) {
                 </div>
 
                 <div className={`${styles.field} ${styles.colSpan2}`}>
-                  <label className={styles.label}>Ruta o URL de Imagen</label>
-                  <div className={styles.imgInputGroup}>
+                  <label className={styles.label}>Imagen del Producto</label>
+                  
+                  {/* Dropzone para Drag & Drop */}
+                  <div
+                    className={`${styles.dropzone} ${isDragOver ? styles.dropzoneActive : ''}`}
+                    onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+                    onDragLeave={() => setIsDragOver(false)}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          handleFileUpload(e.target.files[0]);
+                        }
+                      }}
+                    />
+                    {isUploading ? (
+                      <div className={styles.uploadingState}>
+                        <Loader2 size={24} className={styles.spinner} />
+                        <span>Subiendo imagen a Supabase Storage...</span>
+                      </div>
+                    ) : (
+                      <div className={styles.dropzoneContent}>
+                        <UploadCloud size={24} color="#C5A47E" />
+                        <div>
+                          <p className={styles.dropzoneTitle}>
+                            <strong>Hacé clic</strong> o arrastrá una imagen acá
+                          </p>
+                          <p className={styles.dropzoneHint}>PNG, JPG o WEBP (máx. 5MB)</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {uploadError && (
+                    <p className={styles.uploadErrorText}>{uploadError}</p>
+                  )}
+
+                  <div className={styles.imgInputGroup} style={{ marginTop: '0.75rem' }}>
                     <input
                       name="image_url"
                       type="text"
@@ -236,7 +315,7 @@ export default function ProductTable({ products, categories }: Props) {
                     )}
                   </div>
                   <span className={styles.helperText}>
-                    Tip: Las imágenes del catálogo residen en <code>/images/nombre-imagen.jpg</code>
+                    Tip: Podés arrastrar una foto nueva o ingresar la ruta de imagen existente.
                   </span>
                 </div>
               </div>

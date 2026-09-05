@@ -219,12 +219,26 @@ export default function GiftCardForm({ catalog }: { catalog: GiftCardCatalogItem
                     {f === 'all'
                       ? 'Todo'
                       : f === 'treatment'
-                      ? 'Tratamientos'
+                      ? 'Cosmiatría (Mercedes)'
                       : f === 'product'
-                      ? 'Skincare'
-                      : 'Monto Libre'}
+                      ? 'Skincare (Sulderm)'
+                      : 'Monto Libre ($ ARS)'}
                   </button>
                 ))}
+              </div>
+
+              {/* Nota Médica Informativa */}
+              <div style={{
+                background: 'rgba(197, 164, 126, 0.08)',
+                borderLeft: '3px solid var(--color-champagne)',
+                padding: '0.75rem 1rem',
+                borderRadius: '4px',
+                marginBottom: '1.25rem',
+                fontSize: '0.8rem',
+                color: 'var(--color-negro)',
+                lineHeight: 1.5,
+              }}>
+                <strong>✨ ¿Buscás regalar tratamientos médicos?</strong> (Toxina botulínica, rellenos, láser Nordlys o bioestimuladores). Al requerir evaluación clínica y diagnóstico médico personalizado por la Dra. Landaburo, se regalan seleccionando <strong>Monto Libre</strong> para que la paciente elija su protocolo en consultorio.
               </div>
 
               {/* Selector de Catálogo */}
@@ -240,7 +254,7 @@ export default function GiftCardForm({ catalog }: { catalog: GiftCardCatalogItem
                         onClick={() => handleAddItem(item)}
                       >
                         <span className={styles.catalogBtnType}>
-                          {item.type === 'treatment' ? '💆 Tratamiento' : '🧴 Skincare'}
+                          {item.type === 'treatment' ? '💆 Cosmiatría' : '🧴 Skincare'}
                         </span>
                         <span className={styles.catalogBtnName}>{item.name}</span>
                         <span className={styles.catalogBtnPrice}>{formatARS(item.price_ars)}</span>

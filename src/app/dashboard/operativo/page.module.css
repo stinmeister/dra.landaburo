@@ -183,3 +183,52 @@
   flex-shrink: 0;
 }
 .reviewsBtn:hover { background: var(--color-champagne); color: var(--color-negro); }
+
+/* Stock Alerts */
+.stockList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.stockItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-sm);
+}
+.stockItem:last-child {
+  border-bottom: none;
+}
+.stockName {
+  font-weight: 500;
+  color: var(--color-negro);
+}
+.stockCat {
+  font-size: var(--text-xs);
+  color: var(--color-gris);
+  margin-top: 0.1rem;
+}
+.stockBadgeLow {
+  background: rgba(197, 80, 80, 0.12);
+  color: #c55050;
+  padding: 0.25rem 0.6rem;
+  border-radius: 100px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+.stockBadgeOk {
+  background: rgba(46, 125, 50, 0.1);
+  color: #2e7d32;
+  padding: 0.25rem 0.6rem;
+  border-radius: 100px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+.stockEmpty {
+  font-size: var(--text-sm);
+  color: var(--color-gris);
+  font-style: italic;
+  padding: 0.5rem 0;
+}

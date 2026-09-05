@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
@@ -17,31 +17,36 @@ export async function POST(request: NextRequest) {
     // 2. Hashear la IP con SHA-256 para preservar privacidad de pacientes
     const ip_hash = crypto.createHash('sha256').update(rawIp).digest('hex');
 
-    // 3. Guardar en la tabla cookie_consents de Supabase
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from('cookie_consents')
-      .insert({
-        ip_hash,
-        analytics_accepted,
-        marketing_accepted,
-      })
-      .select('id, created_at')
-      .single();
+    // 3. Guardar en la tabla cookie_consents de Supabase usando admin client (evita violación RLS 42501)
+    let consentRecordId: string | null = null;
+    try {
+      const admin = createAdminClient();
+      const { data, error } = await admin
+        .from('cookie_consents')
+        .insert({
+          ip_hash,
+          analytics_accepted,
+          marketing_accepted,
+        })
+        .select('id, created_at')
+        .single();
 
-    if (error) {
-      console.error('Error insertando en cookie_consents:', error);
-      // Retornamos 200 para no romper la UX del paciente si hay un problema temporal con Supabase
-      return NextResponse.json({
-        success: false,
-        error: error.message,
-      }, { status: 200 });
+      if (error) {
+        console.warn('[CookieConsent] Error al registrar en Supabase:', error.message);
+      } else {
+        consentRecordId = data?.id ?? null;
+      }
+    } catch (dbErr) {
+      console.warn('[CookieConsent] Excepción al persistir en Supabase:', dbErr);
     }
 
-    // 4. Configurar cookie HTTP en la respuesta
+    // 4. Configurar cookie HTTP en la respuesta (siempre se establece para garantizar persistencia por 12 meses)
+    const host = request.headers.get('host') || '';
+    const isProdDomain = host.includes('dralandaburo.com');
+
     const response = NextResponse.json({
       success: true,
-      id: data?.id,
+      id: consentRecordId,
       consent: {
         analytics_accepted,
         marketing_accepted,
@@ -53,9 +58,10 @@ export async function POST(request: NextRequest) {
       m: marketing_accepted ? 1 : 0,
     }), {
       path: '/',
-      maxAge: 365 * 24 * 60 * 60, // 1 año
+      maxAge: 365 * 24 * 60 * 60, // 365 días (12 meses)
       sameSite: 'lax',
       httpOnly: false, // Accesible por cliente para lectura rápida
+      ...(isProdDomain ? { domain: '.dralandaburo.com' } : {}),
     });
 
     return response;

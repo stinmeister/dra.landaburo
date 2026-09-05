@@ -55,7 +55,6 @@ export default function ProductCard({ product }: { product: Product }) {
               <span>Sin imagen</span>
             </div>
           )}
-          {hasDiscount && <span className={styles.discountBadge}>Oferta</span>}
           {outOfStock && <span className={styles.outOfStockOverlay}>Sin stock</span>}
         </div>
       </Link>

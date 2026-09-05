@@ -103,6 +103,20 @@ export default async function OperativoDashboard() {
 
   const staffProfiles = staffProfilesRaw ?? [];
 
+  // Query low stock products (< 5 units)
+  let lowStockProducts: Array<{ id: string; name: string; category: string; stock_quantity: number }> = [];
+  try {
+    const { data: prodData } = await supabase
+      .from('products')
+      .select('id, name, category, stock_quantity')
+      .eq('is_active', true)
+      .order('stock_quantity', { ascending: true });
+    
+    lowStockProducts = (prodData ?? []).filter((p) => (p.stock_quantity ?? 0) <= 5);
+  } catch {
+    lowStockProducts = [];
+  }
+
   // Load app settings for default assignees
   let appSettings: { default_birthday_assignee?: string; default_giftcard_assignee?: string } | null = null;
   try {
@@ -139,6 +153,28 @@ export default async function OperativoDashboard() {
           <section className={styles.card}>
             <h2 className={styles.cardTitle}>Tareas del día</h2>
             <TaskList tasks={tasks} />
+          </section>
+
+          <section className={styles.card}>
+            <h2 className={styles.cardTitle}>Control de Stock & Insumos</h2>
+            <p className={styles.cardHelper}>Productos con 5 o menos unidades en inventario</p>
+            {lowStockProducts.length === 0 ? (
+              <p className={styles.stockEmpty}>✨ Todos los productos cuentan con stock suficiente.</p>
+            ) : (
+              <div className={styles.stockList}>
+                {lowStockProducts.map((p) => (
+                  <div key={p.id} className={styles.stockItem}>
+                    <div>
+                      <div className={styles.stockName}>{p.name}</div>
+                      <div className={styles.stockCat}>{p.category}</div>
+                    </div>
+                    <span className={p.stock_quantity === 0 ? styles.stockBadgeLow : styles.stockBadgeLow}>
+                      {p.stock_quantity === 0 ? 'Sin stock (0 ud)' : `${p.stock_quantity} ud`}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
 
           <section className={styles.card}>

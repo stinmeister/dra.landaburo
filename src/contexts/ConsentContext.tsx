@@ -20,12 +20,20 @@ const COOKIE_NAME = 'cookie_consent';
 
 const ConsentContext = createContext<ConsentContextType | undefined>(undefined);
 
+function getBrowserCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(new RegExp('(^|;\\s*)(' + name + ')=([^;]*)'));
+  return match ? decodeURIComponent(match[3]) : null;
+}
+
 function setBrowserCookie(name: string, value: string, days = 365) {
   if (typeof document === 'undefined') return;
   const date = new Date();
   date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
   const expires = `expires=${date.toUTCString()}`;
-  document.cookie = `${name}=${encodeURIComponent(value)};${expires};path=/;SameSite=Lax`;
+  const hostname = window.location.hostname;
+  const domainPart = hostname.includes('dralandaburo.com') ? ';domain=.dralandaburo.com' : '';
+  document.cookie = `${name}=${encodeURIComponent(value)};${expires};path=/${domainPart};SameSite=Lax`;
 }
 
 export function ConsentProvider({ children }: { children: React.ReactNode }) {
@@ -33,22 +41,51 @@ export function ConsentProvider({ children }: { children: React.ReactNode }) {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
+    let resolvedState: CookieConsentState | null = null;
+
+    // 1. Intentar leer de localStorage
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        const parsed: CookieConsentState = JSON.parse(stored);
-        setConsentState(parsed);
-        // Ensure browser cookie is in sync
-        setBrowserCookie(
-          COOKIE_NAME,
-          JSON.stringify({ a: parsed.analytics ? 1 : 0, m: parsed.marketing ? 1 : 0 })
-        );
+        resolvedState = JSON.parse(stored);
       }
     } catch {
-      // localStorage error (incognito / blocked)
-    } finally {
-      setIsLoaded(true);
+      // localStorage bloqueado / incógnito
     }
+
+    // 2. Si no estaba en localStorage, intentar leer de la cookie HTTP / document.cookie
+    if (!resolvedState) {
+      try {
+        const rawCookie = getBrowserCookie(COOKIE_NAME);
+        if (rawCookie) {
+          const cookieObj = JSON.parse(rawCookie);
+          if (cookieObj && typeof cookieObj === 'object') {
+            resolvedState = {
+              analytics: Boolean(cookieObj.a || cookieObj.analytics_accepted),
+              marketing: Boolean(cookieObj.m || cookieObj.marketing_accepted),
+              timestamp: Date.now(),
+            };
+            // Re-sincronizar en localStorage para velocidad en próximas visitas
+            try {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(resolvedState));
+            } catch {}
+          }
+        }
+      } catch {
+        // Error parseando cookie
+      }
+    }
+
+    if (resolvedState) {
+      setConsentState(resolvedState);
+      // Garantizar que la cookie esté fresca por 1 año
+      setBrowserCookie(
+        COOKIE_NAME,
+        JSON.stringify({ a: resolvedState.analytics ? 1 : 0, m: resolvedState.marketing ? 1 : 0 })
+      );
+    }
+
+    setIsLoaded(true);
   }, []);
 
   const setConsent = useCallback(async (analytics: boolean, marketing: boolean) => {
@@ -58,23 +95,23 @@ export function ConsentProvider({ children }: { children: React.ReactNode }) {
       timestamp: Date.now(),
     };
 
-    // 1. Update State
+    // 1. Actualizar estado en React
     setConsentState(newState);
 
-    // 2. Persist in localStorage
+    // 2. Persistir en localStorage
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
     } catch {
-      // Ignore localStorage errors
+      // Ignorar errores de localStorage
     }
 
-    // 3. Persist in browser cookie
+    // 3. Persistir en cookie del navegador (12 meses de validez)
     setBrowserCookie(
       COOKIE_NAME,
       JSON.stringify({ a: analytics ? 1 : 0, m: marketing ? 1 : 0 })
     );
 
-    // 4. Send to Supabase via API route
+    // 4. Enviar a Supabase para registro de auditoría médica
     try {
       await fetch('/api/cookies/consent', {
         method: 'POST',
@@ -85,10 +122,10 @@ export function ConsentProvider({ children }: { children: React.ReactNode }) {
         }),
       });
     } catch (err) {
-      console.warn('No se pudo sincronizar consentimiento con el servidor:', err);
+      console.warn('[ConsentContext] Aviso: No se pudo sincronizar consentimiento con el servidor:', err);
     }
 
-    // 5. Dispatch window event for external listeners
+    // 5. Despachar evento para Meta Pixel / GA4
     if (typeof window !== 'undefined') {
       window.dispatchEvent(
         new CustomEvent('cookie_consent_updated', { detail: newState })
@@ -100,7 +137,12 @@ export function ConsentProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch {
-      // Ignore
+      // Ignorar
+    }
+    if (typeof document !== 'undefined') {
+      const hostname = window.location.hostname;
+      const domainPart = hostname.includes('dralandaburo.com') ? ';domain=.dralandaburo.com' : '';
+      document.cookie = `${COOKIE_NAME}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/${domainPart}`;
     }
     setConsentState(null);
   }, []);

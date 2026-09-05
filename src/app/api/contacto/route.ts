@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,15 +13,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 1. Guardar en Supabase si la tabla leads existe
+    // 1. Guardar en Supabase si la tabla leads existe (usando Service Role para evitar bloqueos RLS)
     try {
-      const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { cookies: { getAll: () => [], setAll: () => {} } }
-      );
-
-      await supabase.from('leads').insert([
+      const admin = createAdminClient();
+      await admin.from('leads').insert([
         {
           full_name: name,
           email,
@@ -32,11 +27,38 @@ export async function POST(req: NextRequest) {
         },
       ]);
     } catch (dbErr) {
-      console.warn('[Contacto] No se pudo guardar en Supabase:', dbErr);
+      console.warn('[Contacto] Aviso: No se pudo guardar lead en Supabase (la tabla leads puede requerir migración):', dbErr);
     }
 
-    // 2. Despacho de Email con Resend API
+    // 2. Despacho a n8n Webhook de Alertas Operativas (si está configurado)
+    const n8nWebhookUrl = process.env.N8N_CONTACT_WEBHOOK_URL;
+    if (n8nWebhookUrl) {
+      try {
+        await fetch(n8nWebhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event: 'contact_form_submission',
+            name,
+            email,
+            phone: phone || 'No especificado',
+            treatment: treatment || 'Consulta general',
+            message,
+            timestamp: new Date().toISOString(),
+          }),
+        });
+      } catch (n8nErr) {
+        console.warn('[Contacto/n8n Webhook] No se pudo notificar a n8n:', n8nErr);
+      }
+    }
+
+    // 3. Despacho de Email con Resend API
     const resendApiKey = process.env.RESEND_API_KEY;
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'Consultorio Dra. Landaburo <onboarding@resend.dev>';
+    const recipientEmails = process.env.CONTACT_NOTIFICATION_EMAILS
+      ? process.env.CONTACT_NOTIFICATION_EMAILS.split(',').map((e) => e.trim())
+      : ['dra.landaburo@gmail.com', 'Paula@dralandaburo.com'];
+
     if (resendApiKey) {
       try {
         const emailHtml = `
@@ -84,8 +106,8 @@ export async function POST(req: NextRequest) {
             'Authorization': `Bearer ${resendApiKey}`,
           },
           body: JSON.stringify({
-            from: 'Consultorio Dra. Landaburo <consultas@dralandaburo.com>',
-            to: ['dra.landaburo@gmail.com', 'Paula@dralandaburo.com'],
+            from: fromEmail,
+            to: recipientEmails,
             reply_to: email,
             subject: `[Web Consulta] ${name} — ${treatment || 'Consulta General'}`,
             html: emailHtml,

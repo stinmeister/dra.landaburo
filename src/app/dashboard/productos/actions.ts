@@ -110,3 +110,60 @@ export async function updateProduct(formData: FormData) {
   revalidatePath('/dashboard/productos');
   revalidatePath('/tienda');
 }
+
+export async function uploadProductImage(formData: FormData): Promise<{ success: boolean; url?: string; error?: string }> {
+  try {
+    await assertAdmin();
+
+    const file = formData.get('file') as File | null;
+    if (!file || !(file instanceof File)) {
+      return { success: false, error: 'No se recibió ningún archivo válido.' };
+    }
+
+    if (!file.type.startsWith('image/')) {
+      return { success: false, error: 'El archivo debe ser una imagen (JPG, PNG, WEBP).' };
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      return { success: false, error: 'La imagen no debe superar los 5MB.' };
+    }
+
+    const admin = createAdminClient();
+
+    // 1. Asegurar que el bucket 'products' exista
+    const { data: buckets } = await admin.storage.listBuckets();
+    const productBucketExists = (buckets ?? []).some((b) => b.name === 'products' || b.id === 'products');
+
+    if (!productBucketExists) {
+      await admin.storage.createBucket('products', {
+        public: true,
+        fileSizeLimit: 5242880, // 5MB
+        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+      });
+    }
+
+    // 2. Subir imagen
+    const fileExt = file.name.split('.').pop() || 'jpg';
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    const { error: uploadErr } = await admin.storage
+      .from('products')
+      .upload(fileName, buffer, {
+        contentType: file.type,
+        upsert: true,
+      });
+
+    if (uploadErr) {
+      console.error('[Storage Upload Error]:', uploadErr);
+      return { success: false, error: `Error de almacenamiento: ${uploadErr.message}` };
+    }
+
+    const { data: publicUrlData } = admin.storage.from('products').getPublicUrl(fileName);
+    return { success: true, url: publicUrlData.publicUrl };
+  } catch (err: any) {
+    console.error('[uploadProductImage Error]:', err);
+    return { success: false, error: err.message || 'Error al procesar la imagen' };
+  }
+}

@@ -22,12 +22,13 @@ export interface GiftCardCatalogItem {
 export default async function GiftCardsPage() {
   const supabase = await createClient();
 
-  // 1. Cargar todos los tratamientos activos desde Supabase
+  // 1. Cargar tratamientos de Cosmiatría / Cosmetología activos (Mercedes Pasquet)
+  // Los tratamientos médicos (Dra. Landaburo) se regalan vía saldo libre previa evaluación diagnóstica.
   const { data: treatments } = await supabase
     .from('treatments')
     .select('id, title, price_ars, category, description')
     .eq('is_active', true)
-    .order('category')
+    .ilike('category', '%cosmet%')
     .order('title');
 
   // 2. Cargar todos los productos de skincare activos desde Supabase
