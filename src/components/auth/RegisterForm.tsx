@@ -41,7 +41,7 @@ export default function RegisterForm() {
         ? `${window.location.origin}/auth/callback?next=/portal/paciente`
         : undefined;
 
-    const { error: signUpError } = await supabase.auth.signUp({
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -61,6 +61,11 @@ export default function RegisterForm() {
       return;
     }
 
+    if (signUpData?.session) {
+      window.location.href = '/portal/paciente';
+      return;
+    }
+
     setSuccess(true);
     setLoading(false);
   }
@@ -68,13 +73,12 @@ export default function RegisterForm() {
   if (success) {
     return (
       <div className={styles.successBox}>
-        <p className={styles.successTitle}>¡Cuenta creada!</p>
+        <p className={styles.successTitle}>¡Cuenta creada con éxito!</p>
         <p className={styles.successText}>
-          Revisá tu bandeja de entrada para confirmar tu dirección de email y
-          activar tu cuenta.
+          Tu cuenta ya está activa. Podés ingresar directamente con tu email y contraseña.
         </p>
         <Link href="/login" className={styles.backToLogin}>
-          Volver al inicio de sesión
+          Ingresar ahora
         </Link>
       </div>
     );

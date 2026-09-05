@@ -65,7 +65,7 @@ export default function ContactoPage() {
                     <div>
                       <h3>Horarios</h3>
                       <p>
-                        Lun - Vier: 10:00 – 16:00 hs<br />
+                        Lun - Vier: 10:00 – 19:00 hs<br />
                         Sáb: Solo con cita previa
                       </p>
                     </div>

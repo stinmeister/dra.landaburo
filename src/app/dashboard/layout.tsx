@@ -30,6 +30,7 @@ const ADMIN_NAV = [
 
 const STAFF_NAV = [
   { href: '/dashboard/operativo', label: 'Operativo' },
+  { href: '/dashboard/productos', label: 'Productos' },
 ];
 
 export default async function DashboardLayout({

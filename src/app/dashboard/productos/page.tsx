@@ -20,7 +20,7 @@ export default async function ProductosPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
   const { data: selfProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-  if (selfProfile?.role !== 'admin') redirect('/dashboard/operativo');
+  if (!['admin', 'operativo', 'cosmetologa'].includes(selfProfile?.role ?? '')) redirect('/dashboard/operativo');
 
   const admin = createAdminClient();
   const { data: products } = await admin

@@ -34,21 +34,6 @@ export const teamMembers: TeamMember[] = [
     }
   },
   {
-    id: 'dra-noelia-luque',
-    name: 'Dra. Noelia Luque',
-    role: 'Especialista en Clínica Médica y Terapia Intensiva',
-    category: 'medica',
-    badge: 'CUERPO MÉDICO',
-    bio: 'Especialista en Clínica Médica y Terapia Intensiva, con formación en medicina del estilo de vida, medicina ortomolecular y sueroterapia. Con más de una década de trayectoria clínica —incluyendo su paso por el Hospital Clínic de Barcelona— se incorpora al equipo para acompañar a los pacientes desde un abordaje que combina rigor médico con bienestar celular e integral.',
-    specialties: [
-      'Sueroterapia & Nutrientes Endovenosos',
-      'Medicina del Estilo de Vida',
-      'Medicina Ortomolecular & Regenerativa',
-      'Evaluación Clínica de Bienestar'
-    ],
-    image: '/images/Dra.Landaburo.png',
-  },
-  {
     id: 'mercedes-mechi',
     name: 'Mercedes Pasquet',
     role: 'Especialista en Cosmiatría & Cuidado Facial Integral',
@@ -92,6 +77,21 @@ export const teamMembers: TeamMember[] = [
       'Atención Directa vía WhatsApp',
       'Seguimiento Post-Tratamiento',
       'Gestión de Consultas y Cuidados'
+    ],
+    image: '/images/Dra.Landaburo.png',
+  },
+  {
+    id: 'dra-noelia-luque',
+    name: 'Dra. Noelia Luque',
+    role: 'Especialista en Clínica Médica y Terapia Intensiva',
+    category: 'medica',
+    badge: 'CUERPO MÉDICO',
+    bio: 'Especialista en Clínica Médica y Terapia Intensiva, con formación en medicina del estilo de vida, medicina ortomolecular y sueroterapia. Con más de una década de trayectoria clínica —incluyendo su paso por el Hospital Clínic de Barcelona— se incorpora al equipo para acompañar a los pacientes desde un abordaje que combina rigor médico con bienestar celular e integral.',
+    specialties: [
+      'Sueroterapia & Nutrientes Endovenosos',
+      'Medicina del Estilo de Vida',
+      'Medicina Ortomolecular & Regenerativa',
+      'Evaluación Clínica de Bienestar'
     ],
     image: '/images/Dra.Landaburo.png',
   }

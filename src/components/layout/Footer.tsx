@@ -63,7 +63,7 @@ export default function Footer() {
           <div className={styles.infoItem}>
             <Clock size={20} />
             <span>
-              Lun-Vier: 10:00 – 16:00 hs<br />
+              Lun-Vier: 10:00 – 19:00 hs<br />
               Sáb: Solo con cita previa
             </span>
           </div>
