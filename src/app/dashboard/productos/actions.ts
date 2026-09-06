@@ -130,19 +130,7 @@ export async function uploadProductImage(formData: FormData): Promise<{ success:
 
     const admin = createAdminClient();
 
-    // 1. Asegurar que el bucket 'products' exista
-    const { data: buckets } = await admin.storage.listBuckets();
-    const productBucketExists = (buckets ?? []).some((b) => b.name === 'products' || b.id === 'products');
-
-    if (!productBucketExists) {
-      await admin.storage.createBucket('products', {
-        public: true,
-        fileSizeLimit: 5242880, // 5MB
-        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
-      });
-    }
-
-    // 2. Subir imagen
+    // Subir imagen al bucket 'products' (bucket aprovisionado)
     const fileExt = file.name.split('.').pop() || 'jpg';
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
     const arrayBuffer = await file.arrayBuffer();

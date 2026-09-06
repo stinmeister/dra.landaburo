@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     const fromEmail = process.env.RESEND_FROM_EMAIL || 'Consultorio Dra. Landaburo <onboarding@resend.dev>';
     const recipientEmails = process.env.CONTACT_NOTIFICATION_EMAILS
       ? process.env.CONTACT_NOTIFICATION_EMAILS.split(',').map((e) => e.trim())
-      : ['dra.landaburo@gmail.com', 'Paula@dralandaburo.com'];
+      : ['dralandaburo@gmail.com', 'paula@dralandaburo.com'];
 
     if (resendApiKey) {
       try {

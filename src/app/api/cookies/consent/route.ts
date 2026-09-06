@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
@@ -17,11 +17,15 @@ export async function POST(request: NextRequest) {
     // 2. Hashear la IP con SHA-256 para preservar privacidad de pacientes
     const ip_hash = crypto.createHash('sha256').update(rawIp).digest('hex');
 
-    // 3. Guardar en la tabla cookie_consents de Supabase usando admin client (evita violación RLS 42501)
+    // 3. Guardar en la tabla cookie_consents de Supabase usando cliente anónimo (RLS policy anon INSERT)
     let consentRecordId: string | null = null;
     try {
-      const admin = createAdminClient();
-      const { data, error } = await admin
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { auth: { persistSession: false } }
+      );
+      const { data, error } = await supabase
         .from('cookie_consents')
         .insert({
           ip_hash,

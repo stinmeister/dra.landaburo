@@ -18,7 +18,7 @@
 ---
 
 ## 🔬 CAMPAÑA 1: Lanzamiento Exclusivo de Sueroterapia (19 de Septiembre)
-> **Directora del protocolo:** Dra. Noelia Luque (Especialista en Clínica Médica, Cuidados Críticos y Sueroterapia).
+> **Directora del protocolo:** Dra. Noelia Luque (Especialista en Clínica Médica y Terapia Intensiva, con formación en medicina del estilo de vida, medicina ortomolecular y sueroterapia).
 
 ```mermaid
 flowchart LR
