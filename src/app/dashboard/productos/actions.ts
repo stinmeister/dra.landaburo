@@ -41,12 +41,18 @@ export async function createProduct(formData: FormData) {
   const slug = slugify(name);
   const admin = createAdminClient();
 
-  await admin.from('products').insert({
+  const insertData: any = {
     name, slug, category, price_ars,
     stock_quantity: isNaN(stock_quantity) ? 0 : stock_quantity,
     min_stock_alert: isNaN(min_stock_alert) ? 5 : min_stock_alert,
     description, image_url, is_active: true,
-  });
+  };
+
+  const { error: insErr } = await admin.from('products').insert(insertData);
+  if (insErr && insErr.code === '42703') {
+    const { min_stock_alert: _, ...fallbackData } = insertData;
+    await admin.from('products').insert(fallbackData);
+  }
 
   revalidatePath('/dashboard/productos');
   revalidatePath('/tienda');
@@ -101,7 +107,7 @@ export async function updateProduct(formData: FormData) {
   if (!id || !name || !category || isNaN(price_ars)) return;
 
   const admin = createAdminClient();
-  await admin.from('products').update({
+  const updateData: any = {
     name,
     category,
     price_ars,
@@ -109,7 +115,13 @@ export async function updateProduct(formData: FormData) {
     min_stock_alert: isNaN(min_stock_alert) ? 5 : min_stock_alert,
     description,
     image_url: image_url || null,
-  }).eq('id', id);
+  };
+
+  const { error: updErr } = await admin.from('products').update(updateData).eq('id', id);
+  if (updErr && updErr.code === '42703') {
+    const { min_stock_alert: _, ...fallbackUpdate } = updateData;
+    await admin.from('products').update(fallbackUpdate).eq('id', id);
+  }
 
   revalidatePath('/dashboard/productos');
   revalidatePath('/tienda');

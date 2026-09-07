@@ -106,13 +106,24 @@ export default async function OperativoDashboard() {
   // Query low stock products (<= min_stock_alert or 5 units)
   let lowStockProducts: Array<{ id: string; name: string; category: string; stock_quantity: number; min_stock_alert?: number }> = [];
   try {
-    const { data: prodData } = await supabase
+    let prodData: any = null;
+    const { data: pDataAlert, error: pErr } = await supabase
       .from('products')
       .select('id, name, category, stock_quantity, min_stock_alert')
       .eq('is_active', true)
       .order('stock_quantity', { ascending: true });
     
-    lowStockProducts = (prodData ?? []).filter((p) => (p.stock_quantity ?? 0) <= (p.min_stock_alert ?? 5));
+    if (!pErr && pDataAlert) {
+      prodData = pDataAlert;
+    } else {
+      const { data: pDataFallback } = await supabase
+        .from('products')
+        .select('id, name, category, stock_quantity')
+        .eq('is_active', true)
+        .order('stock_quantity', { ascending: true });
+      prodData = pDataFallback;
+    }
+    lowStockProducts = (prodData ?? []).filter((p: any) => (p.stock_quantity ?? 0) <= (p.min_stock_alert ?? 5));
   } catch {
     lowStockProducts = [];
   }

@@ -23,12 +23,23 @@ export default async function ProductosPage() {
   if (!['admin', 'operativo', 'cosmetologa'].includes(selfProfile?.role ?? '')) redirect('/dashboard/operativo');
 
   const admin = createAdminClient();
-  const { data: products } = await admin
+  let products: any[] = [];
+  const { data: pWithAlert, error: pAlertErr } = await admin
     .from('products')
     .select('id, name, category, price_ars, stock_quantity, min_stock_alert, is_active, image_url, description')
     .order('name', { ascending: true });
 
-  const rows = (products ?? []) as any[];
+  if (!pAlertErr && pWithAlert) {
+    products = pWithAlert;
+  } else {
+    const { data: pFallback } = await admin
+      .from('products')
+      .select('id, name, category, price_ars, stock_quantity, is_active, image_url, description')
+      .order('name', { ascending: true });
+    products = pFallback ?? [];
+  }
+
+  const rows = products;
 
   return (
     <div className={styles.page}>
