@@ -12,6 +12,7 @@ interface Product {
   category: string;
   price_ars: number;
   stock_quantity: number;
+  min_stock_alert?: number | null;
   is_active: boolean;
   image_url: string | null;
   description?: string | null;
@@ -98,7 +99,9 @@ export default function ProductTable({ products, categories }: Props) {
               </tr>
             )}
             {products.map((p) => {
-              const lowStock = (p.stock_quantity ?? 0) < 5;
+              const threshold = p.min_stock_alert ?? 5;
+              const isOut = (p.stock_quantity ?? 0) === 0;
+              const lowStock = (p.stock_quantity ?? 0) <= threshold;
               return (
                 <tr key={p.id} className={!p.is_active ? styles.rowInactive : ''}>
                   <td className={styles.imgCell}>
@@ -125,9 +128,13 @@ export default function ProductTable({ products, categories }: Props) {
                   <td className={styles.priceCell}>
                     ${Number(p.price_ars).toLocaleString('es-AR', { minimumFractionDigits: 0 })}
                   </td>
-                  <td className={lowStock ? styles.stockLow : styles.stockOk}>
+                  <td className={isOut ? styles.stockLow : (lowStock ? styles.stockLow : styles.stockOk)}>
                     {p.stock_quantity ?? 0} ud.
-                    {lowStock && <span className={styles.alertDot} title="Stock bajo (menos de 5 unidades)" />}
+                    {isOut ? (
+                      <span className={styles.alertDot} title="Sin stock (0 unidades)" style={{ backgroundColor: '#e53e3e' }} />
+                    ) : lowStock ? (
+                      <span className={styles.alertDot} title={`Stock bajo (${p.stock_quantity} <= umbral de ${threshold} ud.)`} />
+                    ) : null}
                   </td>
                   <td>
                     <form action={toggleProduct}>
@@ -233,6 +240,17 @@ export default function ProductTable({ products, categories }: Props) {
                     type="number"
                     min="0"
                     defaultValue={editingProduct.stock_quantity ?? 0}
+                    className={styles.input}
+                  />
+                </div>
+
+                <div className={styles.field}>
+                  <label className={styles.label}>Umbral Alerta Mínima</label>
+                  <input
+                    name="min_stock_alert"
+                    type="number"
+                    min="0"
+                    defaultValue={editingProduct.min_stock_alert ?? 5}
                     className={styles.input}
                   />
                 </div>

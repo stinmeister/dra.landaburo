@@ -103,16 +103,16 @@ export default async function OperativoDashboard() {
 
   const staffProfiles = staffProfilesRaw ?? [];
 
-  // Query low stock products (< 5 units)
-  let lowStockProducts: Array<{ id: string; name: string; category: string; stock_quantity: number }> = [];
+  // Query low stock products (<= min_stock_alert or 5 units)
+  let lowStockProducts: Array<{ id: string; name: string; category: string; stock_quantity: number; min_stock_alert?: number }> = [];
   try {
     const { data: prodData } = await supabase
       .from('products')
-      .select('id, name, category, stock_quantity')
+      .select('id, name, category, stock_quantity, min_stock_alert')
       .eq('is_active', true)
       .order('stock_quantity', { ascending: true });
     
-    lowStockProducts = (prodData ?? []).filter((p) => (p.stock_quantity ?? 0) <= 5);
+    lowStockProducts = (prodData ?? []).filter((p) => (p.stock_quantity ?? 0) <= (p.min_stock_alert ?? 5));
   } catch {
     lowStockProducts = [];
   }
@@ -157,7 +157,7 @@ export default async function OperativoDashboard() {
 
           <section className={styles.card}>
             <h2 className={styles.cardTitle}>Control de Stock & Insumos</h2>
-            <p className={styles.cardHelper}>Productos con 5 o menos unidades en inventario</p>
+            <p className={styles.cardHelper}>Productos con stock en o por debajo del umbral de alerta</p>
             {lowStockProducts.length === 0 ? (
               <p className={styles.stockEmpty}>✨ Todos los productos cuentan con stock suficiente.</p>
             ) : (

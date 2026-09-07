@@ -25,7 +25,7 @@ export default async function ProductosPage() {
   const admin = createAdminClient();
   const { data: products } = await admin
     .from('products')
-    .select('id, name, category, price_ars, stock_quantity, is_active, image_url, description')
+    .select('id, name, category, price_ars, stock_quantity, min_stock_alert, is_active, image_url, description')
     .order('name', { ascending: true });
 
   const rows = (products ?? []) as any[];

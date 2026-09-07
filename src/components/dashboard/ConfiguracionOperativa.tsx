@@ -89,7 +89,7 @@ export default function ConfiguracionOperativa({
             🎂 Saludos de Cumpleaños
           </label>
           <span className={styles.sublabel}>
-            Responsable de enviar saludos y beneficios de cumpleaños del día.
+            Responsable de enviar los saludos de cumpleaños a las pacientes del día.
           </span>
           <select
             id="birthdayAssignee"

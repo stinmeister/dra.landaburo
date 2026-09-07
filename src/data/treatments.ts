@@ -16,7 +16,7 @@ export const treatments: Treatment[] = [
     shortTitle: 'Toxina Botulínica',
     category: 'facial',
     icon: 'Sparkles',
-    heroImage: '/images/anciana-sonriente-con-inyeccion-para-las-arrugas-de-sus-ojos-scaled.jpg',
+    heroImage: '/images/procedimiento-toxina-botulinica-facial.jpg',
     description: 'Suaviza las líneas de expresión y devuelve frescura a la mirada, sin perder naturalidad ni gestos propios.',
     fullDescription: 'La toxina botulínica es uno de los tratamientos más elegidos para suavizar las líneas de expresión y devolverle frescura a la mirada, sin perder naturalidad ni gestos propios. En consulta, la Dra. Landaburo evalúa cada rostro de forma individual para definir dosis y zonas de aplicación, priorizando siempre un resultado sutil y armónico. Es un procedimiento ambulatorio, con tiempos de recuperación mínimos, pensado para acompañar la piel en las distintas etapas de la vida.',
   },

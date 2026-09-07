@@ -14,8 +14,9 @@ export async function POST(request: NextRequest) {
     const cfIp = request.headers.get('cf-connecting-ip');
     const rawIp = forwarded ? forwarded.split(',')[0].trim() : realIp || cfIp || '127.0.0.1';
 
-    // 2. Hashear la IP con SHA-256 para preservar privacidad de pacientes
-    const ip_hash = crypto.createHash('sha256').update(rawIp).digest('hex');
+    // 2. Hashear la IP con HMAC-SHA256 y secreto del servidor (previene reversión por fuerza bruta bajo Ley 25.326)
+    const hashSecret = process.env.IP_HASH_SECRET || 'dra-landaburo-ip-salt-2026';
+    const ip_hash = crypto.createHmac('sha256', hashSecret).update(rawIp).digest('hex');
 
     // 3. Guardar en la tabla cookie_consents de Supabase usando cliente anónimo (RLS policy anon INSERT)
     let consentRecordId: string | null = null;

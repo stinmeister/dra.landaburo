@@ -28,12 +28,13 @@ function slugify(name: string): string {
 export async function createProduct(formData: FormData) {
   await assertAdmin();
 
-  const name          = (formData.get('name') as string)?.trim();
-  const category      = (formData.get('category') as string)?.trim();
-  const price_ars     = parseFloat(formData.get('price_ars') as string);
-  const stock_quantity = parseInt(formData.get('stock_quantity') as string, 10);
-  const description   = (formData.get('description') as string)?.trim() ?? '';
-  const image_url     = (formData.get('image_url') as string)?.trim() ?? null;
+  const name            = (formData.get('name') as string)?.trim();
+  const category        = (formData.get('category') as string)?.trim();
+  const price_ars       = parseFloat(formData.get('price_ars') as string);
+  const stock_quantity  = parseInt(formData.get('stock_quantity') as string, 10);
+  const min_stock_alert = parseInt(formData.get('min_stock_alert') as string, 10);
+  const description     = (formData.get('description') as string)?.trim() ?? '';
+  const image_url       = (formData.get('image_url') as string)?.trim() ?? null;
 
   if (!name || !category || isNaN(price_ars)) return;
 
@@ -43,6 +44,7 @@ export async function createProduct(formData: FormData) {
   await admin.from('products').insert({
     name, slug, category, price_ars,
     stock_quantity: isNaN(stock_quantity) ? 0 : stock_quantity,
+    min_stock_alert: isNaN(min_stock_alert) ? 5 : min_stock_alert,
     description, image_url, is_active: true,
   });
 
@@ -87,13 +89,14 @@ export async function updateStock(formData: FormData) {
 export async function updateProduct(formData: FormData) {
   await assertAdmin();
 
-  const id             = (formData.get('id') as string)?.trim();
-  const name           = (formData.get('name') as string)?.trim();
-  const category       = (formData.get('category') as string)?.trim();
-  const price_ars      = parseFloat(formData.get('price_ars') as string);
-  const stock_quantity = parseInt(formData.get('stock_quantity') as string, 10);
-  const description    = (formData.get('description') as string)?.trim() ?? '';
-  const image_url      = (formData.get('image_url') as string)?.trim() ?? null;
+  const id              = (formData.get('id') as string)?.trim();
+  const name            = (formData.get('name') as string)?.trim();
+  const category        = (formData.get('category') as string)?.trim();
+  const price_ars       = parseFloat(formData.get('price_ars') as string);
+  const stock_quantity  = parseInt(formData.get('stock_quantity') as string, 10);
+  const min_stock_alert = parseInt(formData.get('min_stock_alert') as string, 10);
+  const description     = (formData.get('description') as string)?.trim() ?? '';
+  const image_url       = (formData.get('image_url') as string)?.trim() ?? null;
 
   if (!id || !name || !category || isNaN(price_ars)) return;
 
@@ -103,6 +106,7 @@ export async function updateProduct(formData: FormData) {
     category,
     price_ars,
     stock_quantity: isNaN(stock_quantity) ? 0 : stock_quantity,
+    min_stock_alert: isNaN(min_stock_alert) ? 5 : min_stock_alert,
     description,
     image_url: image_url || null,
   }).eq('id', id);
