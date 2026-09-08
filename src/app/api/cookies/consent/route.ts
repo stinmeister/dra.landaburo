@@ -15,8 +15,9 @@ export async function POST(request: NextRequest) {
     const rawIp = forwarded ? forwarded.split(',')[0].trim() : realIp || cfIp || '127.0.0.1';
 
     // 2. Hashear la IP con HMAC-SHA256 ÚNICAMENTE si IP_HASH_SECRET está configurada.
-    // Si no está configurada, se almacena como null para evitar hashes reversibles por fuerza bruta bajo Ley 25.326.
-    let ip_hash: string | null = null;
+    // Si no está configurada, se almacena un valor anónimo 'anonymous' para satisfacer la restricción NOT NULL de la BD
+    // sin crear hashes de IP reversibles por fuerza bruta bajo Ley 25.326.
+    let ip_hash = 'anonymous';
     const hashSecret = process.env.IP_HASH_SECRET;
     if (hashSecret && hashSecret.trim()) {
       ip_hash = crypto.createHmac('sha256', hashSecret.trim()).update(rawIp).digest('hex');
