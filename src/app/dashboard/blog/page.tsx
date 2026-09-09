@@ -20,7 +20,7 @@ export default async function BlogDashPage() {
   const admin = createAdminClient();
   const { data: posts } = await admin
     .from('posts')
-    .select('id, slug, title, category, is_published, published_at, created_at')
+    .select('id, slug, title, category, is_published, published_at, updated_at, created_at')
     .order('created_at', { ascending: false });
 
   const rows = posts ?? [];
@@ -30,7 +30,7 @@ export default async function BlogDashPage() {
     <div className={styles.page}>
       <div className={styles.header}>
         <div>
-          <h1 className={styles.title}>Blog</h1>
+          <h1 className={styles.title}>Blog CMS</h1>
           <p className={styles.subtitle}>{published} publicado{published !== 1 ? 's' : ''} · {rows.length - published} borrador{rows.length - published !== 1 ? 'es' : ''}</p>
         </div>
         <Link href="/dashboard/blog/nuevo" className={styles.newBtn}>+ Nuevo artículo</Link>
@@ -43,14 +43,15 @@ export default async function BlogDashPage() {
               <th>Título</th>
               <th>Categoría</th>
               <th>Estado</th>
-              <th>Fecha</th>
+              <th>Publicado</th>
+              <th>Última Edición</th>
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={5} className={styles.emptyCell}>No hay artículos aún. Creá el primero.</td>
+                <td colSpan={6} className={styles.emptyCell}>No hay artículos aún. Creá el primero.</td>
               </tr>
             )}
             {rows.map((p) => (
@@ -63,13 +64,20 @@ export default async function BlogDashPage() {
                   </span>
                 </td>
                 <td className={styles.dateCell}>
-                  {new Date(p.published_at ?? p.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  {p.published_at
+                    ? new Date(p.published_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
+                    : '—'}
+                </td>
+                <td className={styles.dateCell}>
+                  {new Date(p.updated_at ?? p.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </td>
                 <td>
                   <div className={styles.actions}>
                     <Link href={`/dashboard/blog/${p.id}`} className={styles.editBtn}>Editar</Link>
-                    {p.is_published && (
+                    {p.is_published ? (
                       <Link href={`/blog/${p.slug}`} target="_blank" className={styles.viewBtn}>Ver</Link>
+                    ) : (
+                      <Link href={`/blog/preview/${p.slug}`} target="_blank" className={styles.viewBtn} style={{ color: '#c05621' }}>Preview</Link>
                     )}
                     <form action={deletePost}>
                       <input type="hidden" name="id" value={p.id} />

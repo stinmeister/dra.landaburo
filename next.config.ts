@@ -43,6 +43,12 @@ const nextConfig: NextConfig = {
         destination: '/tratamientos/mesoterapia',
         permanent: true,
       },
+      // 1b. Duplicate treatment redirect
+      {
+        source: '/tratamientos/capilar-masculino',
+        destination: '/tratamientos/tratamiento-capilar',
+        permanent: true,
+      },
       // 2. Generic WordPress date posts -> /blog
       {
         source: '/:year(\\d{4})/:month(\\d{2})/:day(\\d{2})/:slug',

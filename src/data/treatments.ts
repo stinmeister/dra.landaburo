@@ -7,6 +7,7 @@ export interface Treatment {
   fullDescription: string;
   icon: string;
   heroImage: string;
+  faqs?: Array<{ question: string; answer: string }>;
 }
 
 export const treatments: Treatment[] = [
@@ -19,6 +20,24 @@ export const treatments: Treatment[] = [
     heroImage: '/images/procedimiento-toxina-botulinica-facial.jpg',
     description: 'Suaviza las líneas de expresión y devuelve frescura a la mirada, sin perder naturalidad ni gestos propios.',
     fullDescription: 'La toxina botulínica es uno de los tratamientos más elegidos para suavizar las líneas de expresión y devolverle frescura a la mirada, sin perder naturalidad ni gestos propios. En consulta, la Dra. Landaburo evalúa cada rostro de forma individual para definir dosis y zonas de aplicación, priorizando siempre un resultado sutil y armónico. Es un procedimiento ambulatorio, con tiempos de recuperación mínimos, pensado para acompañar la piel en las distintas etapas de la vida.',
+    faqs: [
+      {
+        question: '¿La toxina botulínica congela la expresión del rostro?',
+        answer: 'No. Cuando se aplica con criterio médico personalizado, la toxina relaja suavemente los músculos hiperactivos manteniendo la naturalidad y la expresividad propia de cada persona.',
+      },
+      {
+        question: '¿Cuánto tiempo duran los efectos?',
+        answer: 'Los resultados suelen mantenerse entre 4 y 6 meses, dependiendo del metabolismo de cada paciente y de la fuerza muscular de la zona tratada.',
+      },
+      {
+        question: '¿Cuándo comienzo a notar los cambios?',
+        answer: 'Los efectos empiezan a observarse entre las 48 y 72 horas posteriores a la aplicación, alcanzando su resultado definitivo a los 14 días.',
+      },
+      {
+        question: '¿Qué cuidados debo tener luego de la sesión?',
+        answer: 'Durante las primeras 4 a 6 horas se recomienda no acostarse boca abajo, evitar actividad física intensa y no frotar la zona tratada.',
+      },
+    ],
   },
   {
     slug: 'acido-hialuronico',
@@ -102,16 +121,6 @@ export const treatments: Treatment[] = [
   },
   {
     slug: 'tratamiento-capilar',
-    title: 'Salud Capilar & Tricología Médica',
-    shortTitle: 'Salud Capilar',
-    category: 'capilar',
-    icon: 'Sparkles',
-    heroImage: '/images/hombre-dandose-un-masaje-en-el-cuero-cabelludo-2.webp',
-    description: 'Protocolos médicos personalizados para frenar la caída, recuperar densidad y fortalecer la fibra capilar en hombres y mujeres.',
-    fullDescription: 'La salud capilar requiere un diagnóstico médico preciso para abordar las causas reales del debilitamiento y la caída del cabello. En consulta, la Dra. Landaburo evalúa cada caso para diseñar un protocolo combinado que puede integrar Mesoterapia capilar con principios activos específicos, Plasma Rico en Plaquetas (PRP), Exosomas y tecnología láser. Tratamientos ambulatorios y seguros, orientados a revitalizar el folículo piloso, estimular la circulación del cuero cabelludo y promover un crecimiento fuerte y saludable.',
-  },
-  {
-    slug: 'capilar-masculino',
     title: 'Salud Capilar & Tricología Médica',
     shortTitle: 'Salud Capilar',
     category: 'capilar',

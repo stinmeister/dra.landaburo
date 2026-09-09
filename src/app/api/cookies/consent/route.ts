@@ -15,42 +15,35 @@ export async function POST(request: NextRequest) {
     const rawIp = forwarded ? forwarded.split(',')[0].trim() : realIp || cfIp || '127.0.0.1';
 
     // 2. Hashear la IP con HMAC-SHA256 ÚNICAMENTE si IP_HASH_SECRET está configurada.
-    // Si no está configurada, se almacena un valor anónimo 'anonymous' para satisfacer la restricción NOT NULL de la BD
-    // sin crear hashes de IP reversibles por fuerza bruta bajo Ley 25.326.
-    let ip_hash = 'anonymous';
+    // Sin secret, no se genera hash y no se usa ningún fallback hardcodeado.
+    let ip_hash: string | null = null;
     const hashSecret = process.env.IP_HASH_SECRET;
     if (hashSecret && hashSecret.trim()) {
       ip_hash = crypto.createHmac('sha256', hashSecret.trim()).update(rawIp).digest('hex');
     }
 
-    // 3. Guardar en la tabla cookie_consents de Supabase usando credenciales de servidor
-    let consentRecordId: string | null = null;
-    let insertError: string | null = null;
-
+    // 3. Guardar en la tabla cookie_consents de Supabase usando cliente ANÓNIMO (RLS anon INSERT)
+    // IMPORTANTE: NO encadenar .select() ni returning para respetar RLS restrictivo de anon.
     try {
       const supabase = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { auth: { persistSession: false } }
       );
-      const { data, error } = await supabase
+      
+      const { error } = await supabase
         .from('cookie_consents')
         .insert({
-          ip_hash,
+          ip_hash: ip_hash || null,
           analytics_accepted,
           marketing_accepted,
-        })
-        .select('id, created_at')
-        .single();
+        });
 
       if (error) {
-        insertError = error.message;
         console.error('[CookieConsent] Error al registrar en Supabase:', error.message);
-      } else {
-        consentRecordId = data?.id ?? null;
       }
     } catch (dbErr: any) {
-      insertError = dbErr?.message || 'DB exception';
-      console.error('[CookieConsent] Excepción al persistir en Supabase:', dbErr);
+      console.error('[CookieConsent] Excepción al persistir en Supabase:', dbErr?.message || dbErr);
     }
 
     // 4. Configurar cookie HTTP en la respuesta (siempre se establece para garantizar persistencia en navegador por 12 meses)
@@ -58,15 +51,11 @@ export async function POST(request: NextRequest) {
     const isProdDomain = host.includes('dralandaburo.com');
 
     const response = NextResponse.json({
-      success: consentRecordId !== null,
-      id: consentRecordId,
-      error: insertError,
+      success: true,
       consent: {
         analytics_accepted,
         marketing_accepted,
       },
-    }, {
-      status: insertError && !consentRecordId ? 207 : 200 // 207 Multi-Status / partial success si cookie se guardó pero DB falló
     });
 
     response.cookies.set('cookie_consent', JSON.stringify({

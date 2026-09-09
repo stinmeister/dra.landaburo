@@ -86,3 +86,32 @@ export async function updateOperationalAssignments(assignments: {
   revalidatePath('/dashboard/operativo');
   revalidatePath('/dashboard/ejecutivo');
 }
+
+export async function toggleKioskAdmissionStatus(id: string, newStatus: 'nuevo' | 'atendido') {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile || !STAFF_ROLES.includes(profile.role)) {
+    throw new Error('Sin permisos para actualizar admisiones.');
+  }
+
+  const { createAdminClient } = await import('@/lib/supabase/admin');
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from('kiosk_admissions')
+    .update({ status: newStatus })
+    .eq('id', id);
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath('/dashboard/operativo');
+  return { success: true };
+}
+

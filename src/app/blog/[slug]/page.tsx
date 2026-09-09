@@ -33,12 +33,20 @@ export default async function BlogArticlePage({ params }: Props) {
   const supabase = await createClient();
   const { data: post } = await supabase
     .from('posts')
-    .select('id, title, excerpt, content, cover_image_url, category, published_at')
+    .select('id, title, excerpt, content, cover_image_url, category, published_at, updated_at')
     .eq('slug', slug)
     .eq('is_published', true)
     .single();
 
   if (!post) notFound();
+
+  const pubDate = post.published_at
+    ? new Date(post.published_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })
+    : null;
+  const isUpdated = post.updated_at && post.published_at && new Date(post.updated_at).getTime() - new Date(post.published_at).getTime() > 24 * 60 * 60 * 1000;
+  const updDate = isUpdated
+    ? new Date(post.updated_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })
+    : null;
 
   return (
     <>
@@ -56,7 +64,8 @@ export default async function BlogArticlePage({ params }: Props) {
             <h1 className={styles.title}>{post.title}</h1>
             {post.excerpt && <p className={styles.excerpt}>{post.excerpt}</p>}
             <time className={styles.date}>
-              {new Date(post.published_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
+              {pubDate && `Publicado: ${pubDate}`}
+              {updDate && ` · Actualizado: ${updDate}`}
             </time>
           </div>
         </header>

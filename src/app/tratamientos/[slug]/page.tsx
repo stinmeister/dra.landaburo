@@ -36,44 +36,39 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-const faqSchema = (treatmentTitle: string) => ({
-  '@context': 'https://schema.org',
-  '@type': 'FAQPage',
-  mainEntity: [
+const faqSchema = (treatmentTitle: string, customFaqs?: Array<{ question: string; answer: string }>) => {
+  const items = customFaqs && customFaqs.length > 0 ? customFaqs : [
     {
-      '@type': 'Question',
-      name: '¿Cuánto dura el procedimiento?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: `La duración varía según el plan personalizado de ${treatmentTitle}. En la consulta inicial la Dra. Landaburo te informa los tiempos exactos.`,
-      },
+      question: '¿Cuánto dura el procedimiento?',
+      answer: `La duración varía según el plan personalizado de ${treatmentTitle}. En la consulta inicial la Dra. Landaburo te informa los tiempos exactos.`,
     },
     {
-      '@type': 'Question',
-      name: '¿Es doloroso?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'La mayoría de los procedimientos se realizan con anestesia local cuando es necesario. El nivel de incomodidad es mínimo.',
-      },
+      question: '¿Es doloroso?',
+      answer: 'La mayoría de los procedimientos se realizan con anestesia local cuando es necesario. El nivel de incomodidad es mínimo.',
     },
     {
-      '@type': 'Question',
-      name: '¿Cuándo se ven los resultados?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Depende del tratamiento. Algunos ofrecen resultados inmediatos; otros muestran mejoras progresivas durante semanas o meses con un enfoque gradual y natural.',
-      },
+      question: '¿Cuándo se ven los resultados?',
+      answer: 'Depende del tratamiento. Algunos ofrecen resultados inmediatos; otros muestran mejoras progresivas durante semanas o meses con un enfoque gradual y natural.',
     },
     {
+      question: '¿Cuánto tiempo de recuperación necesito?',
+      answer: 'La gran mayoría de los tratamientos permiten retomar la actividad habitual el mismo día. En la consulta previa se indican los cuidados post-procedimiento específicos.',
+    },
+  ];
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: items.map((f) => ({
       '@type': 'Question',
-      name: '¿Cuánto tiempo de recuperación necesito?',
+      name: f.question,
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'La gran mayoría de los tratamientos permiten retomar la actividad habitual el mismo día. En la consulta previa se indican los cuidados post-procedimiento específicos.',
+        text: f.answer,
       },
-    },
-  ],
-});
+    })),
+  };
+};
 
 export default async function TreatmentDetailPage({ params }: Props) {
   const { slug } = await params;
@@ -88,7 +83,7 @@ export default async function TreatmentDetailPage({ params }: Props) {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema(treatment.title)) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema(treatment.title, treatment.faqs)) }}
       />
       <Header />
       <main className={styles.main}>
@@ -131,7 +126,7 @@ export default async function TreatmentDetailPage({ params }: Props) {
                     <p>{treatment.fullDescription}</p>
                   </div>
 
-                  <TreatmentFAQ />
+                  <TreatmentFAQ faqs={treatment.faqs} />
 
                   <div className={styles.cta}>
                     <h2>¿Consultas sobre este tratamiento?</h2>

@@ -143,28 +143,40 @@ export default async function EjecutivoPage() {
         </div>
       )}
 
+      {payments.length === 0 && !paymentsError && (
+        <div className={styles.infoBanner}>
+          ℹ️ <strong>Métricas financieras:</strong> Actualmente no hay cobros registrados en el sistema para este período. Los indicadores de facturación y comisiones se actualizarán automáticamente a medida que se ingresen pagos o se sincronice con el punto de venta / Calu.
+        </div>
+      )}
+
       {/* Metric cards */}
       <section className={styles.metricsGrid}>
         <div className={styles.metricCard}>
           <p className={styles.metricLabel}>Facturación ARS</p>
-          <p className={styles.metricValue}>{formatARS(totalARS)}</p>
+          <p className={payments.length > 0 ? styles.metricValue : `${styles.metricValue} ${styles.metricEmpty}`}>
+            {payments.length > 0 ? formatARS(totalARS) : 'Sin datos registrados'}
+          </p>
           <p className={styles.metricSub}>{payments.length} pagos</p>
         </div>
         <div className={styles.metricCard}>
           <p className={styles.metricLabel}>Facturación USD</p>
-          <p className={styles.metricValue}>{formatUSD(totalUSD)}</p>
+          <p className={payments.length > 0 ? styles.metricValue : `${styles.metricValue} ${styles.metricEmpty}`}>
+            {payments.length > 0 ? formatUSD(totalUSD) : 'Sin datos registrados'}
+          </p>
           <p className={styles.metricSub}>equivalente del mes</p>
         </div>
         <div className={styles.metricCard}>
           <p className={styles.metricLabel}>Comisión Dra. (70%)</p>
-          <p className={`${styles.metricValue} ${styles.metricHighlight}`}>
-            {formatARS(totalDraCommission)}
+          <p className={payments.length > 0 ? `${styles.metricValue} ${styles.metricHighlight}` : `${styles.metricValue} ${styles.metricEmpty}`}>
+            {payments.length > 0 ? formatARS(totalDraCommission) : 'Sin datos registrados'}
           </p>
           <p className={styles.metricSub}>neto del mes</p>
         </div>
         <div className={styles.metricCard}>
           <p className={styles.metricLabel}>Comisión Mercedes (30%)</p>
-          <p className={styles.metricValue}>{formatARS(totalMercedesCommission)}</p>
+          <p className={payments.length > 0 ? styles.metricValue : `${styles.metricValue} ${styles.metricEmpty}`}>
+            {payments.length > 0 ? formatARS(totalMercedesCommission) : 'Sin datos registrados'}
+          </p>
           <p className={styles.metricSub}>cosmetología</p>
         </div>
       </section>

@@ -44,24 +44,86 @@ export async function savePost(formData: FormData) {
   const now = new Date().toISOString();
 
   if (id) {
+    const { data: existing } = await admin.from('posts').select('published_at, is_published').eq('id', id).single();
+    let postPublishedAt: string | null = null;
+    if (isPublished) {
+      postPublishedAt = existing?.published_at || now;
+    } else {
+      postPublishedAt = null;
+    }
+
     await admin.from('posts').update({
-      title, excerpt, content, cover_image_url: cover, category,
-      slug: customSlug, is_published: isPublished,
-      published_at: isPublished ? now : null,
+      title,
+      excerpt,
+      content,
+      cover_image_url: cover,
+      category,
+      slug: customSlug,
+      is_published: isPublished,
+      published_at: postPublishedAt,
       updated_at: now,
     }).eq('id', id);
   } else {
     await admin.from('posts').insert({
-      title, excerpt, content, cover_image_url: cover, category,
-      slug: customSlug, is_published: isPublished,
+      title,
+      excerpt,
+      content,
+      cover_image_url: cover,
+      category,
+      slug: customSlug,
+      is_published: isPublished,
       author_profile_id: profile.id,
       published_at: isPublished ? now : null,
+      updated_at: now,
     });
   }
 
   revalidatePath('/blog');
   revalidatePath('/dashboard/blog');
   redirect('/dashboard/blog');
+}
+
+export async function uploadBlogCover(formData: FormData): Promise<{ success: boolean; url?: string; error?: string }> {
+  try {
+    await assertAdmin();
+
+    const file = formData.get('file') as File | null;
+    if (!file) {
+      return { success: false, error: 'No se recibió ningún archivo.' };
+    }
+
+    if (!file.type.startsWith('image/')) {
+      return { success: false, error: 'El archivo debe ser una imagen (JPG, PNG, WEBP).' };
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      return { success: false, error: 'La imagen no debe superar los 5MB.' };
+    }
+
+    const admin = createAdminClient();
+    const fileExt = file.name.split('.').pop() || 'jpg';
+    const fileName = `blog-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    const { error: uploadErr } = await admin.storage
+      .from('products')
+      .upload(fileName, buffer, {
+        contentType: file.type,
+        upsert: true,
+      });
+
+    if (uploadErr) {
+      console.error('[Storage Blog Upload Error]:', uploadErr);
+      return { success: false, error: `Error de almacenamiento: ${uploadErr.message}` };
+    }
+
+    const { data: publicUrlData } = admin.storage.from('products').getPublicUrl(fileName);
+    return { success: true, url: publicUrlData.publicUrl };
+  } catch (err: any) {
+    console.error('[uploadBlogCover Error]:', err);
+    return { success: false, error: err.message || 'Error al procesar la imagen' };
+  }
 }
 
 export async function deletePost(formData: FormData) {

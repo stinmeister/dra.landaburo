@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
 import { savePost } from '../actions';
-import { PostForm } from '../nuevo/page';
+import PostForm from '@/components/dashboard/PostForm';
 
 export const metadata: Metadata = { title: 'Editar artículo | Panel Dra. Landaburo' };
 

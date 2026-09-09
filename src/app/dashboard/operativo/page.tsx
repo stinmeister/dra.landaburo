@@ -8,6 +8,8 @@ import TaskList from '@/components/dashboard/TaskList';
 import type { TaskItem } from '@/components/dashboard/TaskList';
 import TreatmentSearch from '@/components/dashboard/TreatmentSearch';
 import ConfiguracionOperativa from '@/components/dashboard/ConfiguracionOperativa';
+import CampanasWidget from '@/components/dashboard/CampanasWidget';
+import KioskAdmissionsList from '@/components/dashboard/KioskAdmissionsList';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
@@ -128,6 +130,32 @@ export default async function OperativoDashboard() {
     lowStockProducts = [];
   }
 
+  // Query kiosk admissions (recent 15)
+  let kioskAdmissions: any[] = [];
+  try {
+    const { data: kData } = await supabase
+      .from('kiosk_admissions')
+      .select('id, created_at, full_name, dni, email, phone, city, attribution_channel, referral_name, interests, status')
+      .order('created_at', { ascending: false })
+      .limit(15);
+    kioskAdmissions = kData ?? [];
+  } catch {
+    kioskAdmissions = [];
+  }
+
+  // Query active ad campaigns
+  let activeCampaigns: any[] = [];
+  try {
+    const { data: cData } = await supabase
+      .from('ad_campaigns')
+      .select('id, title, platform, status, target_treatment, promo_details, suggested_response, ad_copy')
+      .eq('status', 'activa')
+      .order('created_at', { ascending: false });
+    activeCampaigns = cData ?? [];
+  } catch {
+    activeCampaigns = [];
+  }
+
   // Load app settings for default assignees
   let appSettings: { default_birthday_assignee?: string; default_giftcard_assignee?: string } | null = null;
   try {
@@ -159,8 +187,11 @@ export default async function OperativoDashboard() {
       </div>
 
       <div className={styles.grid}>
-        {/* Left column: tasks + search */}
+        {/* Left column: kiosk + tasks + search */}
         <div className={styles.leftCol}>
+          {/* Kiosk admissions check-ins */}
+          <KioskAdmissionsList initialAdmissions={kioskAdmissions} />
+
           <section className={styles.card}>
             <h2 className={styles.cardTitle}>Tareas del día</h2>
             <TaskList tasks={tasks} />
@@ -195,8 +226,11 @@ export default async function OperativoDashboard() {
           </section>
         </div>
 
-        {/* Right column: guides + operational config */}
+        {/* Right column: campaigns + guides + operational config */}
         <div className={styles.rightCol}>
+          {/* Active Campaigns Widget */}
+          <CampanasWidget campaigns={activeCampaigns} />
+
           {/* Operational Assignment Config for Admins */}
           {profile.role === 'admin' && (
             <ConfiguracionOperativa
