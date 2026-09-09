@@ -54,45 +54,45 @@ export async function POST(req: NextRequest) {
 
     // 3. Despacho de Email con Resend API
     const resendApiKey = process.env.RESEND_API_KEY;
-    const fromEmail = process.env.RESEND_FROM_EMAIL || 'Consultorio Dra. Landaburo <onboarding@resend.dev>';
-    const recipientEmails = process.env.CONTACT_NOTIFICATION_EMAILS
-      ? process.env.CONTACT_NOTIFICATION_EMAILS.split(',').map((e) => e.trim())
-      : ['dralandaburo@gmail.com', 'paula@dralandaburo.com'];
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'Consultorio Dra. Landaburo <consultas@dralandaburo.com>';
+    const recipientEmails = (process.env.CONTACT_NOTIFICATION_EMAILS || process.env.CONTACT_EMAIL_TO)
+      ? (process.env.CONTACT_NOTIFICATION_EMAILS || process.env.CONTACT_EMAIL_TO)!.split(',').map((e) => e.trim()).filter(Boolean)
+      : ['dralandaburo@gmail.com'];
 
     if (resendApiKey) {
       try {
         const emailHtml = `
           <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
             <div style="background: #1C1C1C; padding: 24px; text-align: center;">
-              <h1 style="color: #C5A47E; margin: 0; font-size: 20px; font-weight: 500; letter-spacing: 0.05em;">Dra. Landaburo — Nueva Consulta Web</h1>
+              <h1 style="color: #C5A47E; margin: 0; font-size: 20px; font-weight: 500; letter-spacing: 0.05em;">Dra. Paula Landaburo — Nueva Consulta Web</h1>
             </div>
-            <div style="padding: 24px 28px; color: #333333; line-height: 1.6;">
-              <p style="font-size: 15px; margin-top: 0;">Has recibido un nuevo mensaje desde el formulario de contacto de la web:</p>
+            <div style="padding: 24px 28px; color: #1C1C1C; line-height: 1.6;">
+              <p style="font-size: 15px; margin-top: 0; color: #1C1C1C;">Se recibió una nueva consulta desde el formulario de contacto del sitio web:</p>
               
               <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
                 <tr style="border-bottom: 1px solid #f0f0f0;">
-                  <td style="padding: 10px 0; font-weight: bold; width: 140px; color: #666;">Nombre:</td>
-                  <td style="padding: 10px 0; color: #111;">${name}</td>
+                  <td style="padding: 10px 0; font-weight: bold; width: 150px; color: #848484;">Paciente:</td>
+                  <td style="padding: 10px 0; color: #1C1C1C; font-weight: 500;">${name}</td>
                 </tr>
                 <tr style="border-bottom: 1px solid #f0f0f0;">
-                  <td style="padding: 10px 0; font-weight: bold; color: #666;">Email:</td>
-                  <td style="padding: 10px 0; color: #111;"><a href="mailto:${email}" style="color: #C5A47E; text-decoration: none;">${email}</a></td>
+                  <td style="padding: 10px 0; font-weight: bold; color: #848484;">Email:</td>
+                  <td style="padding: 10px 0; color: #1C1C1C;"><a href="mailto:${email}" style="color: #C5A47E; text-decoration: none;">${email}</a></td>
                 </tr>
                 <tr style="border-bottom: 1px solid #f0f0f0;">
-                  <td style="padding: 10px 0; font-weight: bold; color: #666;">Teléfono / WA:</td>
-                  <td style="padding: 10px 0; color: #111;">${phone ? `<a href="https://wa.me/${phone.replace(/[^0-9]/g, '')}" style="color: #C5A47E; text-decoration: none;">${phone}</a>` : 'No especificado'}</td>
+                  <td style="padding: 10px 0; font-weight: bold; color: #848484;">Teléfono / WhatsApp:</td>
+                  <td style="padding: 10px 0; color: #1C1C1C;">${phone ? `<a href="https://wa.me/${phone.replace(/[^0-9]/g, '')}" style="color: #C5A47E; text-decoration: none;">${phone}</a>` : 'No especificado'}</td>
                 </tr>
                 <tr style="border-bottom: 1px solid #f0f0f0;">
-                  <td style="padding: 10px 0; font-weight: bold; color: #666;">Tratamiento:</td>
-                  <td style="padding: 10px 0; color: #111;">${treatment || 'Consulta general'}</td>
+                  <td style="padding: 10px 0; font-weight: bold; color: #848484;">Tratamiento de interés:</td>
+                  <td style="padding: 10px 0; color: #1C1C1C;">${treatment || 'Consulta general'}</td>
                 </tr>
               </table>
 
-              <div style="background: #f9f9f9; border-left: 3px solid #C5A47E; padding: 14px 18px; border-radius: 4px; margin-top: 15px;">
-                <p style="margin: 0; font-size: 14px; color: #444; white-space: pre-wrap;"><strong>Mensaje del paciente:</strong><br />${message}</p>
+              <div style="background: #fafafa; border-left: 3px solid #C5A47E; padding: 14px 18px; border-radius: 4px; margin-top: 15px;">
+                <p style="margin: 0; font-size: 14px; color: #1C1C1C; white-space: pre-wrap;"><strong>Mensaje del paciente:</strong><br />${message}</p>
               </div>
 
-              <p style="font-size: 12px; color: #999999; margin-top: 25px; text-align: center;">
+              <p style="font-size: 12px; color: #848484; margin-top: 25px; text-align: center;">
                 Recibido el ${new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })} hs desde dralandaburo.com
               </p>
             </div>
@@ -118,7 +118,8 @@ export async function POST(req: NextRequest) {
           const resendErr = await resendRes.text();
           console.error('[Contacto/Resend Error]:', resendRes.status, resendErr);
         } else {
-          console.log('[Contacto/Resend] Email entregado con éxito para:', email);
+          const resendData = await resendRes.json().catch(() => ({}));
+          console.log(`[Contacto/Resend] Email aceptado por Resend (ID: ${resendData?.id ?? 'n/a'}) para destinatario(s): ${recipientEmails.join(', ')}`);
         }
       } catch (emailErr) {
         console.error('[Contacto/Resend Network Error]:', emailErr);
