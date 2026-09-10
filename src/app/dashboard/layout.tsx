@@ -10,6 +10,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import DashboardSignOut from '@/components/dashboard/DashboardSignOut';
+import DashboardNav from '@/components/dashboard/DashboardNav';
 import styles from './layout.module.css';
 
 export const metadata: Metadata = {
@@ -68,13 +69,7 @@ export default async function DashboardLayout({
           <span className={styles.sidebarBadge}>Panel</span>
         </div>
 
-        <nav className={styles.sidebarNav}>
-          {navItems.map((item) => (
-            <Link key={item.href} href={item.href} className={styles.navItem}>
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+        <DashboardNav items={navItems} />
 
         <div className={styles.sidebarFooter}>
           <Link href="/" className={styles.sidebarHomeLink}>

@@ -138,3 +138,10 @@
     padding: 1.5rem 1.25rem;
   }
 }
+.navItemActive {
+  background-color: rgba(197, 164, 126, 0.16);
+  color: var(--color-champagne) !important;
+  font-weight: 600;
+  border-left: 2px solid var(--color-champagne);
+  padding-left: calc(0.75rem - 2px);
+}
