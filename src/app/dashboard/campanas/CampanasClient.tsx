@@ -154,7 +154,7 @@ export default function CampanasClient({ initialCampaigns, isAdmin }: Props) {
 
               {c.promo_details && (
                 <div className={styles.sectionBlock}>
-                  <span className={styles.blockLabel}>🏷️ Precio / Promoción</span>
+                  <span className={styles.blockLabel}>📌 Aviso destacado</span>
                   <p className={styles.blockText}>{c.promo_details}</p>
                 </div>
               )}
@@ -238,12 +238,12 @@ export default function CampanasClient({ initialCampaigns, isAdmin }: Props) {
 
               <div className={styles.formGrid}>
                 <div className={`${styles.field} ${styles.fullCol}`}>
-                  <label className={styles.label}>Título o Nombre de la Campaña *</label>
+                  <label className={styles.label}>Nombre interno de la campaña *</label>
                   <input
                     name="title"
                     required
                     defaultValue={editingCampaign?.title ?? ''}
-                    placeholder="Ej: Promo Toxina Botulínica Frente & Entrecejo"
+                    placeholder="[Nombre interno para identificar la pauta]"
                     className={styles.input}
                   />
                 </div>
@@ -277,43 +277,53 @@ export default function CampanasClient({ initialCampaigns, isAdmin }: Props) {
                 </div>
 
                 <div className={`${styles.field} ${styles.fullCol}`}>
-                  <label className={styles.label}>Tratamiento Asociado</label>
+                  <label className={styles.label}>Tratamiento asociado</label>
                   <input
                     name="target_treatment"
                     defaultValue={editingCampaign?.target_treatment ?? ''}
-                    placeholder="Ej: Toxina Botulínica, Hilos Tensores, etc."
+                    placeholder="[Tratamiento que menciona el anuncio]"
                     className={styles.input}
                   />
                 </div>
 
                 <div className={`${styles.field} ${styles.fullCol}`}>
-                  <label className={styles.label}>Precio o Promoción Ofrecida</label>
+                  <label className={styles.label}>
+                    Información destacada del anuncio
+                    <span style={{ fontWeight: 400, color: '#848484', marginLeft: '0.5rem', fontSize: '0.8rem' }}>
+                      (el texto lo redacta ChatGPT contra el Copybook y lo aprueba la Dra. Landaburo)
+                    </span>
+                  </label>
                   <input
                     name="promo_details"
                     defaultValue={editingCampaign?.promo_details ?? ''}
-                    placeholder="Ej: 2x1 en aplicación o $180.000 (3 cuotas sin interés)"
+                    placeholder="[Qué dice el aviso — a completar por Agustín]"
                     className={styles.input}
                   />
                 </div>
 
                 <div className={`${styles.field} ${styles.fullCol}`}>
-                  <label className={styles.label}>Texto o Promesa del Anuncio (Copy)</label>
+                  <label className={styles.label}>Texto del anuncio (Copy aprobado)</label>
                   <textarea
                     name="ad_copy"
                     rows={3}
                     defaultValue={editingCampaign?.ad_copy ?? ''}
-                    placeholder="Ej: Suavizá tus líneas de expresión con resultados naturales. Cupos limitados este mes."
+                    placeholder="[Copy aprobado por la Dra. Landaburo — a completar por Agustín]"
                     className={styles.textarea}
                   />
                 </div>
 
                 <div className={`${styles.field} ${styles.fullCol}`}>
-                  <label className={styles.label}>💬 Respuesta sugerida para WhatsApp / Recepción</label>
+                  <label className={styles.label}>
+                    💬 Respuesta sugerida para WhatsApp / Recepción
+                  </label>
+                  <p style={{ margin: '0 0 0.4rem', fontSize: '0.78rem', color: '#848484' }}>
+                    Formato WhatsApp: máx. 4 líneas · máx. 2 emojis (✨ 💫 🌿) · empezar con el nombre de la paciente
+                  </p>
                   <textarea
                     name="suggested_response"
                     rows={4}
                     defaultValue={editingCampaign?.suggested_response ?? ''}
-                    placeholder="Ej: ¡Hola! Sí, la promo de Toxina Botulínica está disponible reservando durante esta semana. Incluye valoración médica personalizada con la Dra. Landaburo. ¿Te gustaría coordinar un turno?"
+                    placeholder="[Qué responder cuando pregunten — a completar por Agustín]"
                     className={styles.textarea}
                   />
                 </div>

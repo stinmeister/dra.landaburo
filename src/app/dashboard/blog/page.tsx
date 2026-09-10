@@ -10,6 +10,12 @@ import styles from './page.module.css';
 
 export const metadata: Metadata = { title: 'Blog CMS | Panel Dra. Landaburo' };
 
+const STATUS_LABELS: Record<string, string> = {
+  publicado: 'Publicado',
+  pendiente: 'Pendiente',
+  borrador: 'Borrador',
+};
+
 export default async function BlogDashPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -20,18 +26,23 @@ export default async function BlogDashPage() {
   const admin = createAdminClient();
   const { data: posts } = await admin
     .from('posts')
-    .select('id, slug, title, category, is_published, published_at, updated_at, created_at')
+    .select('id, slug, title, category, is_published, status, published_at, updated_at, created_at')
     .order('created_at', { ascending: false });
 
   const rows = posts ?? [];
-  const published = rows.filter((p) => p.is_published).length;
+  const published = rows.filter((p) => p.status === 'publicado' || p.is_published).length;
+  const pending = rows.filter((p) => p.status === 'pendiente').length;
 
   return (
     <div className={styles.page}>
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Blog CMS</h1>
-          <p className={styles.subtitle}>{published} publicado{published !== 1 ? 's' : ''} · {rows.length - published} borrador{rows.length - published !== 1 ? 'es' : ''}</p>
+          <p className={styles.subtitle}>
+            {published} publicado{published !== 1 ? 's' : ''}
+            {pending > 0 ? ` · ${pending} pendiente${pending !== 1 ? 's' : ''}` : ''}
+            {' '}· {rows.length - published - pending} borrador{rows.length - published - pending !== 1 ? 'es' : ''}
+          </p>
         </div>
         <Link href="/dashboard/blog/nuevo" className={styles.newBtn}>+ Nuevo artículo</Link>
       </div>
@@ -54,45 +65,59 @@ export default async function BlogDashPage() {
                 <td colSpan={6} className={styles.emptyCell}>No hay artículos aún. Creá el primero.</td>
               </tr>
             )}
-            {rows.map((p) => (
-              <tr key={p.id}>
-                <td className={styles.titleCell}>{p.title}</td>
-                <td className={styles.catCell}>{p.category}</td>
-                <td>
-                  <span className={p.is_published ? styles.badgePublished : styles.badgeDraft}>
-                    {p.is_published ? 'Publicado' : 'Borrador'}
-                  </span>
-                </td>
-                <td className={styles.dateCell}>
-                  {p.published_at
-                    ? new Date(p.published_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
-                    : '—'}
-                </td>
-                <td className={styles.dateCell}>
-                  {new Date(p.updated_at ?? p.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
-                </td>
-                <td>
-                  <div className={styles.actions}>
-                    <Link href={`/dashboard/blog/${p.id}`} className={styles.editBtn}>Editar</Link>
-                    {p.is_published ? (
-                      <Link href={`/blog/${p.slug}`} target="_blank" className={styles.viewBtn}>Ver</Link>
-                    ) : (
-                      <Link href={`/blog/preview/${p.slug}`} target="_blank" className={styles.viewBtn} style={{ color: '#c05621' }}>Preview</Link>
-                    )}
-                    <form action={deletePost}>
-                      <input type="hidden" name="id" value={p.id} />
-                      <button type="submit" className={styles.deleteBtn}
-                        onClick={(e) => { if (!confirm('¿Eliminar este artículo?')) e.preventDefault(); }}>
-                        Eliminar
-                      </button>
-                    </form>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {rows.map((p) => {
+              const statusKey = p.status ?? (p.is_published ? 'publicado' : 'borrador');
+              const isPublished = statusKey === 'publicado';
+              const isPending = statusKey === 'pendiente';
+              return (
+                <tr key={p.id}>
+                  <td className={styles.titleCell}>{p.title}</td>
+                  <td className={styles.catCell}>{p.category}</td>
+                  <td>
+                    <span
+                      className={
+                        isPublished
+                          ? styles.badgePublished
+                          : isPending
+                          ? styles.badgePending ?? styles.badgeDraft
+                          : styles.badgeDraft
+                      }
+                    >
+                      {STATUS_LABELS[statusKey] ?? statusKey}
+                    </span>
+                  </td>
+                  <td className={styles.dateCell}>
+                    {p.published_at
+                      ? new Date(p.published_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
+                      : '—'}
+                  </td>
+                  <td className={styles.dateCell}>
+                    {new Date(p.updated_at ?? p.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </td>
+                  <td>
+                    <div className={styles.actions}>
+                      <Link href={`/dashboard/blog/${p.id}`} className={styles.editBtn}>Editar</Link>
+                      {isPublished ? (
+                        <Link href={`/blog/${p.slug}`} target="_blank" className={styles.viewBtn}>Ver</Link>
+                      ) : (
+                        <Link href={`/blog/preview/${p.slug}`} target="_blank" className={styles.viewBtn} style={{ color: '#c05621' }}>Preview</Link>
+                      )}
+                      <form action={deletePost}>
+                        <input type="hidden" name="id" value={p.id} />
+                        <button type="submit" className={styles.deleteBtn}
+                          onClick={(e) => { if (!confirm('¿Eliminar este artículo?')) e.preventDefault(); }}>
+                          Eliminar
+                        </button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
     </div>
   );
 }
+
