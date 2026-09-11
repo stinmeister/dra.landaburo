@@ -98,12 +98,12 @@ export async function POST(req: NextRequest) {
   // -- Auth ------------------------------------------------------------------
   const ingestSecret = process.env.INGEST_SECRET;
   if (!ingestSecret) {
-    return NextResponse.json({ error: 'INGEST_SECRET not configured' }, { status: 500 });
+    return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
   }
 
   const authHeader = req.headers.get('authorization') ?? '';
   if (authHeader !== `Bearer ${ingestSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
   }
 
   // -- Parse body ------------------------------------------------------------
