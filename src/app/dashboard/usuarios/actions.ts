@@ -79,3 +79,33 @@ export async function createStaffUser(formData: FormData) {
 
   revalidatePath('/dashboard/usuarios');
 }
+
+// ── Permisos por seccion ────────────────────────────────────────────────────
+// Llamar con (userId, section, allowed) donde allowed=null quita la excepcion.
+export async function setUserSectionOverride(
+  userId: string,
+  section: string,
+  allowed: boolean | null
+): Promise<void> {
+  await assertAdmin();
+  const admin = createAdminClient();
+
+  if (!userId || !section) return;
+
+  if (allowed === null) {
+    // Quitar excepcion: el usuario vuelve a heredar del rol
+    await admin
+      .from("user_section_overrides")
+      .delete()
+      .eq("profile_id", userId)
+      .eq("section", section);
+  } else {
+    await admin.from("user_section_overrides").upsert(
+      { profile_id: userId, section, allowed },
+      { onConflict: "profile_id,section" }
+    );
+  }
+
+  revalidatePath("/dashboard/usuarios");
+  revalidatePath("/dashboard");
+}

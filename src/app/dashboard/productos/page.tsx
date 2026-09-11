@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 
 import { createClient } from '@/lib/supabase/server';
+import { getUserSections } from '@/lib/permissions';
 import { createAdminClient } from '@/lib/supabase/admin';
 import ProductTable from './ProductTable';
 import { createProduct } from './actions';
@@ -21,6 +22,10 @@ export default async function ProductosPage() {
   if (!user) redirect('/login');
   const { data: selfProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
   if (!['admin', 'operativo', 'cosmetologa'].includes(selfProfile?.role ?? '')) redirect('/dashboard/operativo');
+
+  // Guard server-side de seccion
+  const perms = await getUserSections(user.id, selfProfile!.role);
+  if (!perms.allowed.has('productos')) redirect('/dashboard/operativo');
 
   const admin = createAdminClient();
   let products: any[] = [];

@@ -1,10 +1,9 @@
-// /dashboard/blog — CMS de articulos. Solo admin.
-// Lista todos los posts (publicados y borradores) con acceso rapido a crear/editar/eliminar.
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { getUserSections } from "@/lib/permissions";
 import { deletePost } from "./actions";
 import BlogDeleteButton from "@/components/dashboard/BlogDeleteButton";
 import styles from "./page.module.css";
@@ -29,6 +28,10 @@ export default async function BlogDashPage() {
     .eq("id", user.id)
     .single();
   if (selfProfile?.role !== "admin") redirect("/dashboard/operativo");
+
+  // Guard server-side de seccion (escribir la URL no alcanza)
+  const perms = await getUserSections(user.id, selfProfile!.role);
+  if (!perms.allowed.has("blog")) redirect("/dashboard/operativo");
 
   const admin = createAdminClient();
   const { data: posts } = await admin

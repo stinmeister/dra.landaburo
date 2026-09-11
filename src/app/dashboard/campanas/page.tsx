@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
+import { getUserSections } from '@/lib/permissions';
 import CampanasClient from './CampanasClient';
 import type { Campaign } from './CampanasClient';
 
@@ -27,6 +28,10 @@ export default async function CampanasPage() {
   if (!profile || !ALLOWED_ROLES.includes(profile.role)) {
     redirect('/portal/paciente');
   }
+
+  // Guard server-side: escribir la URL a mano tampoco da acceso (R6)
+  const perms = await getUserSections(user.id, profile.role);
+  if (!perms.allowed.has('campanas')) redirect('/dashboard/operativo');
 
   let campaigns: Campaign[] = [];
   try {

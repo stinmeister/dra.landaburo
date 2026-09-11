@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { getUserSections } from '@/lib/permissions';
 import TratamientosTable from './TratamientosTable';
 import { createTreatment } from './actions';
 import styles from './page.module.css';
@@ -22,6 +23,10 @@ export default async function TratamientosDashboardPage() {
   if (!user) redirect('/login');
   const { data: selfProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
   if (selfProfile?.role !== 'admin') redirect('/dashboard/operativo');
+
+  // Guard server-side de seccion
+  const perms = await getUserSections(user.id, selfProfile!.role);
+  if (!perms.allowed.has('tratamientos')) redirect('/dashboard/operativo');
 
   const admin = createAdminClient();
   const { data: treatments } = await admin

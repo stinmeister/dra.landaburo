@@ -4,6 +4,7 @@
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
+import { getUserSections } from '@/lib/permissions';
 import MPConfigForm from '@/components/dashboard/MPConfigForm';
 import styles from './page.module.css';
 
@@ -81,6 +82,10 @@ export default async function EjecutivoPage() {
   if (!profile || profile.role !== 'admin') {
     redirect('/');
   }
+
+  // Guard server-side: la seccion 'ejecutivo' puede quitarse a cualquier rol via overrides
+  const perms = await getUserSections(user.id, profile.role);
+  if (!perms.allowed.has('ejecutivo')) redirect('/dashboard/operativo');
 
   // Date range: first and last moment of the current calendar month
   const now = new Date();

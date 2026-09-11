@@ -1,40 +1,32 @@
 // Dashboard layout — wraps all /dashboard/* pages.
-// Server Component: lee la sesión y el rol del usuario para:
-//   1. Redirigir a /login si no hay sesión.
-//   2. Redirigir a /portal/paciente si el rol es 'paciente' (sin acceso al dashboard).
-//   3. Renderizar un sidebar con los ítems de nav correspondientes al rol.
-//      admin → todos los módulos
-//      medico / operativo / cosmetologa → solo Operativo
-import { redirect } from 'next/navigation';
-import type { Metadata } from 'next';
-import Link from 'next/link';
-import { createClient } from '@/lib/supabase/server';
-import DashboardSignOut from '@/components/dashboard/DashboardSignOut';
-import DashboardNav from '@/components/dashboard/DashboardNav';
-import styles from './layout.module.css';
+// Server Component: lee sesion, rol y permisos de seccion del usuario.
+// Pasa las secciones permitidas al DashboardNav (Client Component).
+import { redirect } from "next/navigation";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import DashboardSignOut from "@/components/dashboard/DashboardSignOut";
+import DashboardNav from "@/components/dashboard/DashboardNav";
+import { getUserSections, serializePermissions, ALL_SECTIONS } from "@/lib/permissions";
+import styles from "./layout.module.css";
 
 export const metadata: Metadata = {
-  title: 'Panel | Dra. Landaburo',
+  title: "Panel | Dra. Landaburo",
   robots: { index: false },
 };
 
-const STAFF_ROLES = ['admin', 'medico', 'operativo', 'cosmetologa'];
+const STAFF_ROLES = ["admin", "medico", "operativo", "cosmetologa"];
 
-const ADMIN_NAV = [
-  { href: '/dashboard/ejecutivo', label: 'Ejecutivo' },
-  { href: '/dashboard/operativo', label: 'Operativo' },
-  { href: '/dashboard/campanas',  label: 'Campañas' },
-  { href: '/dashboard/tratamientos', label: 'Tratamientos' },
-  { href: '/dashboard/productos', label: 'Productos' },
-  { href: '/dashboard/usuarios',  label: 'Usuarios' },
-  { href: '/dashboard/blog',      label: 'Blog' },
-];
-
-const STAFF_NAV = [
-  { href: '/dashboard/operativo', label: 'Operativo' },
-  { href: '/dashboard/campanas',  label: 'Campañas' },
-  { href: '/dashboard/productos', label: 'Productos' },
-];
+// Labels legibles para cada seccion
+const SECTION_LABELS: Record<string, string> = {
+  ejecutivo:    "Ejecutivo",
+  operativo:    "Operativo",
+  campanas:     "Campanas",
+  tratamientos: "Tratamientos",
+  productos:    "Productos",
+  usuarios:     "Usuarios",
+  blog:         "Blog",
+};
 
 export default async function DashboardLayout({
   children,
@@ -42,22 +34,34 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!user) redirect('/login?redirectTo=/dashboard');
+  if (!user) redirect("/login?redirectTo=/dashboard");
 
   const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, full_name')
-    .eq('id', user.id)
+    .from("profiles")
+    .select("role, full_name")
+    .eq("id", user.id)
     .single();
 
-  const role = (profile?.role as string | undefined) ?? 'paciente';
+  const role = (profile?.role as string | undefined) ?? "paciente";
 
   // Pacientes no tienen acceso al dashboard
-  if (!STAFF_ROLES.includes(role)) redirect('/portal/paciente');
+  if (!STAFF_ROLES.includes(role)) redirect("/portal/paciente");
 
-  const navItems = role === 'admin' ? ADMIN_NAV : STAFF_NAV;
+  // Calcular secciones permitidas (cacheable por request)
+  const perms = await getUserSections(user.id, role);
+  const serialized = serializePermissions(perms);
+
+  // Construir nav items en el orden canonico
+  const navItems = ALL_SECTIONS
+    .filter((s) => perms.allowed.has(s))
+    .map((s) => ({
+      href: `/dashboard/${s}`,
+      label: SECTION_LABELS[s] ?? s,
+    }));
 
   return (
     <div className={styles.shell}>
@@ -73,7 +77,7 @@ export default async function DashboardLayout({
 
         <div className={styles.sidebarFooter}>
           <Link href="/" className={styles.sidebarHomeLink}>
-            ← Sitio público
+            Sitio publico
           </Link>
           <DashboardSignOut />
         </div>
