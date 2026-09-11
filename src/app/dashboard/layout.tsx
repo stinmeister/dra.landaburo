@@ -26,6 +26,7 @@ const SECTION_LABELS: Record<string, string> = {
   productos:    "Productos",
   usuarios:     "Usuarios",
   blog:         "Blog",
+  revision:     "Revisión",
 };
 
 export default async function DashboardLayout({

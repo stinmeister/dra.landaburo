@@ -125,7 +125,7 @@ export default async function EjecutivoPage() {
     : [];
 
   const lowStock = allProducts.filter(
-    (p) => p.stock_quantity < p.min_stock_alert
+    (p) => (p.stock_quantity ?? 0) <= (p.min_stock_alert ?? 5)
   );
 
   const pendingReviewCount = await getPendingReviewCount();

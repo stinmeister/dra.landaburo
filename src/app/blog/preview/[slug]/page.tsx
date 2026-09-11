@@ -16,7 +16,7 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
-const STAFF_ROLES = ['admin', 'medico', 'operativo', 'cosmetologa', 'recepcionista'];
+const STAFF_ROLES = ['admin', 'medico', 'operativo', 'cosmetologa'];
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;

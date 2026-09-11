@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: 'Gift Cards — Validar y Canjear | Dashboard',
 };
 
-const ALLOWED_ROLES = ['admin', 'medico', 'operativo', 'recepcionista'];
+const ALLOWED_ROLES = ['admin', 'medico', 'operativo', 'cosmetologa'];
 
 export default async function GiftCardsDashboardPage() {
   const supabase = await createClient();

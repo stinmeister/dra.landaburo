@@ -17,6 +17,7 @@ export const ALL_SECTIONS = [
   "productos",
   "usuarios",
   "blog",
+  "revision",
 ] as const;
 
 export type Section = (typeof ALL_SECTIONS)[number];
@@ -100,13 +101,16 @@ export async function assertSectionAccess(
   section: Section
 ): Promise<void> {
   const { redirect } = await import("next/navigation");
+  if (role === "paciente") {
+    redirect("/portal/paciente");
+  }
   const perms = await getUserSections(profileId, role);
   if (!perms.allowed.has(section)) {
     const firstAllowed = ALL_SECTIONS.find((s) => s !== section && perms.allowed.has(s));
     if (firstAllowed) {
       redirect(`/dashboard/${firstAllowed}`);
     } else {
-      redirect("/portal/paciente");
+      redirect("/dashboard/sin-acceso");
     }
   }
 }

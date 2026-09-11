@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import styles from './kiosco.module.css';
 
-type Step = 'start' | 'form' | 'success';
+type Step = 'start' | 'form' | 'success' | 'already_registered';
 
 const ATTRIBUTION_OPTIONS = [
   { value: 'instagram_organic', label: 'Instagram', icon: '📸', detail: '@dra_landaburo' },
@@ -84,7 +84,12 @@ export default function KioscoPage() {
 
       if (!res.ok) throw new Error('Error al enviar');
 
-      setStep('success');
+      const data = await res.json().catch(() => ({}));
+      if (data.already_registered) {
+        setStep('already_registered');
+      } else {
+        setStep('success');
+      }
 
       setTimeout(() => {
         setForm({
@@ -135,6 +140,21 @@ export default function KioscoPage() {
           <div className={styles.successCheck}>✓</div>
           <h2 className={styles.successTitle}>¡Registro completado!</h2>
           <p className={styles.successText}>Muchas gracias. En breve te atenderemos.</p>
+          <p className={styles.successReset}>La pantalla se reiniciará automáticamente...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === 'already_registered') {
+    return (
+      <div className={styles.successScreen}>
+        <div className={styles.successContent}>
+          <div className={styles.successCheck}>✓</div>
+          <h2 className={styles.successTitle}>¡Ya tenemos tus datos!</h2>
+          <p className={styles.successText}>
+            Tu información ya se encuentra registrada en el sistema. Por favor, pasá a recepción para anunciarte.
+          </p>
           <p className={styles.successReset}>La pantalla se reiniciará automáticamente...</p>
         </div>
       </div>

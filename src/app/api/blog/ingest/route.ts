@@ -24,59 +24,48 @@ export async function POST(req: NextRequest) {
     const {
       slug,
       title,
-      subtitle,
       category,
-      author_name = 'Dra. Paula Landaburo',
-      author_role = 'Médica Especialista en Medicina Estética & Dermatología',
-      author_image = '/images/Dra.Landaburo.png',
-      read_time_minutes = 5,
-      hero_image,
-      before_after_image,
       excerpt,
+      content,
       content_markdown,
-      sections = [],
-      faqs = [],
-      seo_title,
-      seo_description,
-      seo_keywords = [],
+      cover_image_url,
+      cover_image,
+      hero_image,
+      author_id,
       published_at,
       is_published = true,
+      status,
     } = body;
 
-    if (!slug || !title || !category || !excerpt || !content_markdown) {
+    const finalContent = content || content_markdown;
+    const finalCoverImage = cover_image_url || cover_image || hero_image || null;
+
+    if (!slug || !title || !category || !excerpt || !finalContent) {
       return NextResponse.json(
         {
           success: false,
-          message: 'Faltan campos requeridos: slug, title, category, excerpt, content_markdown',
+          message: 'Faltan campos requeridos: slug, title, category, excerpt, content/content_markdown',
         },
         { status: 400 }
       );
     }
 
+    const now = new Date().toISOString();
     const { data, error } = await supabase
-      .from('articles')
+      .from('posts')
       .upsert(
         {
           slug,
           title,
-          subtitle: subtitle || null,
           category,
-          author_name,
-          author_role,
-          author_image,
-          read_time_minutes,
-          hero_image: hero_image || null,
-          before_after_image: before_after_image || null,
           excerpt,
-          content_markdown,
-          sections,
-          faqs,
-          seo_title: seo_title || title,
-          seo_description: seo_description || excerpt,
-          seo_keywords,
-          published_at: published_at || new Date().toISOString(),
-          is_published,
-          updated_at: new Date().toISOString(),
+          content: finalContent,
+          cover_image_url: finalCoverImage,
+          author_id: author_id || null,
+          status: status || (is_published ? 'published' : 'draft'),
+          is_published: typeof is_published === 'boolean' ? is_published : true,
+          published_at: published_at || now,
+          updated_at: now,
         },
         { onConflict: 'slug' }
       )
@@ -84,9 +73,9 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Blog ingest error:', error);
+      console.error('Blog ingest error into posts:', error);
       return NextResponse.json(
-        { success: false, message: 'Error al guardar el artículo', error: error.message },
+        { success: false, message: 'Error al guardar el post en el blog', error: error.message },
         { status: 500 }
       );
     }
@@ -97,8 +86,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Artículo publicado exitosamente',
-      article_id: data?.id,
+      message: 'Post publicado exitosamente en el blog',
+      post_id: data?.id,
       slug: data?.slug,
       url: `/blog/${slug}`,
     });

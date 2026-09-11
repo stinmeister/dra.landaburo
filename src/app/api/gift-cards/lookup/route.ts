@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     .eq('id', user.id)
     .single();
 
-  const allowedRoles = ['admin', 'medico', 'operativo', 'recepcionista'];
+  const allowedRoles = ['admin', 'medico', 'operativo', 'cosmetologa'];
   if (!profile || !allowedRoles.includes(profile.role)) {
     return NextResponse.json({ error: 'Sin permisos.' }, { status: 403 });
   }

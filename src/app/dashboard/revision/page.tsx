@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
-import { getUserSections } from '@/lib/permissions';
+import { assertSectionAccess } from '@/lib/permissions';
 import { getReviewItems } from '@/lib/ingest-review';
 import ReviewTable from './ReviewTable';
 import styles from './page.module.css';
@@ -32,16 +32,7 @@ export default async function RevisionPage() {
     redirect('/portal/paciente');
   }
 
-  // Permiso: accesible si tiene acceso a 'ejecutivo' u 'operativo', o si es admin
-  const perms = await getUserSections(user.id, role);
-  const canAccess =
-    role === 'admin' ||
-    perms.allowed.has('ejecutivo') ||
-    perms.allowed.has('operativo');
-
-  if (!canAccess) {
-    redirect('/dashboard/operativo');
-  }
+  await assertSectionAccess(user.id, role, 'revision');
 
   const items = await getReviewItems({ limit: 200 });
 

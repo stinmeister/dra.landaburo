@@ -17,7 +17,7 @@ async function assertStaff() {
     .eq('id', user.id)
     .single();
 
-  const allowedRoles = ['admin', 'medico', 'operativo', 'cosmetologa', 'recepcionista'];
+  const allowedRoles = ['admin', 'medico', 'operativo', 'cosmetologa'];
   if (!profile || !allowedRoles.includes(profile.role)) {
     throw new Error('No autorizado');
   }

@@ -194,19 +194,41 @@ export async function POST(req: NextRequest) {
     const normalizedEmail = email.toLowerCase().trim();
 
     // 3. Prevent overwrites of existing admissions or patients
-    // Check if admission already exists for this email
-    const { data: existingAdmission } = await supabase
+    // Check if admission already exists for this email or DNI
+    const cleanDni = dni && typeof dni === 'string' ? dni.trim() : null;
+    let existingAdmissionQuery = supabase
       .from('kiosk_admissions')
-      .select('id')
-      .eq('email', normalizedEmail)
-      .maybeSingle();
+      .select('id, device_info');
+
+    if (cleanDni) {
+      existingAdmissionQuery = existingAdmissionQuery.or(`email.eq.${normalizedEmail},dni.eq.${cleanDni}`);
+    } else {
+      existingAdmissionQuery = existingAdmissionQuery.eq('email', normalizedEmail);
+    }
+
+    const { data: existingAdmissions } = await existingAdmissionQuery.limit(1);
+    const existingAdmission = existingAdmissions && existingAdmissions.length > 0 ? existingAdmissions[0] : null;
 
     if (existingAdmission) {
       // Existing patient/admission check-in: DO NOT OVERWRITE existing record data!
-      // Return success without altering stored patient records
+      // Registrar la re-entrada en device_info como métrica de uso
+      const currentDevInfo = (existingAdmission.device_info as Record<string, unknown>) || {};
+      const prevCount = typeof currentDevInfo.reentry_count === 'number' ? currentDevInfo.reentry_count : 0;
+      await supabase
+        .from('kiosk_admissions')
+        .update({
+          device_info: {
+            ...currentDevInfo,
+            reentry_count: prevCount + 1,
+            last_reentry_at: new Date().toISOString(),
+          },
+        })
+        .eq('id', existingAdmission.id);
+
       return NextResponse.json({
         success: true,
-        message: 'Admisión registrada correctamente.',
+        already_registered: true,
+        message: 'Tu información ya se encuentra registrada en el sistema. Por favor pasá a recepción.',
       });
     }
 
@@ -215,7 +237,7 @@ export async function POST(req: NextRequest) {
       .from('kiosk_admissions')
       .insert({
         full_name: full_name.trim(),
-        dni: dni ? dni.trim() : null,
+        dni: cleanDni,
         email: normalizedEmail,
         phone: phone.trim(),
         birth_date: birth_date ? birth_date : null,
@@ -224,7 +246,11 @@ export async function POST(req: NextRequest) {
         referral_name: referral_name ? referral_name.trim() : null,
         interests,
         medical_notes: medical_notes ? medical_notes.trim() : null,
-        device_info: { platform: 'ipad_kiosk', user_agent: req.headers.get('user-agent') },
+        device_info: {
+          platform: 'ipad_kiosk',
+          user_agent: req.headers.get('user-agent'),
+          reentry_count: 0,
+        },
         status: 'nuevo',
       });
 

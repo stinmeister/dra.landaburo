@@ -23,6 +23,10 @@ interface PatientInput {
   Email?: string;
   OS_Prepaga?: string;
   Fuente_Datos?: string;
+  Segmento_RFM?: string;
+  rfm_segment?: string;
+  RFM?: string;
+  segmento_rfm?: string;
   [key: string]: unknown;
 }
 
@@ -39,8 +43,45 @@ interface RejectedDetail {
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Helpers & RFM Mapping
 // ---------------------------------------------------------------------------
+
+// Valores exactos permitidos por el constraint patients_rfm_segment_check en DB:
+// 'Nuevo', 'En Riesgo', 'No Perder', 'Inactivo', 'Durmiente 2025', 'Inactivo pre-2025'
+const RFM_MAP: Record<string, string> = {
+  nuevo: 'Nuevo',
+  nuevos: 'Nuevo',
+  'en riesgo': 'En Riesgo',
+  en_riesgo: 'En Riesgo',
+  'no perder': 'No Perder',
+  no_perder: 'No Perder',
+  inactivo: 'Inactivo',
+  inactivos: 'Inactivo',
+  durmiente: 'Durmiente 2025',
+  durmientes: 'Durmiente 2025',
+  'durmiente 2025': 'Durmiente 2025',
+  'inactivo pre-2025': 'Inactivo pre-2025',
+  'inactivo pre 2025': 'Inactivo pre-2025',
+  activo: 'Nuevo',
+  activos: 'Nuevo',
+};
+
+function normalizeRfmSegment(raw: unknown): { mapped: string | null; note?: string } {
+  if (typeof raw !== 'string' || !raw.trim()) return { mapped: null };
+  const clean = raw.trim().toLowerCase();
+  const matched = RFM_MAP[clean];
+  if (matched) {
+    const note =
+      clean === 'activo' || clean === 'activos' || clean === 'durmiente' || clean === 'durmientes'
+        ? `rfm_mapeado: '${raw.trim()}' -> '${matched}'`
+        : undefined;
+    return { mapped: matched, note };
+  }
+  return {
+    mapped: 'Nuevo',
+    note: `rfm_desconocido: '${raw.trim()}' no reconocido en constraint, asignado 'Nuevo'`,
+  };
+}
 
 /** Normalise a DNI string: strip dots and spaces. */
 function normalizeDni(raw: string): string {
@@ -161,6 +202,14 @@ export async function POST(req: NextRequest) {
     const email = rec.Email?.trim() || null;
     const osNotes = buildNotes(rec.OS_Prepaga, rec.Fuente_Datos);
 
+    // -- Parse & normalize RFM segment ---------------------------------------
+    const rawRfm = rec.Segmento_RFM ?? rec.rfm_segment ?? rec.RFM ?? rec.segmento_rfm;
+    const { mapped: mappedRfm, note: rfmNote } = normalizeRfmSegment(rawRfm);
+    const reviewReasons: string[] = [];
+    if (rfmNote) {
+      reviewReasons.push(rfmNote);
+    }
+
     // -- Parse birthdate -----------------------------------------------------
     let birthdate: string | null = null;
     let birthdateInvalid = false;
@@ -192,7 +241,6 @@ export async function POST(req: NextRequest) {
 
     // -- Find existing patient -----------------------------------------------
     let existingRow: Record<string, unknown> | null = null;
-    let multiplePhoneMatch = false;
 
     if (normalizedDni) {
       // Primary lookup: by DNI
@@ -221,24 +269,27 @@ export async function POST(req: NextRequest) {
 
       if (data && data.length === 1) {
         existingRow = data[0];
+        reviewReasons.push(`vinculo_por_telefono: registro vinculado por teléfono (${phone}) al carecer de DNI unívoco`);
       } else if (data && data.length > 1) {
-        multiplePhoneMatch = true;
-        existingRow = data[0]; // Use first match, flag for review
+        // Multiples pacientes comparten el mismo teléfono (madre/hijo, hermanos, etc.)
+        // NO elegir arbitrariamente data[0] para evitar sobreescritura destructiva.
+        needsReviewDetail.push({
+          index: i,
+          reason: `ambiguous_phone_match: ${data.length} pacientes en la base comparten el teléfono ${phone} — registro no modificado para evitar sobreescritura arbitraria`,
+          record: rec,
+        });
+        continue;
       }
     }
 
     const now = new Date().toISOString();
 
     // -- Build review flags --------------------------------------------------
-    const reviewReasons: string[] = [];
     if (birthdateInvalid) {
       reviewReasons.push(`Fecha_Nacimiento invalida: '${rec.Fecha_Nacimiento}'`);
     }
     if (hashDni && !existingRow) {
       reviewReasons.push(`DNI hash '${rawDni}' no matcheo por phone`);
-    }
-    if (multiplePhoneMatch) {
-      reviewReasons.push(`2+ pacientes comparten el mismo telefono: ${phone}`);
     }
 
     // -- UPSERT --------------------------------------------------------------
@@ -252,6 +303,7 @@ export async function POST(req: NextRequest) {
         birthdate: string | null;
         notes: string | null;
         dni: string | null;
+        rfm_segment: string | null;
         synced_at: string | null;
       };
 
@@ -268,6 +320,9 @@ export async function POST(req: NextRequest) {
       }
       if (!dbRow.birthdate && birthdate) {
         changes['birthdate'] = birthdate;
+      }
+      if (!dbRow.rfm_segment && mappedRfm) {
+        changes['rfm_segment'] = mappedRfm;
       }
       // If matched via phone and DB has no DNI, backfill it
       if (!dbRow.dni && normalizedDni) {
@@ -323,6 +378,10 @@ export async function POST(req: NextRequest) {
         notes: osNotes,
         synced_at: now,
       };
+
+      if (mappedRfm) {
+        insertPayload['rfm_segment'] = mappedRfm;
+      }
 
       if (normalizedDni) {
         insertPayload['dni'] = normalizedDni;

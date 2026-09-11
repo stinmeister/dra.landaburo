@@ -2,7 +2,7 @@
 // Applies a partial or full redemption to a gift card.
 // Business rules: if amount_to_redeem >= remaining_balance_ars → status=redeemed
 //                 if amount_to_redeem < remaining_balance_ars  → status=partial
-// Auth required: staff only (admin/medico/operativo/recepcionista).
+// Auth required: staff only (admin/medico/operativo/cosmetologa).
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     .eq('id', user.id)
     .single();
 
-  const allowedRoles = ['admin', 'medico', 'operativo', 'recepcionista'];
+  const allowedRoles = ['admin', 'medico', 'operativo', 'cosmetologa'];
   if (!profile || !allowedRoles.includes(profile.role)) {
     return NextResponse.json({ error: 'Sin permisos para aplicar canjes.' }, { status: 403 });
   }
