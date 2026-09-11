@@ -132,36 +132,61 @@ interface RejectedItem {
   record: PaymentRecord;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+interface ParsedPaymentDate {
+  date: Date;
+  hasSpecificTime: boolean;
+}
 
 /**
  * Parsea fecha y hora completas.
- * Prioridad 1: Clave_Unica (DNI|YYYY-MM-DDTHH:mm:ss|Servicio) preservando la hora del cobro.
- * Prioridad 2: Columna fecha en formato D/M/YYYY (00:00).
+ * Prioridad 1: Clave_Unica (DNI|YYYY-MM-DDTHH:mm:ss|Servicio o YYYYMMDD_HHmmss_DNI) preservando la hora del cobro.
+ * Prioridad 2: Columna fecha en formato D/M/YYYY HH:mm:ss o D/M/YYYY (00:00).
  * Zona horaria Argentina (-03:00).
  * No aplica doble correccion del bug de Calu (WF-01 ya lo corrige al escribir la Sheet).
  */
-function parsePaymentDate(claveUnica: string | undefined, fechaRaw: string | undefined): Date | null {
-  if (claveUnica && claveUnica.includes("|")) {
-    const parts = claveUnica.split("|");
-    if (parts.length >= 2) {
-      const tsPart = parts[1].trim();
-      if (tsPart.includes("T") || tsPart.match(/^\d{4}-\d{2}-\d{2}/)) {
-        const hasTz = tsPart.endsWith("Z") || tsPart.includes("+") || tsPart.slice(10).includes("-");
-        const withTz = hasTz ? tsPart : `${tsPart}-03:00`;
-        const dt = new Date(withTz);
-        if (!isNaN(dt.getTime())) return dt;
+function parsePaymentDate(claveUnica: string | undefined, fechaRaw: string | undefined): ParsedPaymentDate | null {
+  if (claveUnica) {
+    if (claveUnica.includes("|")) {
+      const parts = claveUnica.split("|");
+      if (parts.length >= 2) {
+        const tsPart = parts[1].trim();
+        if (tsPart.includes("T") || tsPart.match(/^\d{4}-\d{2}-\d{2}/)) {
+          const hasTz = tsPart.endsWith("Z") || tsPart.includes("+") || tsPart.slice(10).includes("-");
+          const withTz = hasTz ? tsPart : `${tsPart}-03:00`;
+          const dt = new Date(withTz);
+          if (!isNaN(dt.getTime())) {
+            const hasTime = tsPart.includes("T") && !tsPart.includes("T00:00:00");
+            return { date: dt, hasSpecificTime: hasTime };
+          }
+        }
+      }
+    }
+
+    const underMatch = claveUnica.match(/^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/);
+    if (underMatch) {
+      const [, y, mo, d, h, min, s] = underMatch;
+      const dt = new Date(`${y}-${mo}-${d}T${h}:${min}:${s}-03:00`);
+      if (!isNaN(dt.getTime())) {
+        return { date: dt, hasSpecificTime: true };
       }
     }
   }
 
   if (fechaRaw) {
-    const parts = fechaRaw.trim().split("/");
-    if (parts.length === 3) {
-      const [d, m, y] = parts;
-      const iso = `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}T00:00:00-03:00`;
-      const dt = new Date(iso);
-      if (!isNaN(dt.getTime())) return dt;
+    const rawTrimmed = fechaRaw.trim();
+    const parts = rawTrimmed.split(" ");
+    const dateParts = parts[0].split("/");
+    if (dateParts.length === 3) {
+      const [d, m, y] = dateParts;
+      if (parts[1]) {
+        const timeSub = parts[1].split(":");
+        const timePart = timeSub.length === 2 ? `${parts[1]}:00` : parts[1];
+        const dt = new Date(`${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}T${timePart}-03:00`);
+        if (!isNaN(dt.getTime())) return { date: dt, hasSpecificTime: true };
+      } else {
+        const dt = new Date(`${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}T00:00:00-03:00`);
+        if (!isNaN(dt.getTime())) return { date: dt, hasSpecificTime: false };
+      }
     }
   }
 
@@ -347,8 +372,8 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 5.3 Parseo de fecha y hora ───────────────────────────────────────────
-    const parsedDate = parsePaymentDate(rec.clave_unica, rec.fecha);
-    if (!parsedDate) {
+    const dateParseResult = parsePaymentDate(rec.clave_unica, rec.fecha);
+    if (!dateParseResult) {
       rejected.push({
         index: i,
         reason: `fecha inválida: "${rec.fecha}" (o clave_unica "${rec.clave_unica}") — se espera formato D/M/YYYY o timestamp ISO`,
@@ -356,6 +381,7 @@ export async function POST(req: NextRequest) {
       });
       continue;
     }
+    const { date: parsedDate, hasSpecificTime } = dateParseResult;
 
     // ── 5.4 B4 — Detección de moneda ─────────────────────────────────────────
     const montoRaw = rec.monto_pagado_ars;
@@ -504,21 +530,16 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 5.9 B3 — Deduplicación Nivel 2 (aproximada: patient_id + hora/fecha + monto) ─
-    // Si parsedDate tiene hora específica (distinta de 00:00), busca en rango de ±15 minutos.
-    // Si solo tiene fecha (00:00:00), busca en el rango del día.
+    // Si tiene hora específica, busca en rango de ±15 minutos.
+    // Si solo tiene fecha (sin hora), busca en el rango del día (24 horas).
     {
-      const hasSpecificTime =
-        parsedDate.getHours() !== 0 ||
-        parsedDate.getMinutes() !== 0 ||
-        parsedDate.getSeconds() !== 0;
-
       const winStart = hasSpecificTime
         ? new Date(parsedDate.getTime() - 15 * 60 * 1000)
-        : new Date(new Date(parsedDate).setHours(0, 0, 0, 0));
+        : new Date(parsedDate.getTime());
 
       const winEnd = hasSpecificTime
         ? new Date(parsedDate.getTime() + 15 * 60 * 1000)
-        : new Date(new Date(parsedDate).setHours(23, 59, 59, 999));
+        : new Date(parsedDate.getTime() + 24 * 60 * 60 * 1000 - 1);
 
       const { data: existingApprox, error: approxError } = await supabaseAdmin
         .from("payments")

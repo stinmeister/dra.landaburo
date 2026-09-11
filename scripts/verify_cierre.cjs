@@ -139,7 +139,7 @@ async function main() {
       console.log('\n[VERIFICACIÓN] Paciente 1 insertado en DB:');
       console.log(`  id: ${p1Data.id}`);
       console.log(`  full_name: "${p1Data.full_name}" (Esperado: "Clara Sofía Pérez Gómez") -> ${p1Data.full_name === 'Clara Sofía Pérez Gómez' ? '✅ CORRECTO' : '❌ INCORRECTO'}`);
-      console.log(`  notes: "${p1Data.notes}" (Esperado: "[OS: OSDE 310] | [Fuente: Calu]") -> ${p1Data.notes === '[OS: OSDE 310] | [Fuente: Calu]' ? '✅ CORRECTO' : '❌ INCORRECTO'}`);
+      console.log(`  notes: "${p1Data.notes}" (Esperado: "OS: OSDE 310 | Fuente: Calu") -> ${p1Data.notes === 'OS: OSDE 310 | Fuente: Calu' ? '✅ CORRECTO' : '❌ INCORRECTO'}`);
     }
 
     // Verificar en DB el paciente 2
@@ -183,7 +183,7 @@ async function main() {
     if (p1Updated) {
       console.log('\n[VERIFICACIÓN] Notas post-actualización:');
       console.log(`  notes: "${p1Updated.notes}"`);
-      const expectedNotes = '[OS: Swiss Medical] | [Fuente: Calu]';
+      const expectedNotes = 'OS: Swiss Medical | Fuente: Calu';
       console.log(`  Esperado: "${expectedNotes}" -> ${p1Updated.notes === expectedNotes ? '✅ IDEMPOTENTE PERFECTO' : '❌ FALLÓ IDEMPOTENCIA'}`);
     }
 
@@ -209,7 +209,7 @@ async function main() {
       {
         clave_unica: claveP1,
         dni: testDni1,
-        fecha: '31/7/2026',
+        fecha: '31/7/2026 14:30:00',
         servicio: 'Toxina Botulínica Zona',
         estado: 'Finalizado',
         monto_pagado_ars: 45000,
@@ -221,7 +221,7 @@ async function main() {
       {
         clave_unica: claveP2,
         dni: testDni1,
-        fecha: '31/7/2026',
+        fecha: '31/7/2026 14:30:00',
         servicio: 'Toxina Botulínica Zona',
         estado: 'Finalizado',
         monto_pagado_ars: 45000,
@@ -233,7 +233,7 @@ async function main() {
       {
         clave_unica: claveP3,
         dni: testDni1,
-        fecha: '31/7/2026',
+        fecha: '31/7/2026 14:40:00',
         servicio: 'Toxina Botulínica Zona',
         estado: 'Finalizado',
         monto_pagado_ars: 45000,
@@ -245,7 +245,7 @@ async function main() {
       {
         clave_unica: claveP4,
         dni: testDni1,
-        fecha: '31/7/2026',
+        fecha: '31/7/2026 17:30:00',
         servicio: 'Toxina Botulínica Zona',
         estado: 'Finalizado',
         monto_pagado_ars: 45000,
@@ -257,7 +257,7 @@ async function main() {
       {
         clave_unica: claveP5,
         dni: testDni1,
-        fecha: '31/7/2026',
+        fecha: '31/7/2026 18:00:00',
         servicio: 'Control',
         estado: 'Programado',
         monto_pagado_ars: 0,
