@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 
 import { createClient } from '@/lib/supabase/server';
-import { getUserSections } from '@/lib/permissions';
+import { assertSectionAccess } from '@/lib/permissions';
 import { createAdminClient } from '@/lib/supabase/admin';
 import ProductTable from './ProductTable';
 import { createProduct } from './actions';
@@ -19,13 +19,13 @@ const CATEGORIES = [
 export default async function ProductosPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-  const { data: selfProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-  if (!['admin', 'operativo', 'cosmetologa'].includes(selfProfile?.role ?? '')) redirect('/dashboard/operativo');
+  if (!user) redirect('/login?redirectTo=/dashboard/productos');
+  const { data: selfProfile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
+  const role = selfProfile?.role ?? '';
+  if (!role || role === 'paciente') redirect('/portal/paciente');
 
-  // Guard server-side de seccion
-  const perms = await getUserSections(user.id, selfProfile!.role);
-  if (!perms.allowed.has('productos')) redirect('/dashboard/operativo');
+  // Guard server-side: la matriz de permisos es la unica fuente de verdad (R6)
+  await assertSectionAccess(user.id, role, 'productos');
 
   const admin = createAdminClient();
   let products: any[] = [];

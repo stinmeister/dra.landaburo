@@ -8,6 +8,7 @@ import Footer from '@/components/layout/Footer';
 import WhatsAppButton from '@/components/layout/WhatsAppButton';
 import { Button } from '@/components/ui/Button';
 import { createClient } from '@/lib/supabase/server';
+import MarkdownRenderer from '@/components/blog/MarkdownRenderer';
 import styles from './page.module.css';
 
 interface Props { params: Promise<{ slug: string }> }
@@ -74,9 +75,7 @@ export default async function BlogArticlePage({ params }: Props) {
         <article className={styles.article}>
           <div className={styles.container}>
             <div className={styles.content}>
-              {post.content.split('\n').filter(Boolean).map((para: string, i: number) => (
-                <p key={i}>{para}</p>
-              ))}
+              <MarkdownRenderer content={post.content} />
             </div>
 
             {/* Firma */}

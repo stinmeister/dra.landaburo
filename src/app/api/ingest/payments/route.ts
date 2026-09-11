@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { persistReviewItems } from "@/lib/ingest-review";
 
 // POST /api/ingest/payments
 // Auth: Authorization: Bearer $INGEST_SECRET
@@ -134,16 +135,37 @@ interface RejectedItem {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
- * Parsea fecha en formato 'D/M/YYYY' o 'DD/MM/YYYY' (zona horaria Argentina).
- * Retorna null si el formato es inválido.
+ * Parsea fecha y hora completas.
+ * Prioridad 1: Clave_Unica (DNI|YYYY-MM-DDTHH:mm:ss|Servicio) preservando la hora del cobro.
+ * Prioridad 2: Columna fecha en formato D/M/YYYY (00:00).
+ * Zona horaria Argentina (-03:00).
+ * No aplica doble correccion del bug de Calu (WF-01 ya lo corrige al escribir la Sheet).
  */
-function parseDMYYYY(raw: string): Date | null {
-  const parts = raw?.trim().split("/");
-  if (!parts || parts.length !== 3) return null;
-  const [d, m, y] = parts;
-  const iso = `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}T00:00:00-03:00`;
-  const dt = new Date(iso);
-  return isNaN(dt.getTime()) ? null : dt;
+function parsePaymentDate(claveUnica: string | undefined, fechaRaw: string | undefined): Date | null {
+  if (claveUnica && claveUnica.includes("|")) {
+    const parts = claveUnica.split("|");
+    if (parts.length >= 2) {
+      const tsPart = parts[1].trim();
+      if (tsPart.includes("T") || tsPart.match(/^\d{4}-\d{2}-\d{2}/)) {
+        const hasTz = tsPart.endsWith("Z") || tsPart.includes("+") || tsPart.slice(10).includes("-");
+        const withTz = hasTz ? tsPart : `${tsPart}-03:00`;
+        const dt = new Date(withTz);
+        if (!isNaN(dt.getTime())) return dt;
+      }
+    }
+  }
+
+  if (fechaRaw) {
+    const parts = fechaRaw.trim().split("/");
+    if (parts.length === 3) {
+      const [d, m, y] = parts;
+      const iso = `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}T00:00:00-03:00`;
+      const dt = new Date(iso);
+      if (!isNaN(dt.getTime())) return dt;
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -271,9 +293,11 @@ export async function POST(req: NextRequest) {
 
   // ── 4. Acumuladores ─────────────────────────────────────────────────────────
   let inserted = 0;
+  let inserted_with_warnings = 0;
   let skipped_estado = 0;
   let duplicates_exact = 0;
   let duplicates_approx = 0;
+  let needs_review_uninserted = 0;
   const needs_review: NeedsReviewItem[] = [];
   const rejected: RejectedItem[] = [];
 
@@ -313,6 +337,7 @@ export async function POST(req: NextRequest) {
         continue;
       }
       // Estado desconocido o 'Cita Eliminada...' → needs_review
+      needs_review_uninserted++;
       needs_review.push({
         index: i,
         reason: `estado_desconocido: "${estadoNorm}" no es facturable ni ignorable`,
@@ -321,12 +346,12 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
-    // ── 5.3 Parseo de fecha ───────────────────────────────────────────────────
-    const parsedDate = parseDMYYYY(rec.fecha);
+    // ── 5.3 Parseo de fecha y hora ───────────────────────────────────────────
+    const parsedDate = parsePaymentDate(rec.clave_unica, rec.fecha);
     if (!parsedDate) {
       rejected.push({
         index: i,
-        reason: `fecha inválida: "${rec.fecha}" — se espera formato D/M/YYYY`,
+        reason: `fecha inválida: "${rec.fecha}" (o clave_unica "${rec.clave_unica}") — se espera formato D/M/YYYY o timestamp ISO`,
         record: rec,
       });
       continue;
@@ -336,6 +361,7 @@ export async function POST(req: NextRequest) {
     const montoRaw = rec.monto_pagado_ars;
 
     if (montoRaw < 0) {
+      needs_review_uninserted++;
       needs_review.push({
         index: i,
         reason: `monto_negativo: anomalia de fuente (monto_pagado_ars=${montoRaw})`,
@@ -351,6 +377,7 @@ export async function POST(req: NextRequest) {
     );
 
     if (currencyResult === "USD") {
+      needs_review_uninserted++;
       needs_review.push({
         index: i,
         reason: `moneda_usd: el registro parece estar en USD (medio_pago="${rec.medio_pago}", monto=${montoRaw})`,
@@ -360,6 +387,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (currencyResult === "SUSPICIOUS") {
+      needs_review_uninserted++;
       needs_review.push({
         index: i,
         reason: `monto_sospechoso_posible_usd: monto ${montoRaw} ARS es muy bajo para servicio "${rec.servicio}"`,
@@ -373,6 +401,7 @@ export async function POST(req: NextRequest) {
 
     // Verificar primero si es un método DDL_PENDING para dar razón precisa
     if (PAYMENT_METHOD_MAP_DDL_PENDING[medioPagoKey]) {
+      needs_review_uninserted++;
       needs_review.push({
         index: i,
         reason: `metodo_pago_ddl_pendiente: "${rec.medio_pago}" → "${PAYMENT_METHOD_MAP_DDL_PENDING[medioPagoKey]}" reconocido pero no habilitado en el CHECK constraint aún (aplicar DDL)`,
@@ -383,6 +412,7 @@ export async function POST(req: NextRequest) {
 
     const medioPagoNorm = PAYMENT_METHOD_MAP_ACCEPTED[medioPagoKey];
     if (!medioPagoNorm) {
+      needs_review_uninserted++;
       needs_review.push({
         index: i,
         reason: `medio_pago_desconocido: "${rec.medio_pago}" no está en el mapa de métodos aceptados`,
@@ -401,6 +431,7 @@ export async function POST(req: NextRequest) {
     if (!patientId) {
       const lookupResult = await resolvePatientByDni(rec.dni);
       if (lookupResult === "ambiguous") {
+        needs_review_uninserted++;
         needs_review.push({
           index: i,
           reason: `ambiguous_ref: múltiples pacientes coinciden con DNI "${normalizeDni(rec.dni)}"`,
@@ -409,6 +440,7 @@ export async function POST(req: NextRequest) {
         continue;
       }
       if (!lookupResult) {
+        needs_review_uninserted++;
         needs_review.push({
           index: i,
           reason: `sin_paciente: no se encontró paciente con DNI "${normalizeDni(rec.dni)}"`,
@@ -426,6 +458,7 @@ export async function POST(req: NextRequest) {
     if (!professionalId) {
       const mapped = profesionalMap.get(rec.profesional?.trim() ?? "");
       if (!mapped) {
+        needs_review_uninserted++;
         needs_review.push({
           index: i,
           reason: `sin_professional: "${rec.profesional}" no encontrado en profiles (asignar manualmente)`,
@@ -470,29 +503,37 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── 5.9 B3 — Deduplicación Nivel 2 (aproximada: patient_id + fecha + monto) ─
-    // Busca si ya existe un pago para el mismo paciente, en el mismo día, por el mismo monto.
-    // Si hay match → needs_review (nunca se descarta en silencio).
+    // ── 5.9 B3 — Deduplicación Nivel 2 (aproximada: patient_id + hora/fecha + monto) ─
+    // Si parsedDate tiene hora específica (distinta de 00:00), busca en rango de ±15 minutos.
+    // Si solo tiene fecha (00:00:00), busca en el rango del día.
     {
-      const dayStart = new Date(parsedDate);
-      dayStart.setHours(0, 0, 0, 0);
-      const dayEnd = new Date(parsedDate);
-      dayEnd.setHours(23, 59, 59, 999);
+      const hasSpecificTime =
+        parsedDate.getHours() !== 0 ||
+        parsedDate.getMinutes() !== 0 ||
+        parsedDate.getSeconds() !== 0;
+
+      const winStart = hasSpecificTime
+        ? new Date(parsedDate.getTime() - 15 * 60 * 1000)
+        : new Date(new Date(parsedDate).setHours(0, 0, 0, 0));
+
+      const winEnd = hasSpecificTime
+        ? new Date(parsedDate.getTime() + 15 * 60 * 1000)
+        : new Date(new Date(parsedDate).setHours(23, 59, 59, 999));
 
       const { data: existingApprox, error: approxError } = await supabaseAdmin
         .from("payments")
-        .select("id")
+        .select("id, payment_date")
         .eq("patient_id", patientId)
         .eq("amount_ars", montoRaw)
-        .gte("payment_date", dayStart.toISOString())
-        .lte("payment_date", dayEnd.toISOString())
+        .gte("payment_date", winStart.toISOString())
+        .lte("payment_date", winEnd.toISOString())
         .maybeSingle();
 
       if (!approxError && existingApprox) {
         duplicates_approx++;
         needs_review.push({
           index: i,
-          reason: `posible_duplicado_ventana_solapada: coincide con payment id=${existingApprox.id} por patient_id+fecha+monto_ars (clave_unica="${rec.clave_unica}")`,
+          reason: `posible_duplicado_ventana_solapada: coincide con payment id=${existingApprox.id} por patient_id+fecha_hora+monto_ars (clave_unica="${rec.clave_unica}")`,
           record: rec,
         });
         continue;
@@ -500,9 +541,8 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 5.10 Insert en DB ─────────────────────────────────────────────────────
-    // DDL_PENDING: external_id y notes se omiten hasta que las columnas existan.
-    // Descomentar cuando se aplique el DDL.
-    const { error: insertError } = await supabaseAdmin.from("payments").insert({
+    // external_id y notes ya existen en la tabla payments (verificado en DB).
+    const insertPayload: Record<string, unknown> = {
       patient_id: patientId,
       professional_profile_id: professionalId,
       amount_ars: montoRaw,
@@ -513,10 +553,13 @@ export async function POST(req: NextRequest) {
       payment_date: parsedDate.toISOString(),
       appointment_id: null,
       order_id: null,
-      // [DDL_PENDING] Descomentar cuando existan las columnas en payments:
-      // external_id: rec.clave_unica,
-      // notes: rec.servicio ?? null,
-    });
+      external_id: rec.clave_unica,
+      notes: rec.servicio ?? null,
+    };
+
+    const { error: insertError } = await supabaseAdmin
+      .from("payments")
+      .insert(insertPayload);
 
     if (insertError) {
       rejected.push({ index: i, reason: insertError.message, record: rec });
@@ -526,8 +569,9 @@ export async function POST(req: NextRequest) {
     inserted++;
 
     // Multi-servicio: registrar en needs_review para revisión manual
-    // (el pago ya fue insertado; esto es solo trazabilidad)
+    // (el pago ya fue insertado; esto es advertencia sobre cobro insertado)
     if (isMultiService) {
+      inserted_with_warnings++;
       needs_review.push({
         index: i,
         reason: `is_multi_service: servicio contiene múltiples tratamientos — verificar si debe dividirse en pagos separados (servicio="${rec.servicio}")`,
@@ -536,17 +580,41 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ── 6. Respuesta estandarizada ────────────────────────────────────────────
+  // ── 6. Persistir items en ingest_review (idempotente) ─────────────────────
+  if (needs_review.length > 0) {
+    await persistReviewItems(
+      needs_review.map((item) => ({
+        source: "payments",
+        record_identifier: item.record.clave_unica || item.record.dni || null,
+        reason: item.reason,
+        payload: item.record as unknown as Record<string, unknown>,
+      }))
+    );
+  }
+
+  // ── 7. Respuesta estandarizada reconciliada ──────────────────────────────
+  const reconciliationCheck =
+    inserted +
+    skipped_estado +
+    duplicates_exact +
+    duplicates_approx +
+    needs_review_uninserted +
+    rejected.length ===
+    records.length;
+
   return NextResponse.json({
     success: true,
     summary: {
       total_received: records.length,
       inserted,
+      inserted_with_warnings,
       skipped_estado,
       duplicates_exact,
       duplicates_approx,
+      needs_review_uninserted,
       needs_review: needs_review.length,
       rejected: rejected.length,
+      reconciliation_check: reconciliationCheck,
     },
     needs_review_detail: needs_review,
     rejected_detail: rejected,

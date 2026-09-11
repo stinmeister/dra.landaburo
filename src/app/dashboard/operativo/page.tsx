@@ -4,6 +4,7 @@
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
+import { assertSectionAccess } from '@/lib/permissions';
 import TaskList from '@/components/dashboard/TaskList';
 import type { TaskItem } from '@/components/dashboard/TaskList';
 import TreatmentSearch from '@/components/dashboard/TreatmentSearch';
@@ -15,13 +16,6 @@ import styles from './page.module.css';
 export const metadata: Metadata = {
   title: 'Dashboard Operativo | Dra. Landaburo',
 };
-
-const ALLOWED_ROLES = ['admin', 'medico', 'operativo', 'cosmetologa'] as const;
-type AllowedRole = (typeof ALLOWED_ROLES)[number];
-
-function isAllowed(role: string): role is AllowedRole {
-  return (ALLOWED_ROLES as readonly string[]).includes(role);
-}
 
 // Guías de personal — Doris eliminada, solo Ceci y Laura
 const guides = [
@@ -54,15 +48,21 @@ export default async function OperativoDashboard() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  if (!user) redirect('/login?redirectTo=/dashboard/operativo');
 
   const { data: profile } = await supabase
     .from('profiles')
     .select('id, role, full_name')
     .eq('id', user.id)
-    .single<{ id: string; role: string; full_name: string | null }>();
+    .maybeSingle<{ id: string; role: string; full_name: string | null }>();
 
-  if (!profile || !isAllowed(profile.role)) redirect('/');
+  if (!profile || !profile.role || profile.role === 'paciente') {
+    redirect('/portal/paciente');
+  }
+  const role = profile.role;
+
+  // Guard server-side: la matriz de permisos es la unica fuente de verdad (R6)
+  await assertSectionAccess(user.id, role, 'operativo');
 
   // Fecha de hoy en zona horaria Argentina
   const todayAR = new Intl.DateTimeFormat('en-CA', {

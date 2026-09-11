@@ -90,7 +90,8 @@ export async function getUserSections(
 
 /**
  * Verifica si un usuario puede acceder a una seccion.
- * Lanza redirect a /dashboard/operativo si no tiene permiso.
+ * Si no tiene permiso, redirige a la primera seccion permitida para su rol/overrides,
+ * o a /portal/paciente si no tiene ninguna seccion permitida en el panel.
  * Para usar al principio de cada page.tsx protegida.
  */
 export async function assertSectionAccess(
@@ -101,7 +102,12 @@ export async function assertSectionAccess(
   const { redirect } = await import("next/navigation");
   const perms = await getUserSections(profileId, role);
   if (!perms.allowed.has(section)) {
-    redirect("/dashboard/operativo");
+    const firstAllowed = ALL_SECTIONS.find((s) => s !== section && perms.allowed.has(s));
+    if (firstAllowed) {
+      redirect(`/dashboard/${firstAllowed}`);
+    } else {
+      redirect("/portal/paciente");
+    }
   }
 }
 

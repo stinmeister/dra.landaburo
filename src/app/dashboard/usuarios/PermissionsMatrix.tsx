@@ -69,9 +69,8 @@ export default function PermissionsMatrix({ users, setOverrideAction }: Props) {
     <div className={styles.permMatrix}>
       <h2 className={styles.sectionTitle}>Permisos por seccion</h2>
       <p className={styles.permHint}>
-        Verde = permite (heredado del rol) · Verde negrita = excepcion ON explicita · 
-        Gris = sin acceso (heredado) · Rojo = excepcion OFF explicita · 
-        Hacer click para cambiar. El icono indica si es heredado o excepcion.
+        ✓ (permitido) · — (sin acceso) · * (excepción explícita sobre el rol).
+        Champagne para permitidos, gris para denegados. Hacer clic para alternar excepción.
       </p>
       <div className={styles.permTableWrap}>
         <table className={styles.permTable}>

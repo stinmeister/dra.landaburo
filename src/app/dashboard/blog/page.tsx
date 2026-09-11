@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { getUserSections } from "@/lib/permissions";
+import { assertSectionAccess } from "@/lib/permissions";
 import { deletePost } from "./actions";
 import BlogDeleteButton from "@/components/dashboard/BlogDeleteButton";
 import styles from "./page.module.css";
@@ -21,17 +21,18 @@ export default async function BlogDashPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user) redirect("/login?redirectTo=/dashboard/blog");
   const { data: selfProfile } = await supabase
     .from("profiles")
     .select("role")
     .eq("id", user.id)
-    .single();
-  if (selfProfile?.role !== "admin") redirect("/dashboard/operativo");
+    .maybeSingle();
 
-  // Guard server-side de seccion (escribir la URL no alcanza)
-  const perms = await getUserSections(user.id, selfProfile!.role);
-  if (!perms.allowed.has("blog")) redirect("/dashboard/operativo");
+  const role = selfProfile?.role ?? '';
+  if (!role || role === 'paciente') redirect('/portal/paciente');
+
+  // Guard server-side: la matriz de permisos es la unica fuente de verdad (R6)
+  await assertSectionAccess(user.id, role, 'blog');
 
   const admin = createAdminClient();
   const { data: posts } = await admin

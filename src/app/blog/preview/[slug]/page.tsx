@@ -9,6 +9,7 @@ import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/Button';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import MarkdownRenderer from '@/components/blog/MarkdownRenderer';
 import styles from '@/app/blog/[slug]/page.module.css';
 
 interface Props {
@@ -81,47 +82,71 @@ export default async function BlogPreviewArticlePage({ params }: Props) {
     <>
       <Header />
       <main className={styles.main}>
-        {/* Preview notification banner */}
+        {/* Preview notification banner — inequívoco para borrador clínico */}
         <div
           style={{
-            backgroundColor: '#fffaf0',
-            borderBottom: '2px solid #dd6b20',
-            padding: '0.85rem 1.5rem',
+            backgroundColor: '#1c1c1c',
+            borderBottom: '3px solid #C5A47E',
+            padding: '1.25rem 2rem',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
             flexWrap: 'wrap',
-            gap: '1rem',
+            gap: '1.25rem',
             position: 'sticky',
             top: 0,
             zIndex: 100,
+            boxShadow: '0 4px 15px rgba(0, 0, 0, 0.25)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <span style={{ fontSize: '1.2rem' }}>⚠️</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <span style={{ fontSize: '1.8rem', lineHeight: 1 }}>⚠️</span>
             <div>
-              <strong style={{ color: '#7b341e', fontSize: '0.875rem' }}>
-                Vista Previa de Borrador ({post.is_published ? 'Publicado' : 'No Publicado'})
-              </strong>
-              <div style={{ fontSize: '0.75rem', color: '#718096' }}>
-                Solo visible para el equipo. {formattedUpdated && `Última edición: ${formattedUpdated}`}
+              <div
+                style={{
+                  color: '#f6ad55',
+                  fontSize: '0.9rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                BORRADOR CLÍNICO EN REVISIÓN — PENDIENTE DE VALIDACIÓN MÉDICA
+              </div>
+              <div style={{ fontSize: '0.8rem', color: '#cbd5e0', marginTop: '0.2rem' }}>
+                Este texto NO está aprobado para lectura de pacientes ni publicado en la web.
+                {formattedUpdated && ` · Última edición técnica: ${formattedUpdated}`}
               </div>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <Link
-              href={`/dashboard/blog/${post.id}`}
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+            <span
               style={{
-                fontSize: '0.8rem',
+                fontSize: '0.75rem',
+                padding: '0.25rem 0.6rem',
+                borderRadius: '3px',
+                backgroundColor: post.is_published ? 'rgba(72,187,120,0.2)' : 'rgba(237,137,54,0.2)',
+                color: post.is_published ? '#68d391' : '#f6ad55',
                 fontWeight: 600,
-                color: '#2d3748',
-                backgroundColor: '#edf2f7',
-                padding: '0.35rem 0.75rem',
-                borderRadius: '4px',
-                textDecoration: 'none',
+                textTransform: 'uppercase',
               }}
             >
-              ✏️ Editar en Dashboard
+              {post.is_published ? 'Estado: Publicado' : 'Estado: No Publicado'}
+            </span>
+            <Link
+              href={`/dashboard/blog`}
+              style={{
+                fontSize: '0.82rem',
+                fontWeight: 600,
+                color: '#1c1c1c',
+                backgroundColor: '#C5A47E',
+                padding: '0.45rem 0.9rem',
+                borderRadius: '4px',
+                textDecoration: 'none',
+                transition: 'opacity 0.2s',
+              }}
+            >
+              ✏️ Ir al Panel del Blog
             </Link>
           </div>
         </div>
@@ -153,12 +178,7 @@ export default async function BlogPreviewArticlePage({ params }: Props) {
         <article className={styles.article}>
           <div className={styles.container}>
             <div className={styles.content}>
-              {post.content
-                ? post.content
-                    .split('\n')
-                    .filter(Boolean)
-                    .map((para: string, i: number) => <p key={i}>{para}</p>)
-                : <p style={{ color: '#a0aec0', fontStyle: 'italic' }}>Este artículo aún no contiene texto.</p>}
+              <MarkdownRenderer content={post.content ?? ''} />
             </div>
 
             {/* Firma */}

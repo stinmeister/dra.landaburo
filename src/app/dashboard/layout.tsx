@@ -63,6 +63,13 @@ export default async function DashboardLayout({
       label: SECTION_LABELS[s] ?? s,
     }));
 
+  if (perms.allowed.has("ejecutivo") || perms.allowed.has("operativo") || role === "admin") {
+    navItems.push({
+      href: "/dashboard/revision",
+      label: "Revisión",
+    });
+  }
+
   return (
     <div className={styles.shell}>
       <aside className={styles.sidebar}>

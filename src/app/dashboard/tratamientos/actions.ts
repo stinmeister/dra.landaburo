@@ -5,12 +5,16 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
-async function assertAdmin() {
+async function assertTreatmentAccess() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-  if (profile?.role !== 'admin') redirect('/dashboard/operativo');
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
+  const role = profile?.role ?? '';
+  if (!role || role === 'paciente') redirect('/portal/paciente');
+  const { getUserSections } = await import('@/lib/permissions');
+  const perms = await getUserSections(user.id, role);
+  if (!perms.allowed.has('tratamientos')) redirect('/dashboard/operativo');
   return user;
 }
 
@@ -25,7 +29,7 @@ function slugify(title: string): string {
 }
 
 export async function createTreatment(formData: FormData) {
-  await assertAdmin();
+  await assertTreatmentAccess();
 
   const title             = (formData.get('title') as string)?.trim();
   const category          = (formData.get('category') as string)?.trim();
@@ -56,7 +60,7 @@ export async function createTreatment(formData: FormData) {
 }
 
 export async function updateTreatment(formData: FormData) {
-  await assertAdmin();
+  await assertTreatmentAccess();
 
   const id                = (formData.get('id') as string)?.trim();
   const title             = (formData.get('title') as string)?.trim();
@@ -84,7 +88,7 @@ export async function updateTreatment(formData: FormData) {
 }
 
 export async function toggleTreatment(formData: FormData) {
-  await assertAdmin();
+  await assertTreatmentAccess();
 
   const id       = formData.get('id') as string;
   const isActive = formData.get('is_active') === 'true';

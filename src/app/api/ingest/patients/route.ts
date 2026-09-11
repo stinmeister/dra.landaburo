@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { persistReviewItems } from '@/lib/ingest-review';
 
 // ---------------------------------------------------------------------------
 // Supabase admin client (bypasses RLS)
@@ -81,13 +82,27 @@ function buildNotes(os: string | undefined, fuente: string | undefined): string 
 }
 
 /**
- * Merge notes: if DB already has notes, append new info not already present.
+ * Merge notes: if DB already has notes, update or append without accumulating duplicates.
+ * E.g., OS: OSDE 310 replaces OS: OSDE, not appends it.
  */
 function mergeNotes(existing: string | null, incoming: string | null): string | null {
   if (!incoming) return existing;
   if (!existing) return incoming;
-  if (existing.includes(incoming)) return existing;
-  return `${existing} | ${incoming}`;
+
+  const existingParts = existing.split(' | ').map((p) => p.trim()).filter(Boolean);
+  const incomingParts = incoming.split(' | ').map((p) => p.trim()).filter(Boolean);
+
+  const partMap = new Map<string, string>();
+  for (const part of existingParts) {
+    const key = part.split(':')[0]?.trim() || part;
+    partMap.set(key, part);
+  }
+  for (const part of incomingParts) {
+    const key = part.split(':')[0]?.trim() || part;
+    partMap.set(key, part);
+  }
+
+  return Array.from(partMap.values()).join(' | ');
 }
 
 // ---------------------------------------------------------------------------
@@ -140,7 +155,8 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
-    const fullName = `${apellido}, ${nombre}`.replace(/^,\s*/, '').replace(/,\s*$/, '');
+    // Formato amigable para hablarle a la paciente: Nombre Apellido
+    const fullName = [nombre, apellido].filter(Boolean).join(' ').trim();
     const phone = rec.WhatsApp_E164?.trim() || null;
     const email = rec.Email?.trim() || null;
     const osNotes = buildNotes(rec.OS_Prepaga, rec.Fuente_Datos);
@@ -341,6 +357,18 @@ export async function POST(req: NextRequest) {
         record: rec,
       });
     }
+  }
+
+  // -- Persist review items to DB (idempotente) ------------------------------
+  if (needsReviewDetail.length > 0) {
+    await persistReviewItems(
+      needsReviewDetail.map((item) => ({
+        source: 'patients',
+        record_identifier: item.record.DNI ? normalizeDni(item.record.DNI) : item.record.WhatsApp_E164 ?? null,
+        reason: item.reason,
+        payload: item.record as Record<string, unknown>,
+      }))
+    );
   }
 
   // -- Response --------------------------------------------------------------

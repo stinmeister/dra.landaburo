@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getUserSections } from '@/lib/permissions';
+import { assertSectionAccess } from '@/lib/permissions';
 import TratamientosTable from './TratamientosTable';
 import { createTreatment } from './actions';
 import styles from './page.module.css';
@@ -20,13 +20,19 @@ const CATEGORIES = [
 export default async function TratamientosDashboardPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-  const { data: selfProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-  if (selfProfile?.role !== 'admin') redirect('/dashboard/operativo');
+  if (!user) redirect('/login?redirectTo=/dashboard/tratamientos');
 
-  // Guard server-side de seccion
-  const perms = await getUserSections(user.id, selfProfile!.role);
-  if (!perms.allowed.has('tratamientos')) redirect('/dashboard/operativo');
+  const { data: selfProfile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  const role = selfProfile?.role ?? '';
+  if (!role || role === 'paciente') redirect('/portal/paciente');
+
+  // Guard server-side: la matriz de permisos es la unica fuente de verdad (R6)
+  await assertSectionAccess(user.id, role, 'tratamientos');
 
   const admin = createAdminClient();
   const { data: treatments } = await admin

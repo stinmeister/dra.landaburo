@@ -264,16 +264,16 @@
 }
 
 .permBtnOn {
-  background-color: rgba(72, 199, 142, 0.12);
-  color: #48c78e;
-  border-color: rgba(72, 199, 142, 0.3);
+  background-color: rgba(197, 164, 126, 0.16);
+  color: var(--color-champagne);
+  border-color: rgba(197, 164, 126, 0.35);
 }
 .permBtnOn:hover:not(:disabled) {
-  background-color: rgba(72, 199, 142, 0.2);
+  background-color: rgba(197, 164, 126, 0.25);
 }
 
 .permBtnOff {
-  background-color: rgba(210, 211, 211, 0.08);
+  background-color: rgba(210, 211, 211, 0.06);
   color: var(--color-gris);
   border-color: rgba(210, 211, 211, 0.15);
 }
@@ -286,14 +286,16 @@
 }
 
 .permBtnOverride.permBtnOn {
-  background-color: rgba(72, 199, 142, 0.22);
-  border-color: #48c78e;
+  background-color: rgba(197, 164, 126, 0.28);
+  border-color: var(--color-champagne);
+  font-weight: 700;
 }
 
 .permBtnOverride.permBtnOff {
-  background-color: rgba(255, 100, 100, 0.1);
-  color: #ff6b6b;
-  border-color: rgba(255, 107, 107, 0.4);
+  background-color: rgba(28, 28, 28, 0.05);
+  color: rgba(28, 28, 28, 0.45);
+  border-color: rgba(28, 28, 28, 0.3);
+  border-style: dashed;
 }
 
 .permBtnAdmin {

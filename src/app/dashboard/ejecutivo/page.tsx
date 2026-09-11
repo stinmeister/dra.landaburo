@@ -3,8 +3,10 @@
 // Shows monthly financials (ARS/USD + commissions), low-stock alerts, and MP config.
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { getUserSections } from '@/lib/permissions';
+import { assertSectionAccess } from '@/lib/permissions';
+import { getPendingReviewCount } from '@/lib/ingest-review';
 import MPConfigForm from '@/components/dashboard/MPConfigForm';
 import styles from './page.module.css';
 
@@ -63,29 +65,25 @@ function formatDate(isoString: string): string {
 export default async function EjecutivoPage() {
   const supabase = await createClient();
 
-  // Verify session and role — middleware already blocks unauthenticated users
-  // but we re-check role here for defence in depth (admin-only page)
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/login');
+    redirect('/login?redirectTo=/dashboard/ejecutivo');
   }
 
   const { data: profile } = await supabase
     .from('profiles')
     .select('id, role')
     .eq('id', user.id)
-    .single<Profile>();
+    .maybeSingle<Profile>();
 
-  if (!profile || profile.role !== 'admin') {
-    redirect('/');
-  }
+  const role = profile?.role ?? '';
+  if (!role || role === 'paciente') redirect('/portal/paciente');
 
-  // Guard server-side: la seccion 'ejecutivo' puede quitarse a cualquier rol via overrides
-  const perms = await getUserSections(user.id, profile.role);
-  if (!perms.allowed.has('ejecutivo')) redirect('/dashboard/operativo');
+  // Guard server-side: la matriz de permisos es la unica fuente de verdad (R6)
+  await assertSectionAccess(user.id, role, 'ejecutivo');
 
   // Date range: first and last moment of the current calendar month
   const now = new Date();
@@ -130,6 +128,8 @@ export default async function EjecutivoPage() {
     (p) => p.stock_quantity < p.min_stock_alert
   );
 
+  const pendingReviewCount = await getPendingReviewCount();
+
   const monthLabel = new Intl.DateTimeFormat('es-AR', {
     month: 'long',
     year: 'numeric',
@@ -145,6 +145,40 @@ export default async function EjecutivoPage() {
       {paymentsError && (
         <div className={styles.errorBanner}>
           Error al cargar los pagos. Verificá la conexión con Supabase.
+        </div>
+      )}
+
+      {pendingReviewCount > 0 && (
+        <div
+          style={{
+            backgroundColor: 'rgba(197, 164, 126, 0.12)',
+            border: '1px solid var(--color-champagne)',
+            borderRadius: '6px',
+            padding: '0.85rem 1.25rem',
+            marginBottom: '1.5rem',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            fontSize: '0.9rem',
+          }}
+        >
+          <div>
+            ⚠️ <strong>Atención:</strong> Hay <strong>{pendingReviewCount}</strong> registro(s) pendiente(s) de revisión (cobros en USD, posibles duplicados, incidencias de datos).
+          </div>
+          <Link
+            href="/dashboard/revision"
+            style={{
+              color: '#1c1c1c',
+              backgroundColor: 'var(--color-champagne)',
+              padding: '0.35rem 0.75rem',
+              borderRadius: '4px',
+              fontWeight: 600,
+              fontSize: '0.8rem',
+              textDecoration: 'none',
+            }}
+          >
+            Ver pendientes →
+          </Link>
         </div>
       )}
 
@@ -183,6 +217,24 @@ export default async function EjecutivoPage() {
             {payments.length > 0 ? formatARS(totalMercedesCommission) : 'Sin datos registrados'}
           </p>
           <p className={styles.metricSub}>cosmetología</p>
+        </div>
+        <div className={styles.metricCard}>
+          <p className={styles.metricLabel}>En Revisión</p>
+          <p className={pendingReviewCount > 0 ? `${styles.metricValue} ${styles.metricHighlight}` : `${styles.metricValue} ${styles.metricEmpty}`}>
+            {pendingReviewCount}
+          </p>
+          <p className={styles.metricSub}>
+            <Link
+              href="/dashboard/revision"
+              style={{
+                color: 'var(--color-champagne)',
+                textDecoration: 'underline',
+                textUnderlineOffset: '2px',
+              }}
+            >
+              Ver registros →
+            </Link>
+          </p>
         </div>
       </section>
 
