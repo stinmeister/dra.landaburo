@@ -1,82 +1,122 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 // POST /api/ingest/payments
 // Auth: Authorization: Bearer $INGEST_SECRET
 //
-// Acepta un array de registros de cobros exportados desde Calu (via n8n).
+// Acepta un array de registros de cobros exportados desde la hoja Citas_Raw
+// (Base Unificada v2) procesados por n8n.
 //
-// CORRECCIONES IMPLEMENTADAS (A1-A4):
+// ────────────────────────────────────────────────────────────────────────────
+// DDL_PENDING — columnas que AÚN NO existen en payments:
+//   ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS external_id TEXT UNIQUE;
+//   ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS notes TEXT;
+// DDL_PENDING — valores de payment_method pendientes de agregar al CHECK constraint:
+//   tarjeta_debito | efectivo_usd | cheque
+// ────────────────────────────────────────────────────────────────────────────
 //
-//  A1 - Deduplicación por external_id:
-//       Si llega external_id → dedup por external_id único en DB.
-//       Si no llega external_id → insertar igual pero marcar en needs_review.
-//       DDL_PENDING: external_id y notes se omiten del INSERT hasta que existan las
-//       columnas en DB. Cuando estén, descomentar las líneas marcadas [DDL_PENDING].
-//       SQL a aplicar ANTES de activar la ingesta real:
-//         ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS external_id TEXT UNIQUE;
-//         ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS notes TEXT;
-//         ALTER TABLE public.payments ALTER COLUMN patient_id DROP NOT NULL;
-//         ALTER TABLE public.payments ALTER COLUMN professional_profile_id DROP NOT NULL;
+// CORRECCIONES implementadas respecto a versión anterior:
 //
-//  A2 - Eliminar fallback al primer admin:
-//       Si no llega professional_profile_id → va a needs_review SIN insertar
-//       (professional_profile_id es NOT NULL en DB; no se puede insertar nulo).
+//  B1 — Nuevo schema de entrada: PaymentRecord representa Citas_Raw campo a campo.
+//       (clave_unica, dni, fecha, servicio, estado, monto_pagado_ars, …)
 //
-//  A3 - Lookup de paciente robusto:
-//       Si no se resuelve patient_id → va a needs_review SIN insertar
-//       (patient_id es NOT NULL en DB).
-//       Normalización de teléfono antes del lookup.
-//       Si hay más de un match → needs_review con motivo ambiguous_ref.
+//  B2 — Filtrado por Estado antes de cualquier procesamiento:
+//       Solo 'Finalizado' genera un pago. ESTADOS_IGNORAR se descartan en silencio.
+//       Estados desconocidos van a needs_review('estado_desconocido').
 //
-//  A4 - Estructura de respuesta estandarizada con needs_review_detail y rejected_detail.
+//  B3 — Doble deduplicación:
+//       Nivel 1 (exacta): por clave_unica si la columna external_id existe (DDL_PENDING).
+//       Nivel 2 (aproximada): por patient_id + payment_date (rango del día) + amount_ars.
 //
-// BLOQUEANTE: Sin las columnas external_id y notes en payments, la deduplicación real
-// por external_id no puede hacerse a nivel DB. Actualmente se intenta lookup por
-// esa columna; si Postgres lanza "column does not exist", el registro va a rejected.
-// Aplicar el DDL_PENDING antes de usar en producción.
+//  B4 — Detección de moneda (ARS / USD / SUSPICIOUS).
+//
+//  B5 — Mapa de profesionales leído en runtime desde profiles (sin UUIDs hardcodeados).
+//
+//  B6 — Normalización de medio_pago con tabla explícita. Valores DDL_PENDING marcados.
+//
+//  B7 — Lookup de paciente por DNI (no por teléfono como en la versión anterior).
+//
+//  B8 — INGEST_SECRET: sin la variable, el endpoint devuelve 401. Esto es ESPERADO
+//       hasta que se cargue la variable en el servidor.
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// ─── Supabase admin ───────────────────────────────────────────────────────────
 
-// ─── Normalización de teléfono ───────────────────────────────────────────────
-// Quita todo excepto dígitos y elimina prefijos internacionales argentinos.
-function normalizePhone(raw: string): string {
-  let digits = raw.replace(/\D/g, "");
-  // +54 9 → 13 dígitos comenzando con 549  (celulares)
-  if (digits.length === 13 && digits.startsWith("549")) digits = digits.slice(3);
-  // +54   → 13 dígitos comenzando con 54   (fijos o formato alternativo)
-  if (digits.length === 13 && digits.startsWith("54"))  digits = digits.slice(2);
-  return digits;
-}
+const supabaseAdmin = createAdminClient();
 
-// ─── Tipos ───────────────────────────────────────────────────────────────────
+// ─── Constantes de estado ─────────────────────────────────────────────────────
 
+const ESTADOS_FACTURABLES = new Set(["Finalizado"]);
+
+// Estos estados representan citas que no generaron ingreso real.
+// Se descartan en silencio (no son errores, no son pagos).
+const ESTADOS_IGNORAR = new Set([
+  "Programado",
+  "Confirmado",
+  "Cancelado",
+  "Ausente",
+]);
+
+// ─── Constantes de moneda ─────────────────────────────────────────────────────
+
+const MONTO_SOSPECHOSO_UMBRAL = 5000; // < 5000 ARS en servicios USD = sospechoso
+
+const SERVICIOS_USD = [
+  "botox completo",
+  "botox masetero",
+  "ácido hialurónico",
+  "acido hialuronico",
+  "sculptra",
+  "elleva",
+  "sculptra bioestimulador",
+];
+
+// ─── Mapa de medios de pago ───────────────────────────────────────────────────
+// Clave: valor raw de la hoja (lowercase). Valor: valor normalizado para la DB.
+//
+// PAYMENT_METHOD_MAP_ACCEPTED: el CHECK constraint actual en payments acepta estos.
+// PAYMENT_METHOD_MAP_DDL_PENDING: métodos reconocidos pero que aún NO están en el
+//   constraint. El endpoint los envía a needs_review con 'metodo_pago_ddl_pendiente'
+//   en lugar de dejar que Postgres los rechace con un error críptico.
+//   DDL a aplicar para habilitarlos:
+//     ALTER TABLE public.payments DROP CONSTRAINT payments_payment_method_check;
+//     ALTER TABLE public.payments ADD CONSTRAINT payments_payment_method_check
+//       CHECK (payment_method IN ('efectivo','transferencia','mercadopago',
+//                                 'tarjeta_debito','efectivo_usd','cheque'));
+
+const PAYMENT_METHOD_MAP_ACCEPTED: Record<string, string> = {
+  efectivo: "efectivo",
+  transferencia: "transferencia",
+  mercadopago: "mercadopago",
+  "mercado pago": "mercadopago",
+};
+
+const PAYMENT_METHOD_MAP_DDL_PENDING: Record<string, string> = {
+  "tarjeta de debito": "tarjeta_debito",
+  "tarjeta de débito": "tarjeta_debito",
+  debito: "tarjeta_debito",
+  "efectivo usd": "efectivo_usd",
+  cheque: "cheque",
+};
+
+// ─── Tipos ────────────────────────────────────────────────────────────────────
+
+/** Payload que n8n envía por cada fila de Citas_Raw. */
 interface PaymentRecord {
-  // Campos requeridos
-  payment_date: string;          // ISO 8601 e.g. "2026-09-10T14:30:00-03:00"
-  amount_ars: number;
-  payment_method: "efectivo" | "transferencia" | "mercadopago";
+  // ── Campos de Citas_Raw ──
+  clave_unica: string;               // Clave_Unica (external_id primario)
+  dni: string;                       // DNI del paciente (puede tener puntos/espacios)
+  fecha: string;                     // Fecha en formato 'D/M/YYYY' e.g. '31/7/2026'
+  servicio: string;                  // Servicio (string libre, puede ser multi)
+  estado: string;                    // Estado raw — el endpoint filtra
+  monto_pagado_ars: number;          // Puede ser 0 o negativo
+  deuda_ars: number;                 // Deuda residual (trazabilidad)
+  medio_pago: string;                // Medio_Pago raw — el endpoint normaliza
+  profesional: string;               // e.g. 'Landaburo, Natalia'
+  archivo_origen?: string;           // Trazabilidad: nombre del archivo fuente
 
-  // Campos opcionales
-  currency?: "ARS" | "USD";
-  amount_usd?: number | null;
-  commission_amount_ars?: number;
-
-  // Resolución de FK (n8n puede enviar uuid directo o referencia cruda)
-  patient_id?: string;           // uuid resuelto por n8n
-  patient_ref?: string;          // teléfono, DNI o nombre si n8n no resolvió
-  professional_profile_id?: string;
-  appointment_id?: string | null;
-  order_id?: string | null;
-
-  // Metadatos de trazabilidad
-  // DDL_PENDING: external_id y notes se guardarán en payments cuando existan las columnas.
-  // Por ahora van a needs_review metadata para trazabilidad.
-  external_id?: string;          // ID único del registro en el sistema origen (Calu)
-  notes?: string;                // Observaciones libres del registro origen
+  // ── Resolución opcional (si n8n ya los resolvió) ──
+  patient_id?: string;               // uuid si n8n ya lo resolvió por DNI
+  professional_profile_id?: string;  // uuid si n8n ya lo resolvió
 }
 
 interface NeedsReviewItem {
@@ -91,13 +131,114 @@ interface RejectedItem {
   record: PaymentRecord;
 }
 
-// ─── Handler ─────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Parsea fecha en formato 'D/M/YYYY' o 'DD/MM/YYYY' (zona horaria Argentina).
+ * Retorna null si el formato es inválido.
+ */
+function parseDMYYYY(raw: string): Date | null {
+  const parts = raw?.trim().split("/");
+  if (!parts || parts.length !== 3) return null;
+  const [d, m, y] = parts;
+  const iso = `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}T00:00:00-03:00`;
+  const dt = new Date(iso);
+  return isNaN(dt.getTime()) ? null : dt;
+}
+
+/**
+ * Normaliza DNI: elimina puntos, espacios y caracteres no numéricos.
+ */
+function normalizeDni(raw: string): string {
+  return raw.replace(/[^0-9]/g, "");
+}
+
+/**
+ * Detecta si el monto/servicio/medio_pago corresponde a USD, es sospechoso, o es ARS.
+ */
+function detectCurrency(
+  medioPago: string,
+  montoArs: number,
+  servicio: string
+): "ARS" | "USD" | "SUSPICIOUS" {
+  const mp = medioPago.toLowerCase();
+  if (mp.includes("usd") || mp.includes("dolar") || mp.includes("dólar")) {
+    return "USD";
+  }
+  const servicioLower = servicio.toLowerCase();
+  if (
+    montoArs > 0 &&
+    montoArs < MONTO_SOSPECHOSO_UMBRAL &&
+    SERVICIOS_USD.some((s) => servicioLower.includes(s))
+  ) {
+    return "SUSPICIOUS";
+  }
+  return "ARS";
+}
+
+/**
+ * Lookup de paciente por DNI normalizado.
+ * Retorna:
+ *   - { id: string } si hay exactamente un match
+ *   - 'ambiguous'   si hay más de un match
+ *   - null          si no hay match o DNI inválido
+ */
+async function resolvePatientByDni(
+  dni: string
+): Promise<{ id: string } | "ambiguous" | null> {
+  const normDni = normalizeDni(dni);
+  if (!normDni || normDni.length < 7) return null;
+
+  const { data, error } = await supabaseAdmin
+    .from("patients")
+    .select("id")
+    .eq("dni", normDni);
+
+  if (error || !data) return null;
+  if (data.length === 0) return null;
+  if (data.length > 1) return "ambiguous";
+  return data[0];
+}
+
+/**
+ * Lee los perfiles de profesionales desde la DB y construye un mapa
+ * 'nombre en planilla' → uuid.
+ * Se llama UNA SOLA VEZ por request para evitar N queries.
+ */
+async function getProfesionalMap(): Promise<Map<string, string>> {
+  const { data: profiles } = await supabaseAdmin
+    .from("profiles")
+    .select("id, full_name, role")
+    .in("role", ["admin", "medico", "cosmetologa"]);
+
+  const map = new Map<string, string>();
+  for (const p of profiles ?? []) {
+    if (!p.full_name || !p.id) continue;
+    const nameLower = p.full_name.toLowerCase();
+
+    // Match exacto del nombre completo tal como aparece en la planilla
+    map.set(p.full_name, p.id);
+
+    // Alias por apellido conocido (formato 'Apellido, Nombre')
+    if (nameLower.includes("landaburo")) {
+      map.set("Landaburo, Natalia", p.id);
+      map.set("Landaburo, Paula", p.id);
+    }
+    if (nameLower.includes("pasquet")) {
+      map.set("Pasquet, Mercedes", p.id);
+    }
+  }
+  return map;
+}
+
+// ─── Handler ──────────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
 
   // ── 1. Autenticación ────────────────────────────────────────────────────────
-  // NOTA: INGEST_SECRET debe estar definido en .env.local del servidor.
-  // Sin él, TODOS los requests son rechazados con 401.
+  // NOTA B8: INGEST_SECRET aún no está cargado en el servidor.
+  // Todo request devolverá 401 hasta que la variable esté disponible.
+  // Esto es comportamiento esperado y correcto — NO deshabilitar este bloque.
   const authHeader = req.headers.get("authorization");
   const secret = process.env.INGEST_SECRET;
   if (!secret || authHeader !== `Bearer ${secret}`) {
@@ -112,154 +253,269 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     records = Array.isArray(body) ? body : body.records;
-    if (!Array.isArray(records)) throw new Error("Payload must be array or { records: [] }");
+    if (!Array.isArray(records)) {
+      throw new Error("Payload debe ser array o { records: [] }");
+    }
   } catch (e: unknown) {
     return NextResponse.json(
-      { success: false, message: `Invalid JSON: ${e instanceof Error ? e.message : String(e)}` },
+      {
+        success: false,
+        message: `JSON inválido: ${e instanceof Error ? e.message : String(e)}`,
+      },
       { status: 400 }
     );
   }
 
-  // ── 3. Acumuladores ─────────────────────────────────────────────────────────
+  // ── 3. Carga de mapa de profesionales (una sola vez por request) ────────────
+  const profesionalMap = await getProfesionalMap();
+
+  // ── 4. Acumuladores ─────────────────────────────────────────────────────────
   let inserted = 0;
-  let duplicates_by_external_id = 0;
+  let skipped_estado = 0;
+  let duplicates_exact = 0;
+  let duplicates_approx = 0;
   const needs_review: NeedsReviewItem[] = [];
   const rejected: RejectedItem[] = [];
 
-  // ── 4. Procesamiento por registro ───────────────────────────────────────────
+  // ── 5. Procesamiento por registro ───────────────────────────────────────────
   for (let i = 0; i < records.length; i++) {
     const rec = records[i];
 
-    // 4a. Validación de campos requeridos (formato) → rejected si fallan
-    if (!rec.payment_date || rec.amount_ars == null || !rec.payment_method) {
-      rejected.push({ index: i, reason: "Faltan campos requeridos: payment_date, amount_ars, payment_method", record: rec });
+    // ── 5.1 Validación mínima de campos requeridos → rejected ────────────────
+    if (!rec.clave_unica?.trim()) {
+      rejected.push({ index: i, reason: "clave_unica es requerida", record: rec });
       continue;
     }
-    if (!["efectivo", "transferencia", "mercadopago"].includes(rec.payment_method)) {
-      rejected.push({ index: i, reason: `payment_method inválido: "${rec.payment_method}"`, record: rec });
+    if (!rec.dni?.trim()) {
+      rejected.push({ index: i, reason: "dni es requerido", record: rec });
       continue;
     }
-    let parsedDate: Date;
-    try {
-      parsedDate = new Date(rec.payment_date);
-      if (isNaN(parsedDate.getTime())) throw new Error("fecha inválida");
-    } catch {
-      rejected.push({ index: i, reason: `payment_date inválido: "${rec.payment_date}"`, record: rec });
+    if (!rec.fecha?.trim()) {
+      rejected.push({ index: i, reason: "fecha es requerida", record: rec });
+      continue;
+    }
+    if (rec.monto_pagado_ars == null) {
+      rejected.push({ index: i, reason: "monto_pagado_ars es requerido", record: rec });
+      continue;
+    }
+    if (!rec.estado?.trim()) {
+      rejected.push({ index: i, reason: "estado es requerido", record: rec });
       continue;
     }
 
-    // 4b. A1 – Deduplicación por external_id
-    // DDL_PENDING: esta consulta fallará con error de Postgres si la columna
-    // external_id no existe aún. En ese caso el registro va a rejected con el
-    // mensaje de error de DB. Aplicar el DDL_PENDING para habilitar esto.
-    if (rec.external_id) {
-      const { data: existingByExtId, error: extIdError } = await supabaseAdmin
-        .from("payments")
-        .select("id")
-        .eq("external_id", rec.external_id)
-        .maybeSingle();
+    // ── 5.2 B2 — Filtrado por estado ─────────────────────────────────────────
+    const estadoNorm = rec.estado.trim();
 
-      if (extIdError) {
-        // Columna no existe u otro error de DB → rechazar con detalle
-        rejected.push({
+    if (!ESTADOS_FACTURABLES.has(estadoNorm)) {
+      if (ESTADOS_IGNORAR.has(estadoNorm)) {
+        // Cita no generó ingreso — descartar en silencio
+        skipped_estado++;
+        continue;
+      }
+      // Estado desconocido o 'Cita Eliminada...' → needs_review
+      needs_review.push({
+        index: i,
+        reason: `estado_desconocido: "${estadoNorm}" no es facturable ni ignorable`,
+        record: rec,
+      });
+      continue;
+    }
+
+    // ── 5.3 Parseo de fecha ───────────────────────────────────────────────────
+    const parsedDate = parseDMYYYY(rec.fecha);
+    if (!parsedDate) {
+      rejected.push({
+        index: i,
+        reason: `fecha inválida: "${rec.fecha}" — se espera formato D/M/YYYY`,
+        record: rec,
+      });
+      continue;
+    }
+
+    // ── 5.4 B4 — Detección de moneda ─────────────────────────────────────────
+    const montoRaw = rec.monto_pagado_ars;
+
+    if (montoRaw < 0) {
+      needs_review.push({
+        index: i,
+        reason: `monto_negativo: anomalia de fuente (monto_pagado_ars=${montoRaw})`,
+        record: rec,
+      });
+      continue;
+    }
+
+    const currencyResult = detectCurrency(
+      rec.medio_pago ?? "",
+      montoRaw,
+      rec.servicio ?? ""
+    );
+
+    if (currencyResult === "USD") {
+      needs_review.push({
+        index: i,
+        reason: `moneda_usd: el registro parece estar en USD (medio_pago="${rec.medio_pago}", monto=${montoRaw})`,
+        record: rec,
+      });
+      continue;
+    }
+
+    if (currencyResult === "SUSPICIOUS") {
+      needs_review.push({
+        index: i,
+        reason: `monto_sospechoso_posible_usd: monto ${montoRaw} ARS es muy bajo para servicio "${rec.servicio}"`,
+        record: rec,
+      });
+      continue;
+    }
+
+    // ── 5.5 B6 — Normalización de medio de pago ───────────────────────────────
+    const medioPagoKey = rec.medio_pago?.toLowerCase()?.trim() ?? "";
+
+    // Verificar primero si es un método DDL_PENDING para dar razón precisa
+    if (PAYMENT_METHOD_MAP_DDL_PENDING[medioPagoKey]) {
+      needs_review.push({
+        index: i,
+        reason: `metodo_pago_ddl_pendiente: "${rec.medio_pago}" → "${PAYMENT_METHOD_MAP_DDL_PENDING[medioPagoKey]}" reconocido pero no habilitado en el CHECK constraint aún (aplicar DDL)`,
+        record: rec,
+      });
+      continue;
+    }
+
+    const medioPagoNorm = PAYMENT_METHOD_MAP_ACCEPTED[medioPagoKey];
+    if (!medioPagoNorm) {
+      needs_review.push({
+        index: i,
+        reason: `medio_pago_desconocido: "${rec.medio_pago}" no está en el mapa de métodos aceptados`,
+        record: rec,
+      });
+      continue;
+    }
+
+    // ── Multi-servicio: flag para trazabilidad ────────────────────────────────
+    const isMultiService = (rec.servicio ?? "").includes(",");
+
+    // ── 5.6 B7 — Resolución de patient_id por DNI ────────────────────────────
+    // patient_id es NOT NULL en DB — si no se resuelve, NO se puede insertar.
+    let patientId: string | undefined = rec.patient_id;
+
+    if (!patientId) {
+      const lookupResult = await resolvePatientByDni(rec.dni);
+      if (lookupResult === "ambiguous") {
+        needs_review.push({
           index: i,
-          reason: `Error al verificar external_id (DDL_PENDING posible): ${extIdError.message}`,
+          reason: `ambiguous_ref: múltiples pacientes coinciden con DNI "${normalizeDni(rec.dni)}"`,
           record: rec,
         });
         continue;
       }
-
-      if (existingByExtId) {
-        duplicates_by_external_id++;
-        continue; // Ya insertado, ignorar silenciosamente
-      }
-    } else {
-      // Sin external_id: se procesa pero se marcará en needs_review al final
-      // (no se corta aquí; el registro sigue su flujo normal de inserción)
-    }
-
-    // 4c. A3 – Resolución robusta de patient_id
-    // patient_id es NOT NULL en DB → si no se resuelve, NO se puede insertar.
-    let patientId: string | undefined = rec.patient_id;
-    let patientNeedsReviewReason: string | undefined;
-
-    if (!patientId && rec.patient_ref) {
-      const normPhone = normalizePhone(rec.patient_ref);
-
-      // Construir OR seguro: .or() con columnas separadas, sin interpolación de valores
-      // para evitar inyección. Se usan placeholders de parámetros de Supabase.
-      const { data: patients, error: patientError } = await supabaseAdmin
-        .from("patients")
-        .select("id")
-        .or(
-          [
-            `phone.eq.${normPhone}`,
-            `phone.eq.${rec.patient_ref}`,   // también sin normalizar, por si el DB ya tiene formato distinto
-            `dni.eq.${rec.patient_ref}`,
-          ].join(",")
-        );
-
-      if (patientError) {
-        rejected.push({ index: i, reason: `Error al buscar paciente: ${patientError.message}`, record: rec });
+      if (!lookupResult) {
+        needs_review.push({
+          index: i,
+          reason: `sin_paciente: no se encontró paciente con DNI "${normalizeDni(rec.dni)}"`,
+          record: rec,
+        });
         continue;
       }
+      patientId = lookupResult.id;
+    }
 
-      // Deduplicar por id (el OR puede traer duplicados si phone y dni matchean el mismo)
-      const uniquePatients = patients
-        ? [...new Map(patients.map((p) => [p.id, p])).values()]
-        : [];
+    // ── 5.7 B5 — Resolución de professional_profile_id ───────────────────────
+    // professional_profile_id es NOT NULL en DB — obligatorio.
+    let professionalId: string | undefined = rec.professional_profile_id;
 
-      if (uniquePatients.length === 0) {
-        patientNeedsReviewReason = `sin_paciente: no se encontró paciente con ref "${rec.patient_ref}"`;
-      } else if (uniquePatients.length > 1) {
-        patientNeedsReviewReason = `ambiguous_ref: ${uniquePatients.length} pacientes coinciden con ref "${rec.patient_ref}"`;
-      } else {
-        patientId = uniquePatients[0].id;
+    if (!professionalId) {
+      const mapped = profesionalMap.get(rec.profesional?.trim() ?? "");
+      if (!mapped) {
+        needs_review.push({
+          index: i,
+          reason: `sin_professional: "${rec.profesional}" no encontrado en profiles (asignar manualmente)`,
+          record: rec,
+        });
+        continue;
       }
-    } else if (!patientId && !rec.patient_ref) {
-      patientNeedsReviewReason = "sin_paciente: no se recibió patient_id ni patient_ref";
+      professionalId = mapped;
     }
 
-    // Si patient_id no se pudo resolver → needs_review SIN insertar
-    // (patient_id es NOT NULL en DB; insertar null causaría error de Postgres)
-    if (!patientId) {
-      needs_review.push({
-        index: i,
-        reason: patientNeedsReviewReason ?? "sin_paciente: razón desconocida",
-        record: rec,
-      });
-      continue;
+    // ── 5.8 B3 — Deduplicación Nivel 1 (exacta por clave_unica / external_id) ──
+    // DDL_PENDING: esta query fallará si la columna external_id no existe aún.
+    // En ese caso el error se atrapa y el registro va a rejected con DDL_PENDING.
+    {
+      const { data: existingByExtId, error: extIdError } = await supabaseAdmin
+        .from("payments")
+        .select("id")
+        .eq("external_id", rec.clave_unica)
+        .maybeSingle();
+
+      if (extIdError) {
+        // Si el error es por columna inexistente → DDL_PENDING, seguir con nivel 2
+        const isDdlPending =
+          extIdError.message.includes("column") ||
+          extIdError.message.includes("does not exist") ||
+          extIdError.code === "42703";
+
+        if (!isDdlPending) {
+          // Error inesperado de DB → rejected
+          rejected.push({
+            index: i,
+            reason: `Error al verificar external_id: ${extIdError.message}`,
+            record: rec,
+          });
+          continue;
+        }
+        // DDL_PENDING detectado → continuar al nivel 2
+      } else if (existingByExtId) {
+        // Duplicado exacto encontrado → ignorar silenciosamente
+        duplicates_exact++;
+        continue;
+      }
     }
 
-    // 4d. A2 – Resolución de professional_profile_id (SIN fallback al primer admin)
-    // professional_profile_id es NOT NULL en DB → si no llega, NO se puede insertar.
-    // ELIMINADO: el fallback al primer admin era semánticamente incorrecto.
-    if (!rec.professional_profile_id) {
-      needs_review.push({
-        index: i,
-        reason: "sin_professional: asignar profesional manualmente (professional_profile_id es requerido en DB)",
-        record: rec,
-      });
-      continue;
+    // ── 5.9 B3 — Deduplicación Nivel 2 (aproximada: patient_id + fecha + monto) ─
+    // Busca si ya existe un pago para el mismo paciente, en el mismo día, por el mismo monto.
+    // Si hay match → needs_review (nunca se descarta en silencio).
+    {
+      const dayStart = new Date(parsedDate);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(parsedDate);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      const { data: existingApprox, error: approxError } = await supabaseAdmin
+        .from("payments")
+        .select("id")
+        .eq("patient_id", patientId)
+        .eq("amount_ars", montoRaw)
+        .gte("payment_date", dayStart.toISOString())
+        .lte("payment_date", dayEnd.toISOString())
+        .maybeSingle();
+
+      if (!approxError && existingApprox) {
+        duplicates_approx++;
+        needs_review.push({
+          index: i,
+          reason: `posible_duplicado_ventana_solapada: coincide con payment id=${existingApprox.id} por patient_id+fecha+monto_ars (clave_unica="${rec.clave_unica}")`,
+          record: rec,
+        });
+        continue;
+      }
     }
 
-    // 4e. Insert en DB
-    // DDL_PENDING: external_id y notes se omiten del INSERT hasta que las columnas
-    // existan en payments. Descomentar las líneas marcadas cuando el DDL sea aplicado.
+    // ── 5.10 Insert en DB ─────────────────────────────────────────────────────
+    // DDL_PENDING: external_id y notes se omiten hasta que las columnas existan.
+    // Descomentar cuando se aplique el DDL.
     const { error: insertError } = await supabaseAdmin.from("payments").insert({
       patient_id: patientId,
-      professional_profile_id: rec.professional_profile_id,
-      appointment_id: rec.appointment_id ?? null,
-      order_id: rec.order_id ?? null,
-      amount_ars: rec.amount_ars,
-      amount_usd: rec.amount_usd ?? null,
-      currency: rec.currency ?? "ARS",
-      payment_method: rec.payment_method,
-      commission_amount_ars: rec.commission_amount_ars ?? 0,
+      professional_profile_id: professionalId,
+      amount_ars: montoRaw,
+      amount_usd: null,
+      currency: "ARS",
+      payment_method: medioPagoNorm,
+      commission_amount_ars: 0,   // siempre 0 hasta que se cablee commission_rates
       payment_date: parsedDate.toISOString(),
+      appointment_id: null,
+      order_id: null,
       // [DDL_PENDING] Descomentar cuando existan las columnas en payments:
-      // external_id: rec.external_id ?? null,
-      // notes: rec.notes ?? null,
+      // external_id: rec.clave_unica,
+      // notes: rec.servicio ?? null,
     });
 
     if (insertError) {
@@ -269,23 +525,26 @@ export async function POST(req: NextRequest) {
 
     inserted++;
 
-    // A1: Si no tenía external_id, marcar en needs_review DESPUÉS del insert exitoso
-    if (!rec.external_id) {
+    // Multi-servicio: registrar en needs_review para revisión manual
+    // (el pago ya fue insertado; esto es solo trazabilidad)
+    if (isMultiService) {
       needs_review.push({
         index: i,
-        reason: "sin_external_id: posible duplicado (no hay external_id para deduplicar)",
+        reason: `is_multi_service: servicio contiene múltiples tratamientos — verificar si debe dividirse en pagos separados (servicio="${rec.servicio}")`,
         record: rec,
       });
     }
   }
 
-  // ── 5. A4 – Respuesta estandarizada ─────────────────────────────────────────
+  // ── 6. Respuesta estandarizada ────────────────────────────────────────────
   return NextResponse.json({
     success: true,
     summary: {
       total_received: records.length,
       inserted,
-      duplicates_by_external_id,
+      skipped_estado,
+      duplicates_exact,
+      duplicates_approx,
       needs_review: needs_review.length,
       rejected: rejected.length,
     },
