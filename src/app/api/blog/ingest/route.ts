@@ -51,6 +51,13 @@ export async function POST(req: NextRequest) {
     }
 
     const now = new Date().toISOString();
+    const postStatus =
+      status === 'publicado' || status === 'borrador'
+        ? status
+        : is_published
+        ? 'publicado'
+        : 'borrador';
+
     const { data, error } = await supabase
       .from('posts')
       .upsert(
@@ -62,7 +69,7 @@ export async function POST(req: NextRequest) {
           content: finalContent,
           cover_image_url: finalCoverImage,
           author_id: author_id || null,
-          status: status || (is_published ? 'published' : 'draft'),
+          status: postStatus,
           is_published: typeof is_published === 'boolean' ? is_published : true,
           published_at: published_at || now,
           updated_at: now,
