@@ -5,11 +5,10 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { assertSectionAccess } from "@/lib/permissions";
-import { changeUserRole, createStaffUser, setUserSectionOverride } from "./actions";
+import { assertSectionAccess, ALL_SECTIONS, type Section } from "@/lib/permissions";
+import { changeUserRole, createStaffUser } from "./actions";
 import PermissionsMatrix from "./PermissionsMatrix";
-import type { UserPermRow, Section } from "./PermissionsMatrix";
-import { ALL_SECTIONS } from "./PermissionsMatrix";
+import type { UserPermRow } from "./PermissionsMatrix";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = { title: "Usuarios | Panel Dra. Landaburo" };
@@ -108,16 +107,6 @@ export default async function UsuariosPage() {
     };
   });
 
-  // Server action wrapper para pasar al Client Component
-  async function handleSetOverride(
-    userId: string,
-    section: Section,
-    allowed: boolean | null
-  ) {
-    "use server";
-    await setUserSectionOverride(userId, section, allowed);
-  }
-
   return (
     <div className={styles.page}>
       <div className={styles.header}>
@@ -183,7 +172,7 @@ export default async function UsuariosPage() {
       </div>
 
       {/* Matriz de permisos por seccion */}
-      <PermissionsMatrix users={permRows} setOverrideAction={handleSetOverride} />
+      <PermissionsMatrix users={permRows} />
 
       {/* Formulario Nuevo Miembro */}
       <div className={styles.newMember}>

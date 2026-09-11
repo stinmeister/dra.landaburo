@@ -184,7 +184,7 @@ export default async function EjecutivoPage() {
 
       {payments.length === 0 && !paymentsError && (
         <div className={styles.infoBanner}>
-          ℹ️ <strong>Métricas financieras:</strong> Actualmente no hay cobros registrados en el sistema para este período. Los indicadores de facturación y comisiones se actualizarán automáticamente a medida que se ingresen pagos o se sincronice con el punto de venta / Calu.
+          ℹ️ <strong>Información pendiente de importación:</strong> La información de cobros todavía no fue importada desde la planilla. Los indicadores financieros y comisiones se actualizarán automáticamente apenas se complete la carga de la Base Unificada.
         </div>
       )}
 

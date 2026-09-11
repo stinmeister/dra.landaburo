@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { assertSectionAccess } from '@/lib/permissions';
+import { ensureDailyRecurringTasks } from '@/lib/tasks-generator';
 import TaskList from '@/components/dashboard/TaskList';
 import type { TaskItem } from '@/components/dashboard/TaskList';
 import TreatmentSearch from '@/components/dashboard/TreatmentSearch';
@@ -68,6 +69,9 @@ export default async function OperativoDashboard() {
   const todayAR = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Argentina/Buenos_Aires',
   }).format(new Date()); // 'YYYY-MM-DD'
+
+  // Generación "al vuelo" e idempotente de tareas recurrentes del día (ej: viernes de stock)
+  await ensureDailyRecurringTasks(todayAR);
 
   // Read from staff_tasks (new table) — falls back to empty array if table doesn't exist yet
   let tasks: TaskItem[] = [];
@@ -168,6 +172,21 @@ export default async function OperativoDashboard() {
     // ok if table doesn't exist yet
   }
 
+  // Read default stock assignee directly from recurring_task_rules (weekly_friday)
+  let defaultStockAssignee: string | undefined = undefined;
+  try {
+    const { data: stockRule } = await supabase
+      .from('recurring_task_rules')
+      .select('assigned_profile_id')
+      .eq('recurrence_type', 'weekly_friday')
+      .maybeSingle();
+    if (stockRule?.assigned_profile_id) {
+      defaultStockAssignee = stockRule.assigned_profile_id;
+    }
+  } catch {
+    // fallback if query fails
+  }
+
   const dateLabel = new Intl.DateTimeFormat('es-AR', {
     weekday: 'long',
     day: 'numeric',
@@ -237,6 +256,7 @@ export default async function OperativoDashboard() {
               profiles={staffProfiles}
               initialBirthdayAssignee={appSettings?.default_birthday_assignee}
               initialGiftcardAssignee={appSettings?.default_giftcard_assignee}
+              initialStockAssignee={defaultStockAssignee}
             />
           )}
 
@@ -260,26 +280,47 @@ export default async function OperativoDashboard() {
             </button>
           </section>
 
-          <section className={styles.card}>
-            <h2 className={styles.cardTitle}>Guías de personal</h2>
-            <div className={styles.guides}>
-              {guides.map((guide) => (
-                <div key={guide.name} className={styles.guideItem}>
-                  <div className={styles.guideHeader}>
-                    <span className={styles.guideName}>{guide.name}</span>
-                    <span className={styles.guideRole}>{guide.role}</span>
-                  </div>
-                  <ul className={styles.guideList}>
-                    {guide.items.map((item, i) => (
-                      <li key={i} className={styles.guideListItem}>
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
+          {/* Guías de personal aisladas server-side (Parte 6):
+              - Admin ve todas las guías
+              - Cada colaboradora ve únicamente la suya (Ceci ve Ceci, Laura ve Laura) */}
+          {(() => {
+            const userFullName = (profile.full_name ?? '').toLowerCase();
+            const visibleGuides = profile.role === 'admin'
+              ? guides
+              : guides.filter((g) => {
+                  const guideNameLower = g.name.toLowerCase();
+                  if (guideNameLower === 'ceci' && (userFullName.includes('ceci') || userFullName.includes('cecilia'))) return true;
+                  if (guideNameLower === 'laura' && (userFullName.includes('laura') || userFullName.includes('dzuryk'))) return true;
+                  return false;
+                });
+
+            if (visibleGuides.length === 0) return null;
+
+            return (
+              <section className={styles.card}>
+                <h2 className={styles.cardTitle}>
+                  {profile.role === 'admin' ? 'Guías de personal' : `Tu guía de trabajo (${visibleGuides[0].name})`}
+                </h2>
+                <div className={styles.guides}>
+                  {visibleGuides.map((guide) => (
+                    <div key={guide.name} className={styles.guideItem}>
+                      <div className={styles.guideHeader}>
+                        <span className={styles.guideName}>{guide.name}</span>
+                        <span className={styles.guideRole}>{guide.role}</span>
+                      </div>
+                      <ul className={styles.guideList}>
+                        {guide.items.map((item, i) => (
+                          <li key={i} className={styles.guideListItem}>
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </section>
+              </section>
+            );
+          })()}
         </div>
       </div>
     </div>

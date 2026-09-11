@@ -1,13 +1,11 @@
 "use client";
 
 import { useTransition, useState } from "react";
+import { ALL_SECTIONS, type Section } from "@/lib/permissions";
+import { setUserSectionOverride } from "./actions";
 import styles from "./page.module.css";
 
-export type Section = "ejecutivo" | "operativo" | "campanas" | "tratamientos" | "productos" | "usuarios" | "blog";
-
-export const ALL_SECTIONS: Section[] = [
-  "ejecutivo", "operativo", "campanas", "tratamientos", "productos", "usuarios", "blog",
-];
+export type { Section };
 
 const SECTION_LABELS: Record<Section, string> = {
   ejecutivo:    "Ejecutivo",
@@ -17,6 +15,7 @@ const SECTION_LABELS: Record<Section, string> = {
   productos:    "Productos",
   usuarios:     "Usuarios",
   blog:         "Blog",
+  revision:     "Revisión",
 };
 
 export interface UserPermRow {
@@ -30,12 +29,13 @@ export interface UserPermRow {
 
 interface Props {
   users: UserPermRow[];
-  setOverrideAction: (userId: string, section: Section, allowed: boolean | null) => Promise<void>;
+  setOverrideAction?: (userId: string, section: Section, allowed: boolean | null) => Promise<void>;
 }
 
 export default function PermissionsMatrix({ users, setOverrideAction }: Props) {
   const [isPending, startTransition] = useTransition();
   const [saving, setSaving] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleToggle = (
     userId: string,
@@ -43,6 +43,7 @@ export default function PermissionsMatrix({ users, setOverrideAction }: Props) {
     currentState: string
   ) => {
     let nextAllowed: boolean | null;
+    setErrorMsg(null);
 
     // Ciclo de estados: role_on -> override_off -> role_on (quita excepcion)
     //                   role_off -> override_on -> role_off (quita excepcion)
@@ -60,8 +61,17 @@ export default function PermissionsMatrix({ users, setOverrideAction }: Props) {
     setSaving(key);
 
     startTransition(async () => {
-      await setOverrideAction(userId, section, nextAllowed);
-      setSaving(null);
+      try {
+        if (setOverrideAction) {
+          await setOverrideAction(userId, section, nextAllowed);
+        } else {
+          await setUserSectionOverride(userId, section, nextAllowed);
+        }
+      } catch (err: any) {
+        setErrorMsg(err?.message || "No se pudo actualizar el permiso.");
+      } finally {
+        setSaving(null);
+      }
     });
   };
 
@@ -72,6 +82,19 @@ export default function PermissionsMatrix({ users, setOverrideAction }: Props) {
         ✓ (permitido) · — (sin acceso) · * (excepción explícita sobre el rol).
         Champagne para permitidos, gris para denegados. Hacer clic para alternar excepción.
       </p>
+      {errorMsg && (
+        <div style={{
+          backgroundColor: "#fef2f2",
+          border: "1px solid #f87171",
+          color: "#991b1b",
+          padding: "0.75rem 1rem",
+          borderRadius: "6px",
+          marginBottom: "1rem",
+          fontSize: "0.875rem"
+        }}>
+          ⚠️ <strong>Error al actualizar permisos:</strong> {errorMsg}
+        </div>
+      )}
       <div className={styles.permTableWrap}>
         <table className={styles.permTable}>
           <thead>

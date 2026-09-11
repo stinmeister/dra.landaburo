@@ -73,58 +73,98 @@ export async function toggleProduct(formData: FormData) {
   revalidatePath('/tienda');
 }
 
-export async function updateStock(formData: FormData) {
-  await assertAdmin();
-
-  const id    = formData.get('id') as string;
-  const delta = parseInt(formData.get('delta') as string, 10);
-
-  if (!id || isNaN(delta)) return;
-
-  const admin = createAdminClient();
-  const { data } = await admin.from('products').select('stock_quantity').eq('id', id).single();
-  if (!data) return;
-
-  const newStock = Math.max(0, (data.stock_quantity ?? 0) + delta);
-  await admin.from('products').update({ stock_quantity: newStock }).eq('id', id);
-
-  revalidatePath('/dashboard/productos');
-  revalidatePath('/tienda');
+async function assertStaffCanManageProducts() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+  const { data: profile } = await supabase.from('profiles').select('id, role').eq('id', user.id).single();
+  if (!profile || profile.role === 'paciente') redirect('/portal/paciente');
+  if (profile.role === 'admin') return user;
+  const staffAllowed = ['admin', 'operativo', 'cosmetologa', 'medico'];
+  if (!staffAllowed.includes(profile.role)) redirect('/dashboard/operativo');
+  return user;
 }
 
-export async function updateProduct(formData: FormData) {
-  await assertAdmin();
+export async function updateStock(formData: FormData): Promise<{ success: boolean; newStock?: number; error?: string }> {
+  try {
+    await assertStaffCanManageProducts();
 
-  const id              = (formData.get('id') as string)?.trim();
-  const name            = (formData.get('name') as string)?.trim();
-  const category        = (formData.get('category') as string)?.trim();
-  const price_ars       = parseFloat(formData.get('price_ars') as string);
-  const stock_quantity  = parseInt(formData.get('stock_quantity') as string, 10);
-  const min_stock_alert = parseInt(formData.get('min_stock_alert') as string, 10);
-  const description     = (formData.get('description') as string)?.trim() ?? '';
-  const image_url       = (formData.get('image_url') as string)?.trim() ?? null;
+    const id    = formData.get('id') as string;
+    const delta = parseInt(formData.get('delta') as string, 10);
 
-  if (!id || !name || !category || isNaN(price_ars)) return;
+    if (!id || isNaN(delta)) {
+      return { success: false, error: 'Parámetros inválidos para actualizar stock.' };
+    }
 
-  const admin = createAdminClient();
-  const updateData: any = {
-    name,
-    category,
-    price_ars,
-    stock_quantity: isNaN(stock_quantity) ? 0 : stock_quantity,
-    min_stock_alert: isNaN(min_stock_alert) ? 5 : min_stock_alert,
-    description,
-    image_url: image_url || null,
-  };
+    const admin = createAdminClient();
+    const { data, error: fetchErr } = await admin.from('products').select('stock_quantity').eq('id', id).single();
+    if (fetchErr || !data) {
+      return { success: false, error: `No se encontró el producto: ${fetchErr?.message || 'ID no existe'}` };
+    }
 
-  const { error: updErr } = await admin.from('products').update(updateData).eq('id', id);
-  if (updErr && updErr.code === '42703') {
-    const { min_stock_alert: _, ...fallbackUpdate } = updateData;
-    await admin.from('products').update(fallbackUpdate).eq('id', id);
+    const newStock = Math.max(0, (data.stock_quantity ?? 0) + delta);
+    const { error: updErr } = await admin.from('products').update({ stock_quantity: newStock }).eq('id', id);
+    if (updErr) {
+      return { success: false, error: `Error al modificar stock en base de datos: ${updErr.message}` };
+    }
+
+    revalidatePath('/dashboard/productos');
+    revalidatePath('/dashboard/operativo');
+    revalidatePath('/tienda');
+
+    return { success: true, newStock };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Error al actualizar el stock.' };
   }
+}
 
-  revalidatePath('/dashboard/productos');
-  revalidatePath('/tienda');
+export async function updateProduct(formData: FormData): Promise<{ success: boolean; error?: string }> {
+  try {
+    await assertStaffCanManageProducts();
+
+    const id              = (formData.get('id') as string)?.trim();
+    const name            = (formData.get('name') as string)?.trim();
+    const category        = (formData.get('category') as string)?.trim();
+    const price_ars       = parseFloat(formData.get('price_ars') as string);
+    const stock_quantity  = parseInt(formData.get('stock_quantity') as string, 10);
+    const min_stock_alert = parseInt(formData.get('min_stock_alert') as string, 10);
+    const description     = (formData.get('description') as string)?.trim() ?? '';
+    const image_url       = (formData.get('image_url') as string)?.trim() ?? null;
+
+    if (!id || !name || !category || isNaN(price_ars)) {
+      return { success: false, error: 'Completá los campos obligatorios del producto (nombre, categoría, precio).' };
+    }
+
+    const admin = createAdminClient();
+    const updateData: any = {
+      name,
+      category,
+      price_ars,
+      stock_quantity: isNaN(stock_quantity) ? 0 : stock_quantity,
+      min_stock_alert: isNaN(min_stock_alert) ? 5 : min_stock_alert,
+      description,
+      image_url: image_url || null,
+    };
+
+    const { error: updErr } = await admin.from('products').update(updateData).eq('id', id);
+    if (updErr) {
+      if (updErr.code === '42703') {
+        const { min_stock_alert: _, ...fallbackUpdate } = updateData;
+        const { error: fbErr } = await admin.from('products').update(fallbackUpdate).eq('id', id);
+        if (fbErr) return { success: false, error: `Error al actualizar producto: ${fbErr.message}` };
+      } else {
+        return { success: false, error: `Error al actualizar producto: ${updErr.message}` };
+      }
+    }
+
+    revalidatePath('/dashboard/productos');
+    revalidatePath('/dashboard/operativo');
+    revalidatePath('/tienda');
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Error al guardar los datos del producto.' };
+  }
 }
 
 export async function uploadProductImage(formData: FormData): Promise<{ success: boolean; url?: string; error?: string }> {

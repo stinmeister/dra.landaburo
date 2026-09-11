@@ -41,7 +41,8 @@ export async function changeUserRole(formData: FormData) {
     if (targetProfile?.role === 'admin' && (count ?? 0) <= 1) return;
   }
 
-  await admin.from('profiles').update({ role: newRole }).eq('id', userId);
+  const { error } = await admin.from('profiles').update({ role: newRole }).eq('id', userId);
+  if (error) throw new Error(`No se pudo actualizar el rol: ${error.message}`);
   revalidatePath('/dashboard/usuarios');
 }
 
@@ -54,7 +55,9 @@ export async function createStaffUser(formData: FormData) {
   const role     = formData.get('role') as string;
 
   const staffRoles = ['admin', 'medico', 'operativo', 'cosmetologa'];
-  if (!fullName || !email || !password || !staffRoles.includes(role)) return;
+  if (!fullName || !email || !password || !staffRoles.includes(role)) {
+    throw new Error('Datos incompletos o rol inválido.');
+  }
 
   const admin = createAdminClient();
 
@@ -65,10 +68,12 @@ export async function createStaffUser(formData: FormData) {
     user_metadata: { full_name: fullName },
   });
 
-  if (authError || !authData.user) return;
+  if (authError || !authData.user) {
+    throw new Error(`Error al crear usuario en autenticación: ${authError?.message || 'Error desconocido'}`);
+  }
 
   // Upsert profile con email incluido (la tabla profiles tiene email NOT NULL)
-  await admin
+  const { error: profError } = await admin
     .from('profiles')
     .upsert({
       id: authData.user.id,
@@ -76,6 +81,10 @@ export async function createStaffUser(formData: FormData) {
       full_name: fullName,
       role,
     });
+
+  if (profError) {
+    throw new Error(`Error al registrar perfil: ${profError.message}`);
+  }
 
   revalidatePath('/dashboard/usuarios');
 }
@@ -90,20 +99,24 @@ export async function setUserSectionOverride(
   await assertAdmin();
   const admin = createAdminClient();
 
-  if (!userId || !section) return;
+  if (!userId || !section) {
+    throw new Error('Faltan parámetros requeridos (userId o section).');
+  }
 
   if (allowed === null) {
     // Quitar excepcion: el usuario vuelve a heredar del rol
-    await admin
+    const { error } = await admin
       .from("user_section_overrides")
       .delete()
       .eq("profile_id", userId)
       .eq("section", section);
+    if (error) throw new Error(`No se pudo eliminar la excepción: ${error.message}`);
   } else {
-    await admin.from("user_section_overrides").upsert(
+    const { error } = await admin.from("user_section_overrides").upsert(
       { profile_id: userId, section, allowed },
       { onConflict: "profile_id,section" }
     );
+    if (error) throw new Error(`No se pudo guardar la excepción: ${error.message}`);
   }
 
   revalidatePath("/dashboard/usuarios");

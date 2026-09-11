@@ -4,6 +4,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 const STAFF_ROLES = ['admin', 'medico', 'operativo', 'cosmetologa'];
 
@@ -68,19 +69,39 @@ export async function updateOperationalAssignments(assignments: {
     throw new Error('Solo administradores pueden modificar asignaciones operativas.');
   }
 
-  // Try updating app_settings if available
-  try {
-    await supabase.from('app_settings').upsert(
-      {
-        id: 'default',
-        default_birthday_assignee: assignments.birthdayAssignee || null,
-        default_giftcard_assignee: assignments.giftcardAssignee || null,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'id' }
-    );
-  } catch (err) {
-    console.warn('[OperationalAssignments] Notice on app_settings upsert:', err);
+  const admin = createAdminClient();
+
+  // 1. Persistir el responsable de control de stock en recurring_task_rules
+  if (assignments.stockAssignee) {
+    const { error: ruleErr } = await admin
+      .from('recurring_task_rules')
+      .update({ assigned_profile_id: assignments.stockAssignee })
+      .eq('recurrence_type', 'weekly_friday');
+
+    if (ruleErr) {
+      throw new Error(`No se pudo actualizar la regla de stock: ${ruleErr.message}`);
+    }
+  }
+
+  // 2. Persistir asignaciones globales en app_settings
+  const { error: setErr } = await admin.from('app_settings').upsert(
+    {
+      id: 'default',
+      default_birthday_assignee: assignments.birthdayAssignee || null,
+      default_giftcard_assignee: assignments.giftcardAssignee || null,
+      default_stock_assignee: assignments.stockAssignee || null,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'id' }
+  );
+
+  if (setErr) {
+    // Si la tabla no existe en la base de datos (DDL pendiente de correr en Supabase)
+    if (setErr.code === '42P01') {
+      console.warn('[OperationalAssignments] Tabla app_settings pendiente de DDL en Supabase.');
+    } else {
+      throw new Error(`Error al guardar configuración general: ${setErr.message}`);
+    }
   }
 
   revalidatePath('/dashboard/operativo');

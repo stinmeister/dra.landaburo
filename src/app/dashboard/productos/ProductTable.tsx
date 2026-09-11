@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Edit2, Plus, Minus, X, Check, Image as ImageIcon, UploadCloud, Loader2 } from 'lucide-react';
 import { toggleProduct, updateStock, updateProduct, uploadProductImage } from './actions';
@@ -24,23 +25,73 @@ interface Props {
 }
 
 export default function ProductTable({ products, categories }: Props) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [selectedImage, setSelectedImage] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [stockPendingId, setStockPendingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleOpenEdit = (p: Product) => {
     setEditingProduct(p);
     setSelectedImage(p.image_url || '');
     setUploadError(null);
+    setEditError(null);
   };
 
   const handleCloseEdit = () => {
     setEditingProduct(null);
     setSelectedImage('');
     setUploadError(null);
+    setEditError(null);
+  };
+
+  const handleDelta = (productId: string, delta: number) => {
+    setActionError(null);
+    setStockPendingId(productId);
+    startTransition(async () => {
+      try {
+        const formData = new FormData();
+        formData.append('id', productId);
+        formData.append('delta', String(delta));
+        const res = await updateStock(formData);
+        if (!res.success) {
+          setActionError(res.error || 'Error al actualizar el stock.');
+        } else {
+          router.refresh();
+        }
+      } catch (err: any) {
+        setActionError(err?.message || 'Error al actualizar el stock.');
+      } finally {
+        setStockPendingId(null);
+      }
+    });
+  };
+
+  const handleSubmitEdit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setEditError(null);
+    setIsSavingProduct(true);
+    try {
+      const formData = new FormData(e.currentTarget);
+      const res = await updateProduct(formData);
+      if (res.success) {
+        handleCloseEdit();
+        router.refresh();
+      } else {
+        setEditError(res.error || 'Error al guardar los cambios del producto.');
+      }
+    } catch (err: any) {
+      setEditError(err?.message || 'Error inesperado al guardar.');
+    } finally {
+      setIsSavingProduct(false);
+    }
   };
 
   const handleFileUpload = async (file: File) => {
@@ -76,6 +127,19 @@ export default function ProductTable({ products, categories }: Props) {
 
   return (
     <>
+      {actionError && (
+        <div style={{
+          backgroundColor: '#fef2f2',
+          border: '1px solid #f87171',
+          color: '#991b1b',
+          padding: '0.75rem 1rem',
+          borderRadius: '6px',
+          marginBottom: '1rem',
+          fontSize: '0.875rem'
+        }}>
+          ⚠️ <strong>Error en producto:</strong> {actionError}
+        </div>
+      )}
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead>
@@ -102,6 +166,7 @@ export default function ProductTable({ products, categories }: Props) {
               const threshold = p.min_stock_alert ?? 5;
               const isOut = (p.stock_quantity ?? 0) === 0;
               const lowStock = (p.stock_quantity ?? 0) <= threshold;
+              const isUpdatingThis = stockPendingId === p.id;
               return (
                 <tr key={p.id} className={!p.is_active ? styles.rowInactive : ''}>
                   <td className={styles.imgCell}>
@@ -147,16 +212,24 @@ export default function ProductTable({ products, categories }: Props) {
                   </td>
                   <td>
                     <div className={styles.stockRow}>
-                      <form action={updateStock}>
-                        <input type="hidden" name="id" value={p.id} />
-                        <input type="hidden" name="delta" value="-1" />
-                        <button type="submit" className={styles.deltaBtn} disabled={(p.stock_quantity ?? 0) <= 0}>−</button>
-                      </form>
-                      <form action={updateStock}>
-                        <input type="hidden" name="id" value={p.id} />
-                        <input type="hidden" name="delta" value="1" />
-                        <button type="submit" className={styles.deltaBtn}>+</button>
-                      </form>
+                      <button
+                        type="button"
+                        onClick={() => handleDelta(p.id, -1)}
+                        className={styles.deltaBtn}
+                        disabled={(p.stock_quantity ?? 0) <= 0 || isUpdatingThis}
+                        title="Disminuir stock en 1"
+                      >
+                        {isUpdatingThis ? '…' : '−'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelta(p.id, 1)}
+                        className={styles.deltaBtn}
+                        disabled={isUpdatingThis}
+                        title="Aumentar stock en 1"
+                      >
+                        {isUpdatingThis ? '…' : '+'}
+                      </button>
                     </div>
                   </td>
                   <td>
@@ -188,10 +261,21 @@ export default function ProductTable({ products, categories }: Props) {
               </button>
             </div>
 
-            <form action={async (formData) => {
-              await updateProduct(formData);
-              handleCloseEdit();
-            }} className={styles.modalForm}>
+            {editError && (
+              <div style={{
+                backgroundColor: '#fef2f2',
+                border: '1px solid #f87171',
+                color: '#991b1b',
+                padding: '0.75rem 1rem',
+                borderRadius: '6px',
+                marginBottom: '1rem',
+                fontSize: '0.875rem'
+              }}>
+                ⚠️ <strong>Error al guardar producto:</strong> {editError}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmitEdit} className={styles.modalForm}>
               <input type="hidden" name="id" value={editingProduct.id} />
 
               <div className={styles.formGrid}>
@@ -339,12 +423,12 @@ export default function ProductTable({ products, categories }: Props) {
               </div>
 
               <div className={styles.modalActions}>
-                <button type="button" onClick={handleCloseEdit} className={styles.cancelBtn}>
+                <button type="button" onClick={handleCloseEdit} className={styles.cancelBtn} disabled={isSavingProduct}>
                   Cancelar
                 </button>
-                <button type="submit" className={styles.saveBtn}>
-                  <Check size={16} />
-                  <span>Guardar Cambios</span>
+                <button type="submit" className={styles.saveBtn} disabled={isSavingProduct}>
+                  {isSavingProduct ? <Loader2 size={16} className={styles.spinner} /> : <Check size={16} />}
+                  <span>{isSavingProduct ? 'Guardando...' : 'Guardar Cambios'}</span>
                 </button>
               </div>
             </form>
