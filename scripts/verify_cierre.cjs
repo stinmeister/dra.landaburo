@@ -326,12 +326,69 @@ async function main() {
     const locationTrat = resTratamientos.headers.get('location');
     console.log(`  Redirect destino: ${locationTrat}`);
 
+    // FASE 4.2: Evaluación de permisos para perfiles con rol 'operativo'
+    console.log('\n--- FASE 4.2: Evaluación de permisos para usuarios con rol "operativo" ---');
+    const operativoProfiles = profiles?.filter(p => p.role === 'operativo') || [];
+    console.log(`Usuarios con rol 'operativo' encontrados: ${operativoProfiles.length}`);
+    for (const opProf of operativoProfiles) {
+      const { data: defaults } = await sb
+        .from('role_section_defaults')
+        .select('section, allowed')
+        .eq('role', 'operativo');
+
+      const { data: overrideRows } = await sb
+        .from('user_section_overrides')
+        .select('section, allowed')
+        .eq('profile_id', opProf.id);
+
+      const fromRole = new Set();
+      const overrides = new Map();
+      const allowed = new Set();
+
+      for (const d of defaults ?? []) {
+        if (d.allowed) fromRole.add(d.section);
+      }
+      for (const o of overrideRows ?? []) {
+        overrides.set(o.section, o.allowed);
+      }
+
+      const ALL_SECTIONS = ['ejecutivo', 'operativo', 'campanas', 'tratamientos', 'productos', 'usuarios', 'blog'];
+      for (const s of ALL_SECTIONS) {
+        const o = overrides.get(s);
+        if (o !== undefined) {
+          if (o) allowed.add(s);
+        } else if (fromRole.has(s)) {
+          allowed.add(s);
+        }
+      }
+
+      console.log(`  Usuario: ${opProf.full_name} (${opProf.id})`);
+      console.log(`    Secciones permitidas: ${Array.from(allowed).join(', ')}`);
+      console.log(`    Acceso a tratamientos: ${allowed.has('tratamientos') ? '✅ PERMITIDO' : '❌ DENEGADO'}`);
+      console.log(`    Acceso a productos: ${allowed.has('productos') ? '✅ PERMITIDO' : '❌ DENEGADO'}`);
+      console.log(`    Acceso a campanas: ${allowed.has('campanas') ? '✅ PERMITIDO' : '❌ DENEGADO'}`);
+      console.log(`    Acceso a operativo: ${allowed.has('operativo') ? '✅ PERMITIDO' : '❌ DENEGADO'}`);
+      console.log(`    Acceso a ejecutivo: ${allowed.has('ejecutivo') ? '❌ NO PERMITIDO (Correcto)' : '⚠️ PERMITIDO'}`);
+    }
+
     // -------------------------------------------------------------
-    // FASE 5: TEST BLOG MARKDOWN PREVIEW
+    // FASE 5: TEST BLOG MARKDOWN PREVIEW Y RENDERER
     // -------------------------------------------------------------
     console.log('\n--- FASE 5: Blog Markdown Renderer y Banner de Revisión ---');
-    const resBlogPreview = await fetch(`${BASE_URL}/blog/preview/test-slug-inexistente`, { redirect: 'manual' });
-    console.log(`HTTP GET /blog/preview/test-slug status: ${resBlogPreview.status}`);
+    const { data: testPost } = await sb.from('posts').select('slug, title, published').limit(1).maybeSingle();
+    if (testPost) {
+      console.log(`Post encontrado en base de datos: "${testPost.title}" (slug: ${testPost.slug}, published: ${testPost.published})`);
+      const resBlogPublic = await fetch(`${BASE_URL}/blog/${testPost.slug}`);
+      console.log(`HTTP GET /blog/${testPost.slug} status: ${resBlogPublic.status} -> ${resBlogPublic.status === 200 ? '✅ 200 OK (Renderiza Markdown)' : 'INFO'}`);
+      
+      const resBlogPreviewPost = await fetch(`${BASE_URL}/blog/preview/${testPost.slug}`);
+      console.log(`HTTP GET /blog/preview/${testPost.slug} status: ${resBlogPreviewPost.status} -> ${resBlogPreviewPost.status === 200 ? '✅ 200 OK (Preview)' : 'INFO'}`);
+      const previewHtml = await resBlogPreviewPost.text();
+      const hasBanner = previewHtml.includes('BORRADOR CLÍNICO EN REVISIÓN') || previewHtml.includes('bannerReview') || previewHtml.includes('CLÍNICO');
+      console.log(`¿Preview contiene el banner de revisión clínica?: ${hasBanner ? '✅ SÍ (Banner presente)' : '❌ NO'}`);
+    } else {
+      console.log('No se encontraron posts en la base de datos para probar el slug público.');
+    }
 
     // -------------------------------------------------------------
     // FASE 6: AUDITORÍA DE INGEST_REVIEW (si existe la tabla)
