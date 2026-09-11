@@ -368,16 +368,16 @@ async function main() {
       console.log(`    Acceso a productos: ${allowed.has('productos') ? '✅ PERMITIDO' : '❌ DENEGADO'}`);
       console.log(`    Acceso a campanas: ${allowed.has('campanas') ? '✅ PERMITIDO' : '❌ DENEGADO'}`);
       console.log(`    Acceso a operativo: ${allowed.has('operativo') ? '✅ PERMITIDO' : '❌ DENEGADO'}`);
-      console.log(`    Acceso a ejecutivo: ${allowed.has('ejecutivo') ? '❌ NO PERMITIDO (Correcto)' : '⚠️ PERMITIDO'}`);
+      console.log(`    Acceso a ejecutivo: ${allowed.has('ejecutivo') ? '⚠️ PERMITIDO' : '✅ NO PERMITIDO (Correcto - exclusivo admin)'}`);
     }
 
     // -------------------------------------------------------------
     // FASE 5: TEST BLOG MARKDOWN PREVIEW Y RENDERER
     // -------------------------------------------------------------
     console.log('\n--- FASE 5: Blog Markdown Renderer y Banner de Revisión ---');
-    const { data: testPost } = await sb.from('posts').select('slug, title, published').limit(1).maybeSingle();
+    const { data: testPost, error: postErr } = await sb.from('posts').select('id, slug, title, is_published').limit(1).maybeSingle();
     if (testPost) {
-      console.log(`Post encontrado en base de datos: "${testPost.title}" (slug: ${testPost.slug}, published: ${testPost.published})`);
+      console.log(`Post encontrado en base de datos: "${testPost.title}" (slug: ${testPost.slug}, is_published: ${testPost.is_published})`);
       const resBlogPublic = await fetch(`${BASE_URL}/blog/${testPost.slug}`);
       console.log(`HTTP GET /blog/${testPost.slug} status: ${resBlogPublic.status} -> ${resBlogPublic.status === 200 ? '✅ 200 OK (Renderiza Markdown)' : 'INFO'}`);
       
@@ -387,7 +387,7 @@ async function main() {
       const hasBanner = previewHtml.includes('BORRADOR CLÍNICO EN REVISIÓN') || previewHtml.includes('bannerReview') || previewHtml.includes('CLÍNICO');
       console.log(`¿Preview contiene el banner de revisión clínica?: ${hasBanner ? '✅ SÍ (Banner presente)' : '❌ NO'}`);
     } else {
-      console.log('No se encontraron posts en la base de datos para probar el slug público.');
+      console.log('No se encontraron posts en la base de datos para probar el slug público.', postErr ? postErr.message : '');
     }
 
     // -------------------------------------------------------------
