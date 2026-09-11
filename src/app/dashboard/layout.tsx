@@ -56,20 +56,13 @@ export default async function DashboardLayout({
   const perms = await getUserSections(user.id, role);
   const serialized = serializePermissions(perms);
 
-  // Construir nav items en el orden canonico
+  // Construir nav items en el orden canonico (ALL_SECTIONS ya incluye revision de forma unificada)
   const navItems = ALL_SECTIONS
     .filter((s) => perms.allowed.has(s))
     .map((s) => ({
       href: `/dashboard/${s}`,
       label: SECTION_LABELS[s] ?? s,
     }));
-
-  if (perms.allowed.has("ejecutivo") || perms.allowed.has("operativo") || role === "admin") {
-    navItems.push({
-      href: "/dashboard/revision",
-      label: "Revisión",
-    });
-  }
 
   return (
     <div className={styles.shell}>

@@ -205,7 +205,7 @@ export default async function EjecutivoPage() {
           <p className={styles.metricSub}>equivalente del mes</p>
         </div>
         <div className={styles.metricCard}>
-          <p className={styles.metricLabel}>Comisión Dra. (70%)</p>
+          <p className={styles.metricLabel}>Neto para el consultorio</p>
           <p className={payments.length > 0 ? `${styles.metricValue} ${styles.metricHighlight}` : `${styles.metricValue} ${styles.metricEmpty}`}>
             {payments.length > 0 ? formatARS(totalDraCommission) : 'Sin datos registrados'}
           </p>

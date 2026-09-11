@@ -240,7 +240,7 @@ export default async function OperativoDashboard() {
 
           <section className={styles.card}>
             <h2 className={styles.cardTitle}>Buscador de tratamientos</h2>
-            <p className={styles.cardHelper}>102 tratamientos disponibles — escribí para filtrar</p>
+            <p className={styles.cardHelper}>Catálogo de tratamientos disponibles — escribí para filtrar</p>
             <TreatmentSearch />
           </section>
         </div>

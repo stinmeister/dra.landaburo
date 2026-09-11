@@ -33,6 +33,7 @@ export default function ProductTable({ products, categories }: Props) {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [stockPendingId, setStockPendingId] = useState<string | null>(null);
+  const [localStock, setLocalStock] = useState<Record<string, number>>({});
   const [actionError, setActionError] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [isSavingProduct, setIsSavingProduct] = useState(false);
@@ -57,13 +58,13 @@ export default function ProductTable({ products, categories }: Props) {
     setStockPendingId(productId);
     startTransition(async () => {
       try {
-        const formData = new FormData();
-        formData.append('id', productId);
-        formData.append('delta', String(delta));
-        const res = await updateStock(formData);
+        const res = await updateStock(productId, delta);
         if (!res.success) {
           setActionError(res.error || 'Error al actualizar el stock.');
         } else {
+          if (typeof res.newStock === 'number') {
+            setLocalStock((prev) => ({ ...prev, [productId]: res.newStock! }));
+          }
           router.refresh();
         }
       } catch (err: any) {
@@ -163,9 +164,10 @@ export default function ProductTable({ products, categories }: Props) {
               </tr>
             )}
             {products.map((p) => {
+              const currentStock = localStock[p.id] ?? (p.stock_quantity ?? 0);
               const threshold = p.min_stock_alert ?? 5;
-              const isOut = (p.stock_quantity ?? 0) === 0;
-              const lowStock = (p.stock_quantity ?? 0) <= threshold;
+              const isOut = currentStock === 0;
+              const lowStock = currentStock <= threshold;
               const isUpdatingThis = stockPendingId === p.id;
               return (
                 <tr key={p.id} className={!p.is_active ? styles.rowInactive : ''}>
@@ -194,11 +196,11 @@ export default function ProductTable({ products, categories }: Props) {
                     ${Number(p.price_ars).toLocaleString('es-AR', { minimumFractionDigits: 0 })}
                   </td>
                   <td className={isOut ? styles.stockLow : (lowStock ? styles.stockLow : styles.stockOk)}>
-                    {p.stock_quantity ?? 0} ud.
+                    {currentStock} ud.
                     {isOut ? (
                       <span className={styles.alertDot} title="Sin stock (0 unidades)" style={{ backgroundColor: '#e53e3e' }} />
                     ) : lowStock ? (
-                      <span className={styles.alertDot} title={`Stock bajo (${p.stock_quantity} <= umbral de ${threshold} ud.)`} />
+                      <span className={styles.alertDot} title={`Stock bajo (${currentStock} <= umbral de ${threshold} ud.)`} />
                     ) : null}
                   </td>
                   <td>
@@ -216,7 +218,7 @@ export default function ProductTable({ products, categories }: Props) {
                         type="button"
                         onClick={() => handleDelta(p.id, -1)}
                         className={styles.deltaBtn}
-                        disabled={(p.stock_quantity ?? 0) <= 0 || isUpdatingThis}
+                        disabled={currentStock <= 0 || isUpdatingThis}
                         title="Disminuir stock en 1"
                       >
                         {isUpdatingThis ? '…' : '−'}

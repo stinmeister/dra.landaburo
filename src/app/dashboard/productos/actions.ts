@@ -76,34 +76,62 @@ export async function toggleProduct(formData: FormData) {
 async function assertStaffCanManageProducts() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  if (!user) {
+    throw new Error('Sesión no iniciada. Por favor iniciá sesión nuevamente.');
+  }
   const { data: profile } = await supabase.from('profiles').select('id, role').eq('id', user.id).single();
-  if (!profile || profile.role === 'paciente') redirect('/portal/paciente');
-  if (profile.role === 'admin') return user;
+  if (!profile || profile.role === 'paciente') {
+    throw new Error('Sin permisos de staff para gestionar inventario.');
+  }
   const staffAllowed = ['admin', 'operativo', 'cosmetologa', 'medico'];
-  if (!staffAllowed.includes(profile.role)) redirect('/dashboard/operativo');
+  if (!staffAllowed.includes(profile.role)) {
+    throw new Error('Rol no autorizado para modificar stock.');
+  }
   return user;
 }
 
-export async function updateStock(formData: FormData): Promise<{ success: boolean; newStock?: number; error?: string }> {
+export async function updateStock(
+  targetOrFormData: string | FormData,
+  maybeDelta?: number
+): Promise<{ success: boolean; newStock?: number; error?: string }> {
   try {
     await assertStaffCanManageProducts();
 
-    const id    = formData.get('id') as string;
-    const delta = parseInt(formData.get('delta') as string, 10);
+    let id: string = '';
+    let delta: number = 0;
 
-    if (!id || isNaN(delta)) {
+    if (typeof targetOrFormData === 'string') {
+      id = targetOrFormData.trim();
+      delta = typeof maybeDelta === 'number' ? maybeDelta : 0;
+    } else if (targetOrFormData instanceof FormData || (targetOrFormData && typeof (targetOrFormData as any).get === 'function')) {
+      id = ((targetOrFormData.get('id') as string) || '').trim();
+      delta = parseInt((targetOrFormData.get('delta') as string) || '0', 10);
+    } else if (typeof targetOrFormData === 'object' && targetOrFormData !== null) {
+      id = ((targetOrFormData as any).id || '').trim();
+      delta = Number((targetOrFormData as any).delta) || 0;
+    }
+
+    if (!id || isNaN(delta) || delta === 0) {
       return { success: false, error: 'Parámetros inválidos para actualizar stock.' };
     }
 
     const admin = createAdminClient();
-    const { data, error: fetchErr } = await admin.from('products').select('stock_quantity').eq('id', id).single();
+    const { data, error: fetchErr } = await admin
+      .from('products')
+      .select('stock_quantity')
+      .eq('id', id)
+      .single();
+
     if (fetchErr || !data) {
       return { success: false, error: `No se encontró el producto: ${fetchErr?.message || 'ID no existe'}` };
     }
 
     const newStock = Math.max(0, (data.stock_quantity ?? 0) + delta);
-    const { error: updErr } = await admin.from('products').update({ stock_quantity: newStock }).eq('id', id);
+    const { error: updErr } = await admin
+      .from('products')
+      .update({ stock_quantity: newStock })
+      .eq('id', id);
+
     if (updErr) {
       return { success: false, error: `Error al modificar stock en base de datos: ${updErr.message}` };
     }

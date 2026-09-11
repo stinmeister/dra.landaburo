@@ -52,16 +52,23 @@ export default function ConfiguracionOperativa({
 
     startTransition(async () => {
       try {
-        await updateOperationalAssignments({
+        const res = await updateOperationalAssignments({
           birthdayAssignee,
           giftcardAssignee,
           stockAssignee,
         });
-        setStatus({
-          type: 'success',
-          message: '✓ Responsables actualizados correctamente.',
-        });
-        router.refresh();
+        if (res.success) {
+          setStatus({
+            type: 'success',
+            message: res.message || '✓ Responsables actualizados correctamente.',
+          });
+          router.refresh();
+        } else {
+          setStatus({
+            type: 'error',
+            message: res.error || 'Error al guardar asignaciones.',
+          });
+        }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Error al guardar asignaciones.';
         setStatus({
