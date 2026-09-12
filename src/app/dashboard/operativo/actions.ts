@@ -50,9 +50,9 @@ export async function toggleTask(taskId: string, currentValue: boolean) {
 }
 
 export async function updateOperationalAssignments(assignments: {
-  birthdayAssignee: string;
-  giftcardAssignee: string;
-  stockAssignee: string;
+  birthdayAssignee?: string;
+  giftcardAssignee?: string;
+  stockAssignee?: string;
 }): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
     const supabase = await createClient();
@@ -74,52 +74,108 @@ export async function updateOperationalAssignments(assignments: {
 
     const admin = createAdminClient();
 
-    // 1. Persistir el responsable de control de stock en recurring_task_rules
-    if (assignments.stockAssignee) {
-      const { error: ruleErr } = await admin
-        .from('recurring_task_rules')
-        .update({ assigned_profile_id: assignments.stockAssignee })
-        .eq('recurrence_type', 'weekly_friday');
+    // 1. Consultar reglas existentes en recurring_task_rules
+    const { data: existingRules, error: rulesErr } = await admin
+      .from('recurring_task_rules')
+      .select('id, recurrence_type, title');
 
-      if (ruleErr) {
-        return { success: false, error: `No se pudo actualizar la regla de stock: ${ruleErr.message}` };
+    if (rulesErr) {
+      return { success: false, error: `Error al consultar recurring_task_rules: ${rulesErr.message}` };
+    }
+
+    const updated: string[] = [];
+    const skipped: string[] = [];
+
+    // 2. Actualizar regla de Stock (weekly_friday)
+    const stockRule = (existingRules ?? []).find(
+      (r) => r.recurrence_type === 'weekly_friday' || r.title?.toLowerCase().includes('stock')
+    );
+    if (assignments.stockAssignee) {
+      if (stockRule) {
+        const { error: updErr } = await admin
+          .from('recurring_task_rules')
+          .update({
+            assigned_profile_id: assignments.stockAssignee,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', stockRule.id);
+
+        if (updErr) {
+          return { success: false, error: `No se pudo actualizar regla de stock: ${updErr.message}` };
+        }
+        updated.push('Control de Stock');
+      } else {
+        skipped.push('Control de Stock (regla no existe en base de datos)');
       }
     }
 
-    // 2. Persistir asignaciones globales en app_settings
-    let warningMsg = '';
-    const { error: setErr } = await admin.from('app_settings').upsert(
-      {
-        id: 'default',
-        default_birthday_assignee: assignments.birthdayAssignee || null,
-        default_giftcard_assignee: assignments.giftcardAssignee || null,
-        default_stock_assignee: assignments.stockAssignee || null,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'id' }
-    );
+    // 3. Actualizar regla de Cumpleaños si existe
+    if (assignments.birthdayAssignee) {
+      const birthdayRule = (existingRules ?? []).find(
+        (r) => r.recurrence_type === 'daily' || r.title?.toLowerCase().includes('cumpleaños')
+      );
+      if (birthdayRule) {
+        const { error: updErr } = await admin
+          .from('recurring_task_rules')
+          .update({
+            assigned_profile_id: assignments.birthdayAssignee,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', birthdayRule.id);
 
-    if (setErr) {
-      // Si la tabla no existe en la base de datos (PostgREST schema cache o Postgres 42P01)
-      const isMissingTable = setErr.code === '42P01' || 
-        setErr.code === 'PGRST205' || 
-        setErr.message?.toLowerCase().includes('schema cache') || 
-        setErr.message?.toLowerCase().includes('does not exist');
-
-      if (isMissingTable) {
-        console.warn('[OperationalAssignments] Tabla app_settings pendiente de DDL en Supabase.');
-        warningMsg = ' (Nota: Asignación de stock guardada en reglas. Tabla app_settings pendiente de migración en base de datos)';
+        if (updErr) {
+          return { success: false, error: `No se pudo actualizar regla de cumpleaños: ${updErr.message}` };
+        }
+        updated.push('Saludos de Cumpleaños');
       } else {
-        return { success: false, error: `Error al guardar configuración general: ${setErr.message}` };
+        skipped.push('Saludos de Cumpleaños (regla no existe en base de datos)');
       }
+    }
+
+    // 4. Actualizar regla de Gift Cards si existe
+    if (assignments.giftcardAssignee) {
+      const giftcardRule = (existingRules ?? []).find(
+        (r) =>
+          r.recurrence_type === 'on_demand' ||
+          r.recurrence_type === 'event_triggered' ||
+          r.title?.toLowerCase().includes('gift')
+      );
+      if (giftcardRule) {
+        const { error: updErr } = await admin
+          .from('recurring_task_rules')
+          .update({
+            assigned_profile_id: assignments.giftcardAssignee,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', giftcardRule.id);
+
+        if (updErr) {
+          return { success: false, error: `No se pudo actualizar regla de gift cards: ${updErr.message}` };
+        }
+        updated.push('Preparación de Gift Cards');
+      } else {
+        skipped.push('Preparación de Gift Cards (regla no existe en base de datos)');
+      }
+    }
+
+    if (updated.length === 0 && skipped.length > 0) {
+      return {
+        success: false,
+        error: `No se actualizó ninguna asignación: ${skipped.join(', ')}.`,
+      };
     }
 
     revalidatePath('/dashboard/operativo');
     revalidatePath('/dashboard/ejecutivo');
 
+    let msg = `✓ Responsable(s) guardado(s) en recurring_task_rules: ${updated.join(', ')}.`;
+    if (skipped.length > 0) {
+      msg += ` [Aviso R11: ${skipped.join(', ')}]`;
+    }
+
     return {
       success: true,
-      message: `✓ Responsables actualizados correctamente.${warningMsg}`,
+      message: msg,
     };
   } catch (err: any) {
     return {

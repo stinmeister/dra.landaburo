@@ -121,3 +121,34 @@
   color: #c0392b;
   font-weight: 600;
 }
+
+.select:disabled {
+  background-color: #f3f4f6;
+  color: #6b7280;
+  cursor: not-allowed;
+  border-color: #e5e7eb;
+}
+
+.pendingBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #b45309;
+  background-color: #fef3c7;
+  border: 1px solid #fde68a;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm);
+  margin-top: 0.25rem;
+  width: fit-content;
+}
+
+.pendingHelper {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  color: #92400e;
+  margin: 0.15rem 0 0.25rem 0;
+  line-height: 1.3;
+}

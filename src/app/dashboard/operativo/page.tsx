@@ -160,28 +160,34 @@ export default async function OperativoDashboard() {
     activeCampaigns = [];
   }
 
-  // Load app settings for default assignees
-  let appSettings: { default_birthday_assignee?: string; default_giftcard_assignee?: string } | null = null;
-  try {
-    const { data: sData } = await supabase
-      .from('app_settings')
-      .select('default_birthday_assignee, default_giftcard_assignee')
-      .maybeSingle();
-    appSettings = sData;
-  } catch {
-    // ok if table doesn't exist yet
-  }
+  // Load operational assignment rules directly from recurring_task_rules (eliminando app_settings)
+  let stockRule: { id: string; assigned_profile_id: string | null; title: string } | null = null;
+  let birthdayRule: { id: string; assigned_profile_id: string | null; title: string } | null = null;
+  let giftcardRule: { id: string; assigned_profile_id: string | null; title: string } | null = null;
 
-  // Read default stock assignee directly from recurring_task_rules (weekly_friday)
-  let defaultStockAssignee: string | undefined = undefined;
   try {
-    const { data: stockRule } = await supabase
+    const { data: dbRules } = await supabase
       .from('recurring_task_rules')
-      .select('assigned_profile_id')
-      .eq('recurrence_type', 'weekly_friday')
-      .maybeSingle();
-    if (stockRule?.assigned_profile_id) {
-      defaultStockAssignee = stockRule.assigned_profile_id;
+      .select('id, title, recurrence_type, assigned_profile_id, is_active');
+
+    if (dbRules) {
+      const s = dbRules.find(
+        (r) => r.recurrence_type === 'weekly_friday' || r.title?.toLowerCase().includes('stock')
+      );
+      if (s) stockRule = { id: s.id, assigned_profile_id: s.assigned_profile_id, title: s.title };
+
+      const b = dbRules.find(
+        (r) => r.recurrence_type === 'daily' || r.title?.toLowerCase().includes('cumpleaños')
+      );
+      if (b) birthdayRule = { id: b.id, assigned_profile_id: b.assigned_profile_id, title: b.title };
+
+      const g = dbRules.find(
+        (r) =>
+          r.recurrence_type === 'on_demand' ||
+          r.recurrence_type === 'event_triggered' ||
+          r.title?.toLowerCase().includes('gift')
+      );
+      if (g) giftcardRule = { id: g.id, assigned_profile_id: g.assigned_profile_id, title: g.title };
     }
   } catch {
     // fallback if query fails
@@ -254,9 +260,9 @@ export default async function OperativoDashboard() {
           {profile.role === 'admin' && (
             <ConfiguracionOperativa
               profiles={staffProfiles}
-              initialBirthdayAssignee={appSettings?.default_birthday_assignee}
-              initialGiftcardAssignee={appSettings?.default_giftcard_assignee}
-              initialStockAssignee={defaultStockAssignee}
+              stockRule={stockRule}
+              birthdayRule={birthdayRule}
+              giftcardRule={giftcardRule}
             />
           )}
 
