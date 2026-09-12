@@ -8,6 +8,17 @@
   gap: 1.25rem;
 }
 
+.heading1 {
+  font-family: var(--font-heading, "Faraz Modern"), Georgia, serif;
+  font-size: clamp(1.65rem, 3.2vw, 2.25rem);
+  font-weight: 400;
+  color: var(--color-negro, #1c1c1c);
+  line-height: 1.25;
+  margin-top: 2.5rem;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.015em;
+}
+
 .heading2 {
   font-family: var(--font-heading, "Faraz Modern"), Georgia, serif;
   font-size: clamp(1.4rem, 2.5vw, 1.85rem);

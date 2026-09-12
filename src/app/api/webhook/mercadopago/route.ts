@@ -22,15 +22,24 @@ function verifySignature(
   signature: string | null,
   secret: string
 ): boolean {
-  if (!signature) return false;
-  const tsMatch = signature.match(/ts=(\d+)/);
-  const v1Match = signature.match(/v1=([a-f0-9]+)/);
-  if (!tsMatch || !v1Match) return false;
-  const ts = tsMatch[1];
-  const expectedHash = v1Match[1];
-  const payload = `id:${paymentId};request-id:${requestId};ts:${ts};`;
-  const computed = createHmac('sha256', secret).update(payload).digest('hex');
-  return computed === expectedHash;
+  if (!signature || !secret) return false;
+
+  // x-signature format: ts=...,v1=...
+  const parts = signature.split(',').reduce<Record<string, string>>((acc, part) => {
+    const [k, v] = part.split('=');
+    if (k && v) acc[k.trim()] = v.trim();
+    return acc;
+  }, {});
+
+  const ts = parts['ts'];
+  const v1 = parts['v1'];
+  if (!ts || !v1) return false;
+
+  // Manifest template: id:[data.id];request-id:[x-request-id];ts:[ts];
+  const manifest = `id:${paymentId};request-id:${requestId};ts:${ts};`;
+  const computedHash = createHmac('sha256', secret).update(manifest).digest('hex');
+
+  return computedHash.toLowerCase() === v1.toLowerCase();
 }
 
 export async function POST(req: NextRequest) {
@@ -53,38 +62,54 @@ export async function POST(req: NextRequest) {
   }
   const paymentId = String(rawPaymentId);
 
+  // 1. Leer credenciales desde variables de entorno (sin tocar app_settings)
+  const webhookSecret = process.env.MP_WEBHOOK_SECRET;
+  const mpAccessToken = process.env.MP_ACCESS_TOKEN;
+
+  if (!webhookSecret) {
+    console.error('[Webhook/MP] RECHAZADO: MP_WEBHOOK_SECRET no está configurado en las variables de entorno.');
+    return NextResponse.json(
+      { error: 'Servicio no configurado para recibir webhooks de pago.' },
+      { status: 503 }
+    );
+  }
+
+  // 2. Extracción de identificador para manifiesto (query param data.id o body id)
+  const searchParams = req.nextUrl.searchParams;
+  const manifestId = searchParams.get('data.id') || searchParams.get('id') || paymentId;
+  const requestId = req.headers.get('x-request-id') ?? '';
+  const signature = req.headers.get('x-signature');
+
+  // 3. CAPA 1: Validación estricta y obligatoria de la firma HMAC-SHA256
+  const isValid = verifySignature(manifestId, requestId, signature, webhookSecret);
+  if (!isValid) {
+    console.warn('[Webhook/MP] RECHAZADO 401: Intento de webhook con firma inválida o ausente.', {
+      manifestId,
+      requestId,
+      hasSignature: Boolean(signature),
+      clientIp: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'desconocida',
+      timestamp: new Date().toISOString(),
+    });
+    return NextResponse.json({ error: 'Firma de webhook inválida.' }, { status: 401 });
+  }
+
+  // 4. CAPA 2: Re-consulta directa a la API oficial de Mercado Pago para verificar estado real
+  if (!mpAccessToken) {
+    console.error('[Webhook/MP] RECHAZADO: MP_ACCESS_TOKEN no configurado en servidor.');
+    return NextResponse.json({ error: 'Configuración incompleta en servidor.' }, { status: 503 });
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { cookies: { getAll: () => [], setAll: () => {} } }
   );
 
-  const { data: settings } = await supabase
-    .from('app_settings')
-    .select('mp_access_token, mp_webhook_secret')
-    .single();
-
-  if (!settings?.mp_access_token) {
-    console.error('[Webhook/MP] mp_access_token no configurado.');
-    return NextResponse.json({ error: 'Configuración incompleta.' }, { status: 503 });
-  }
-
-  if (settings.mp_webhook_secret) {
-    const signature = req.headers.get('x-signature');
-    const requestId = req.headers.get('x-request-id') ?? '';
-    if (!verifySignature(paymentId, requestId, signature, settings.mp_webhook_secret)) {
-      console.warn('[Webhook/MP] Firma inválida — posible request no legítimo.');
-      return NextResponse.json({ error: 'Firma inválida.' }, { status: 401 });
-    }
-  } else {
-    console.warn('[Webhook/MP] mp_webhook_secret no configurado — saltando verificación de firma.');
-  }
-
   // Consult MP for the actual payment data
   let mpPayment: Record<string, unknown>;
   try {
     const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-      headers: { Authorization: `Bearer ${settings.mp_access_token}` },
+      headers: { Authorization: `Bearer ${mpAccessToken}` },
     });
     if (!mpRes.ok) {
       console.error('[Webhook/MP] Error al obtener pago MP:', mpRes.status);

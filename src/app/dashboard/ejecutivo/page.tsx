@@ -7,7 +7,6 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { assertSectionAccess } from '@/lib/permissions';
 import { getPendingReviewCount } from '@/lib/ingest-review';
-import MPConfigForm from '@/components/dashboard/MPConfigForm';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
@@ -302,8 +301,33 @@ export default async function EjecutivoPage() {
         )}
       </section>
 
-      {/* Configuración de MercadoPago — Client Component */}
-      <MPConfigForm />
+      {/* Estado de Integración Mercado Pago — Lectura de variables de entorno del servidor */}
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>Estado de Mercado Pago</h2>
+        <div className={styles.mpStatusCard}>
+          <div className={styles.mpStatusRow}>
+            <span className={styles.mpStatusLabel}>Access Token (Backend Checkout):</span>
+            <span className={process.env.MP_ACCESS_TOKEN ? styles.badgeSuccess : styles.badgeWarning}>
+              {process.env.MP_ACCESS_TOKEN ? '✓ Configurado en entorno' : 'Pendiente (MP_ACCESS_TOKEN no configurado)'}
+            </span>
+          </div>
+          <div className={styles.mpStatusRow}>
+            <span className={styles.mpStatusLabel}>Webhook Secret (Firma HMAC obligatoria):</span>
+            <span className={process.env.MP_WEBHOOK_SECRET ? styles.badgeSuccess : styles.badgeWarning}>
+              {process.env.MP_WEBHOOK_SECRET ? '✓ Configurado en entorno' : 'Pendiente (MP_WEBHOOK_SECRET no configurado)'}
+            </span>
+          </div>
+          <div className={styles.mpStatusRow}>
+            <span className={styles.mpStatusLabel}>Public Key (Frontend SDK):</span>
+            <span className={process.env.NEXT_PUBLIC_MP_PUBLIC_KEY ? styles.badgeSuccess : styles.badgeWarning}>
+              {process.env.NEXT_PUBLIC_MP_PUBLIC_KEY ? '✓ Configurado en entorno' : 'Pendiente (NEXT_PUBLIC_MP_PUBLIC_KEY no configurado)'}
+            </span>
+          </div>
+          <p className={styles.mpStatusHelper}>
+            Por seguridad, las credenciales de Mercado Pago se gestionan exclusivamente mediante variables de entorno en el servidor (.env.local) y nunca se almacenan en la base de datos.
+          </p>
+        </div>
+      </section>
     </div>
   );
 }

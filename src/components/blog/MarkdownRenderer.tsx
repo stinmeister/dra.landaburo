@@ -95,6 +95,7 @@ function parseInline(text: string): React.ReactNode[] {
 }
 
 type Block =
+  | { type: 'h1'; content: string }
   | { type: 'h2'; content: string }
   | { type: 'h3'; content: string }
   | { type: 'blockquote'; lines: string[] }
@@ -140,7 +141,7 @@ export default function MarkdownRenderer({ content }: Props) {
       continue;
     }
     if (line.startsWith('# ')) {
-      blocks.push({ type: 'h2', content: line.slice(2).trim() });
+      blocks.push({ type: 'h1', content: line.slice(2).trim() });
       i++;
       continue;
     }
@@ -200,6 +201,12 @@ export default function MarkdownRenderer({ content }: Props) {
     <div className={styles.markdownBody}>
       {blocks.map((block, idx) => {
         switch (block.type) {
+          case 'h1':
+            return (
+              <h1 key={idx} className={styles.heading1}>
+                {parseInline(block.content)}
+              </h1>
+            );
           case 'h2':
             return (
               <h2 key={idx} className={styles.heading2}>

@@ -81,14 +81,11 @@ export async function POST(req: NextRequest) {
   // Construimos un mapa id → price_ars para acceso O(1) al armar los items
   const priceMap = new Map<string, number>(dbProducts.map((p) => [p.id, p.price_ars]));
 
-  // Leer configuración de MercadoPago desde app_settings
-  const { data: settings, error: settingsError } = await supabase
-    .from('app_settings')
-    .select('mp_access_token')
-    .single();
+  // Leer credencial de Mercado Pago desde variable de entorno
+  const mpAccessToken = process.env.MP_ACCESS_TOKEN;
 
-  if (settingsError || !settings?.mp_access_token) {
-    console.error('[Checkout/MP] No se encontró mp_access_token en app_settings:', settingsError);
+  if (!mpAccessToken) {
+    console.error('[Checkout/MP] No se encontró MP_ACCESS_TOKEN en variables de entorno.');
     return NextResponse.json(
       { error: 'El sistema de pagos no está configurado. Contactá al consultorio.' },
       { status: 503 }
@@ -118,22 +115,17 @@ export async function POST(req: NextRequest) {
   }
 
   // Insertar items de la orden
-  const orderItems = items.map((i) => {
-    const unitPrice = priceMap.get(i.id)!;
-    return {
-      order_id: order.id,
-      product_id: i.id,
-      product_name: i.name,
-      quantity: i.quantity,
-      unit_price_ars: unitPrice,
-      subtotal_ars: unitPrice * i.quantity,
-    };
-  });
+  const orderItems = items.map((i) => ({
+    order_id: order.id,
+    product_id: i.id,
+    quantity: i.quantity,
+    unit_price_ars: priceMap.get(i.id)!,
+  }));
 
   const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
   if (itemsError) {
-    console.error('[Checkout/MP] Error insertando order_items:', itemsError);
-    // No cancelamos la orden — MP puede confirmarla igual; se concilia manualmente
+    console.error('[Checkout/MP] Error guardando items de la orden:', itemsError);
+    // Continuamos igual — la orden existe y el pago puede procesarse
   }
 
   // Llamar a MercadoPago Preferences API
@@ -169,7 +161,7 @@ export async function POST(req: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${settings.mp_access_token}`,
+        Authorization: `Bearer ${mpAccessToken}`,
       },
       body: JSON.stringify(mpBody),
     });

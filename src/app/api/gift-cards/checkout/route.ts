@@ -201,22 +201,11 @@ export async function POST(req: NextRequest) {
 
   const totalAmountARS = validatedItems.reduce((sum, i) => sum + i.unit_price * i.quantity, 0);
 
-  // Read MP access token from app_settings or process.env
-  let mpAccessToken = process.env.MP_ACCESS_TOKEN;
-  try {
-    const { data: settings } = await supabase
-      .from('app_settings')
-      .select('mp_access_token')
-      .maybeSingle();
-    if (settings?.mp_access_token) {
-      mpAccessToken = settings.mp_access_token;
-    }
-  } catch {
-    // app_settings may not exist yet
-  }
+  // Leer credencial de Mercado Pago desde variable de entorno
+  const mpAccessToken = process.env.MP_ACCESS_TOKEN;
 
   if (!mpAccessToken) {
-    console.warn('[GiftCard/Checkout] mp_access_token not found.');
+    console.warn('[GiftCard/Checkout] MP_ACCESS_TOKEN no configurado en variables de entorno.');
     return NextResponse.json(
       { error: 'El sistema de pagos no está configurado. Contactá al consultorio.' },
       { status: 503 }

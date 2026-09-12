@@ -56,7 +56,8 @@ export async function ensureDailyRecurringTasks(todayAR: string) {
   // 3. Evaluate calendar conditions for today
   const [y, m, d] = todayAR.split('-').map(Number);
   const utcDate = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
-  const dayOfWeek = utcDate.getUTCDay(); // 0 = Sun, 5 = Fri
+  const dayOfWeek = utcDate.getUTCDay(); // 0 = Sun, 1 = Mon, ..., 5 = Fri, 6 = Sat
+  const isBusinessDay = dayOfWeek >= 1 && dayOfWeek <= 5;
   const isFriday = dayOfWeek === 5;
   const isLastBizDay = isLastBusinessDayOfMonth(todayAR);
 
@@ -73,15 +74,26 @@ export async function ensureDailyRecurringTasks(todayAR: string) {
   const tasksToInsert = [];
 
   for (const rule of rules) {
+    // on_demand no es una regla periódica de calendario; actúa como contenedor de responsable por defecto
+    // para eventos operativos puntuales (ej. empaque de gift cards físicas). Se ignora explícitamente.
+    if (rule.recurrence_type === 'on_demand') {
+      continue;
+    }
+
     if (existingRuleIds.has(rule.id) || existingTitles.has(rule.title)) continue;
 
     let shouldTrigger = false;
-    if (rule.recurrence_type === 'weekly_friday' && isFriday) {
-      shouldTrigger = true;
-    } else if (rule.recurrence_type === 'monthly_last_business_day' && isLastBizDay) {
-      shouldTrigger = true;
+    if (rule.recurrence_type === 'weekly_friday') {
+      shouldTrigger = isFriday;
+    } else if (rule.recurrence_type === 'monthly_last_business_day') {
+      shouldTrigger = isLastBizDay;
     } else if (rule.recurrence_type === 'daily') {
-      shouldTrigger = true;
+      // Las tareas diarias se generan únicamente en días hábiles (lunes a viernes)
+      shouldTrigger = isBusinessDay;
+    } else {
+      console.warn(
+        `[tasks-generator] Regla "${rule.title}" (ID: ${rule.id}) tiene un recurrence_type no reconocido: "${rule.recurrence_type}". Se omite.`
+      );
     }
 
     if (shouldTrigger) {
