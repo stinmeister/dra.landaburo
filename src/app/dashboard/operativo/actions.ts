@@ -96,7 +96,6 @@ export async function updateOperationalAssignments(assignments: {
           .from('recurring_task_rules')
           .update({
             assigned_profile_id: assignments.stockAssignee,
-            updated_at: new Date().toISOString(),
           })
           .eq('id', stockRule.id);
 
@@ -119,7 +118,6 @@ export async function updateOperationalAssignments(assignments: {
           .from('recurring_task_rules')
           .update({
             assigned_profile_id: assignments.birthdayAssignee,
-            updated_at: new Date().toISOString(),
           })
           .eq('id', birthdayRule.id);
 
@@ -145,7 +143,6 @@ export async function updateOperationalAssignments(assignments: {
           .from('recurring_task_rules')
           .update({
             assigned_profile_id: assignments.giftcardAssignee,
-            updated_at: new Date().toISOString(),
           })
           .eq('id', giftcardRule.id);
 
