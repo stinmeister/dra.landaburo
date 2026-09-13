@@ -83,9 +83,14 @@ function normalizeRfmSegment(raw: unknown): { mapped: string | null; note?: stri
   };
 }
 
+function toStr(val: unknown): string {
+  if (val === null || val === undefined) return '';
+  return String(val).trim();
+}
+
 /** Normalise a DNI string: strip dots and spaces. */
-function normalizeDni(raw: string): string {
-  return raw.trim().replace(/[.\s]/g, '');
+function normalizeDni(raw: unknown): string {
+  return toStr(raw).replace(/[.\s]/g, '');
 }
 
 /**
@@ -101,9 +106,10 @@ function isHash(value: string): boolean {
  * Parse a date string in DD-MM-YYYY format.
  * Returns an ISO date string 'YYYY-MM-DD' or null on failure.
  */
-function parseDDMMYYYY(raw: string | undefined | null): string | null {
-  if (!raw?.trim()) return null;
-  const parts = raw.trim().split('-');
+function parseDDMMYYYY(raw: unknown): string | null {
+  const str = toStr(raw);
+  if (!str) return null;
+  const parts = str.split('-');
   if (parts.length !== 3) return null;
   const [dd, mm, yyyy] = parts;
   const iso = `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
@@ -115,10 +121,12 @@ function parseDDMMYYYY(raw: string | undefined | null): string | null {
 /**
  * Build the notes string from OS_Prepaga and Fuente_Datos.
  */
-function buildNotes(os: string | undefined, fuente: string | undefined): string | null {
+function buildNotes(os: unknown, fuente: unknown): string | null {
+  const osStr = toStr(os);
+  const fuenteStr = toStr(fuente);
   const parts: string[] = [];
-  if (os?.trim()) parts.push(`OS: ${os.trim()}`);
-  if (fuente?.trim()) parts.push(`Fuente: ${fuente.trim()}`);
+  if (osStr) parts.push(`OS: ${osStr}`);
+  if (fuenteStr) parts.push(`Fuente: ${fuenteStr}`);
   return parts.length > 0 ? parts.join(' | ') : null;
 }
 
@@ -186,10 +194,10 @@ export async function POST(req: NextRequest) {
   // -- Process each record ---------------------------------------------------
   for (let i = 0; i < records.length; i++) {
     const rec = records[i];
-
-    // Validate required fields
-    const apellido = rec.Apellido?.trim() ?? '';
-    const nombre = rec.Nombre?.trim() ?? '';
+    try {
+      // Validate required fields
+    const apellido = toStr(rec.Apellido);
+    const nombre = toStr(rec.Nombre);
 
     if (!apellido && !nombre) {
       rejectedDetail.push({ index: i, reason: 'Missing both Apellido and Nombre', record: rec });
@@ -198,8 +206,8 @@ export async function POST(req: NextRequest) {
 
     // Formato amigable para hablarle a la paciente: Nombre Apellido
     const fullName = [nombre, apellido].filter(Boolean).join(' ').trim();
-    const phone = rec.WhatsApp_E164?.trim() || null;
-    const email = rec.Email?.trim() || null;
+    const phone = toStr(rec.WhatsApp_E164) || null;
+    const email = toStr(rec.Email) || null;
     const osNotes = buildNotes(rec.OS_Prepaga, rec.Fuente_Datos);
 
     // -- Parse & normalize RFM segment ---------------------------------------
@@ -213,8 +221,9 @@ export async function POST(req: NextRequest) {
     // -- Parse birthdate -----------------------------------------------------
     let birthdate: string | null = null;
     let birthdateInvalid = false;
-    if (rec.Fecha_Nacimiento?.trim()) {
-      birthdate = parseDDMMYYYY(rec.Fecha_Nacimiento);
+    const rawBirthdate = toStr(rec.Fecha_Nacimiento);
+    if (rawBirthdate) {
+      birthdate = parseDDMMYYYY(rawBirthdate);
       if (birthdate === null) {
         birthdateInvalid = true;
         // Don't reject — insert with null and flag needs_review
@@ -222,7 +231,7 @@ export async function POST(req: NextRequest) {
     }
 
     // -- DNI normalisation ---------------------------------------------------
-    const rawDni = rec.DNI?.trim() ?? '';
+    const rawDni = toStr(rec.DNI);
     let normalizedDni: string | null = null;
     let lookupByPhone = false;
     let hashDni = false;
@@ -309,7 +318,7 @@ export async function POST(req: NextRequest) {
 
       const changes: Record<string, unknown> = {};
 
-      if (!dbRow.full_name?.trim() && fullName) {
+      if (!toStr(dbRow.full_name) && fullName) {
         changes['full_name'] = fullName;
       }
       if (!dbRow.phone && phone) {
@@ -416,7 +425,11 @@ export async function POST(req: NextRequest) {
         record: rec,
       });
     }
+  } catch (recErr: unknown) {
+    const errMsg = recErr instanceof Error ? recErr.message : String(recErr);
+    rejectedDetail.push({ index: i, reason: `Unhandled record error: ${errMsg}`, record: rec });
   }
+}
 
   // -- Persist review items to DB (idempotente) ------------------------------
   if (needsReviewDetail.length > 0) {
