@@ -62,13 +62,13 @@ const ESTADOS_IGNORAR = new Set([
 const MONTO_SOSPECHOSO_UMBRAL = 5000; // < 5000 ARS en servicios USD = sospechoso
 
 const SERVICIOS_USD = [
-  "botox completo",
-  "botox masetero",
+  "botox",
   "ácido hialurónico",
   "acido hialuronico",
   "sculptra",
   "elleva",
-  "sculptra bioestimulador",
+  "skinvive",
+  "sunekos",
 ];
 
 // ─── Mapa de medios de pago ───────────────────────────────────────────────────
@@ -266,13 +266,18 @@ async function getProfesionalMap(): Promise<Map<string, string>> {
     // Match exacto del nombre completo tal como aparece en la planilla
     map.set(p.full_name, p.id);
 
-    // Alias por apellido conocido (formato 'Apellido, Nombre')
-    if (nameLower.includes("landaburo")) {
+    // Alias por nombre conocido (formato 'Apellido, Nombre' o 'Nombre Apellido'):
+    if (nameLower.includes("natalia") || nameLower.includes("paula")) {
       map.set("Landaburo, Natalia", p.id);
       map.set("Landaburo, Paula", p.id);
+      map.set("Dra. Landaburo", p.id);
+      map.set("Dra Landaburo", p.id);
     }
-    if (nameLower.includes("pasquet")) {
+    if (nameLower.includes("pasquet") || nameLower.includes("mercedes")) {
       map.set("Pasquet, Mercedes", p.id);
+      map.set("Mercedes Pasquet", p.id);
+      map.set("Mechi Pasquet", p.id);
+      map.set("Pasquet Mercedes", p.id);
     }
   }
   return map;
