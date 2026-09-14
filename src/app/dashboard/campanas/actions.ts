@@ -87,7 +87,7 @@ export async function saveCampaign(formData: FormData) {
   return { success: true };
 }
 
-export async function toggleCampaignStatus(id: string, newStatus: 'activa' | 'pausada' | 'finalizada') {
+export async function toggleCampaignStatus(id: string, newStatus: 'activa' | 'planificada' | 'pausada' | 'finalizada') {
   await assertAdmin();
   if (!id) throw new Error('ID requerido');
 

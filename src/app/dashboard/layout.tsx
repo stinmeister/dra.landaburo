@@ -21,7 +21,7 @@ const STAFF_ROLES = ["admin", "medico", "operativo", "cosmetologa"];
 const SECTION_LABELS: Record<string, string> = {
   ejecutivo:    "Ejecutivo",
   operativo:    "Operativo",
-  campanas:     "Campanas",
+  campanas:     "Campañas",
   tratamientos: "Tratamientos",
   productos:    "Productos",
   usuarios:     "Usuarios",
@@ -78,7 +78,7 @@ export default async function DashboardLayout({
 
         <div className={styles.sidebarFooter}>
           <Link href="/" className={styles.sidebarHomeLink}>
-            Sitio publico
+            Sitio público
           </Link>
           <DashboardSignOut />
         </div>

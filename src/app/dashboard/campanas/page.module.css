@@ -91,6 +91,10 @@
   border-left: 4px solid #38a169;
 }
 
+.cardPlanned {
+  border-left: 4px solid #3182ce;
+}
+
 .cardPaused {
   border-left: 4px solid #dd6b20;
   opacity: 0.85;
@@ -132,6 +136,11 @@
 .badgeActive {
   background-color: #e6fffa;
   color: #234e52;
+}
+
+.badgePlanned {
+  background-color: #ebf8ff;
+  color: #2b6cb0;
 }
 
 .badgePaused {

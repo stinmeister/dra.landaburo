@@ -8,7 +8,7 @@ export interface Campaign {
   id: string;
   title: string;
   platform: string;
-  status: 'activa' | 'pausada' | 'finalizada';
+  status: 'activa' | 'planificada' | 'pausada' | 'finalizada';
   ad_copy: string | null;
   target_treatment: string | null;
   promo_details: string | null;
@@ -75,10 +75,10 @@ export default function CampanasClient({ initialCampaigns, isAdmin }: Props) {
     });
   };
 
-  // Sort: active first, then paused, then finished
+  // Sort: active first, then planned, then paused, then finished
   const sortedCampaigns = [...campaigns].sort((a, b) => {
-    const priority = { activa: 0, pausada: 1, finalizada: 2 };
-    return (priority[a.status] ?? 3) - (priority[b.status] ?? 3);
+    const priority: Record<string, number> = { activa: 0, planificada: 1, pausada: 2, finalizada: 3 };
+    return (priority[a.status] ?? 4) - (priority[b.status] ?? 4);
   });
 
   const activeCount = campaigns.filter((c) => c.status === 'activa').length;
@@ -120,6 +120,8 @@ export default function CampanasClient({ initialCampaigns, isAdmin }: Props) {
               className={`${styles.card} ${
                 c.status === 'activa'
                   ? styles.cardActive
+                  : c.status === 'planificada'
+                  ? styles.cardPlanned
                   : c.status === 'pausada'
                   ? styles.cardPaused
                   : styles.cardFinished
@@ -131,6 +133,8 @@ export default function CampanasClient({ initialCampaigns, isAdmin }: Props) {
                   className={`${styles.badge} ${
                     c.status === 'activa'
                       ? styles.badgeActive
+                      : c.status === 'planificada'
+                      ? styles.badgePlanned
                       : c.status === 'pausada'
                       ? styles.badgePaused
                       : styles.badgeFinished
@@ -271,6 +275,7 @@ export default function CampanasClient({ initialCampaigns, isAdmin }: Props) {
                     className={styles.select}
                   >
                     <option value="activa">Activa</option>
+                    <option value="planificada">Planificada</option>
                     <option value="pausada">Pausada</option>
                     <option value="finalizada">Finalizada</option>
                   </select>
@@ -317,7 +322,7 @@ export default function CampanasClient({ initialCampaigns, isAdmin }: Props) {
                     💬 Respuesta sugerida para WhatsApp / Recepción
                   </label>
                   <p style={{ margin: '0 0 0.4rem', fontSize: '0.78rem', color: '#848484' }}>
-                    Formato WhatsApp: máx. 4 líneas · máx. 2 emojis (✨ 💫 🌿) · empezar con el nombre de la paciente
+                    Formato WhatsApp: máx. 4 líneas · máx. 2 emojis (✨ 💫 🌿) · empezar con el nombre de la paciente · sin ofrecer disponibilidad inmediata (agenda con espera &gt;1 mes)
                   </p>
                   <textarea
                     name="suggested_response"

@@ -10,7 +10,7 @@ export type { Section };
 const SECTION_LABELS: Record<Section, string> = {
   ejecutivo:    "Ejecutivo",
   operativo:    "Operativo",
-  campanas:     "Campanas",
+  campanas:     "Campañas",
   tratamientos: "Tratamientos",
   productos:    "Productos",
   usuarios:     "Usuarios",

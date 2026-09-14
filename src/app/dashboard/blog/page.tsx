@@ -63,7 +63,7 @@ export default async function BlogDashPage() {
           </p>
         </div>
         <Link href="/dashboard/blog/nuevo" className={styles.newBtn}>
-          + Nuevo articulo
+          + Nuevo artículo
         </Link>
       </div>
 
@@ -71,11 +71,11 @@ export default async function BlogDashPage() {
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>Titulo</th>
-              <th>Categoria</th>
+              <th>Título</th>
+              <th>Categoría</th>
               <th>Estado</th>
               <th>Publicado</th>
-              <th>Ultima Edicion</th>
+              <th>Última Edición</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -83,7 +83,7 @@ export default async function BlogDashPage() {
             {rows.length === 0 && (
               <tr>
                 <td colSpan={6} className={styles.emptyCell}>
-                  No hay articulos aun. Crea el primero.
+                  No hay artículos aún. Creá el primero.
                 </td>
               </tr>
             )}
