@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { assertSectionAccess } from '@/lib/permissions';
 import { getPendingReviewCount } from '@/lib/ingest-review';
+import PeriodSelector from '@/components/dashboard/PeriodSelector';
+import type { PeriodOption } from '@/components/dashboard/PeriodSelector';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
@@ -61,7 +63,11 @@ function formatDate(isoString: string): string {
   }).format(new Date(isoString));
 }
 
-export default async function EjecutivoPage() {
+export default async function EjecutivoPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ period?: string }>;
+}) {
   const supabase = await createClient();
 
   const {
@@ -84,12 +90,81 @@ export default async function EjecutivoPage() {
   // Guard server-side: la matriz de permisos es la unica fuente de verdad (R6)
   await assertSectionAccess(user.id, role, 'ejecutivo');
 
-  // Date range: first and last moment of the current calendar month
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+  // 1. Total payments in entire DB to distinguish "no data imported" from "empty month"
+  const { count: totalPaymentsCount } = await supabase
+    .from('payments')
+    .select('id', { count: 'exact', head: true });
+  const totalInDb = totalPaymentsCount ?? 0;
 
-  // Fetch current-month payments with patient name for the table
+  // 2. Fetch latest payment date to default to month with data if current month has no payments
+  const { data: latestPayment } = await supabase
+    .from('payments')
+    .select('payment_date')
+    .order('payment_date', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  // 3. Find distinct months that have payments
+  const { data: dateRows } = await supabase
+    .from('payments')
+    .select('payment_date');
+  
+  const monthsWithData = new Set<string>();
+  (dateRows ?? []).forEach((r) => {
+    if (r.payment_date) {
+      monthsWithData.add(r.payment_date.slice(0, 7)); // 'YYYY-MM'
+    }
+  });
+
+  // 4. Resolve selected period
+  const { period: requestedPeriod } = await searchParams;
+  const now = new Date();
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  let selectedPeriod: string;
+  if (requestedPeriod && /^\d{4}-\d{2}$/.test(requestedPeriod)) {
+    selectedPeriod = requestedPeriod;
+  } else if (latestPayment?.payment_date) {
+    selectedPeriod = latestPayment.payment_date.slice(0, 7);
+  } else {
+    selectedPeriod = currentMonthKey;
+  }
+
+  const [sYear, sMonth] = selectedPeriod.split('-').map(Number);
+  const monthStart = new Date(Date.UTC(sYear, sMonth - 1, 1, 0, 0, 0)).toISOString();
+  const monthEnd = new Date(Date.UTC(sYear, sMonth, 0, 23, 59, 59, 999)).toISOString();
+
+  // Build available period options
+  const defaultMonths = ['2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11', '2026-12'];
+  const allPeriodKeys = Array.from(new Set([...defaultMonths, ...monthsWithData, selectedPeriod])).sort();
+  
+  const periodOptions: PeriodOption[] = allPeriodKeys.map((key) => {
+    const [y, m] = key.split('-').map(Number);
+    const d = new Date(y, m - 1, 15);
+    const rawName = new Intl.DateTimeFormat('es-AR', { month: 'long', year: 'numeric' }).format(d);
+    const label = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+    return {
+      value: key,
+      label: key === currentMonthKey ? `${label} (actual)` : label,
+      hasData: monthsWithData.has(key),
+    };
+  });
+
+  const selectedDisplayDate = new Date(sYear, sMonth - 1, 15);
+  const rawMonthLabel = new Intl.DateTimeFormat('es-AR', {
+    month: 'long',
+    year: 'numeric',
+  }).format(selectedDisplayDate);
+  const monthLabel = rawMonthLabel.charAt(0).toUpperCase() + rawMonthLabel.slice(1);
+
+  let latestMonthLabel = '';
+  if (latestPayment?.payment_date) {
+    const lDate = new Date(latestPayment.payment_date);
+    const lRaw = new Intl.DateTimeFormat('es-AR', { month: 'long', year: 'numeric' }).format(lDate);
+    latestMonthLabel = lRaw.charAt(0).toUpperCase() + lRaw.slice(1);
+  }
+
+  // Fetch payments for selected month
   const { data: paymentsRaw, error: paymentsError } = await supabase
     .from('payments')
     .select('id, amount_ars, amount_usd, currency, payment_method, commission_amount_ars, payment_date, patients(full_name)')
@@ -111,8 +186,7 @@ export default async function EjecutivoPage() {
   );
   const totalDraCommission = totalARS - totalMercedesCommission;
 
-  // Supabase/PostgREST doesn't support column-to-column comparisons natively,
-  // so we fetch all active products and filter in JS — dataset is small (<50 rows).
+  // Products with low stock
   const { data: allProductsRaw } = await supabase
     .from('products')
     .select('id, name, stock_quantity, min_stock_alert')
@@ -129,16 +203,16 @@ export default async function EjecutivoPage() {
 
   const pendingReviewCount = await getPendingReviewCount();
 
-  const monthLabel = new Intl.DateTimeFormat('es-AR', {
-    month: 'long',
-    year: 'numeric',
-  }).format(now);
-
   return (
     <div className={styles.page}>
       <div className={styles.pageHeader}>
-        <h1 className={styles.title}>Dashboard Ejecutivo</h1>
-        <span className={styles.period}>{monthLabel}</span>
+        <div>
+          <h1 className={styles.title}>Dashboard Ejecutivo</h1>
+          <span className={styles.period}>{monthLabel}</span>
+        </div>
+        <div className={styles.periodControls}>
+          <PeriodSelector currentPeriod={selectedPeriod} options={periodOptions} />
+        </div>
       </div>
 
       {paymentsError && (
@@ -181,9 +255,17 @@ export default async function EjecutivoPage() {
         </div>
       )}
 
-      {payments.length === 0 && !paymentsError && (
+      {/* Caso A: Cero cobros en toda la base de datos */}
+      {totalInDb === 0 && !paymentsError && (
         <div className={styles.infoBanner}>
           ℹ️ <strong>Información pendiente de importación:</strong> La información de cobros todavía no fue importada desde la planilla. Los indicadores financieros y comisiones se actualizarán automáticamente apenas se complete la carga de la Base Unificada.
+        </div>
+      )}
+
+      {/* Caso B: Hay cobros en la base, pero ninguno en este mes seleccionado */}
+      {totalInDb > 0 && payments.length === 0 && !paymentsError && (
+        <div className={styles.emptyPeriodBanner}>
+          ℹ️ <strong>Período sin cobros registrados:</strong> No hay cobros registrados en <strong>{monthLabel}</strong>. Hay <strong>{totalInDb}</strong> cobro(s) en otros períodos{latestMonthLabel ? ` (último registrado: ${latestMonthLabel})` : ''}. Podés seleccionar otro mes con el selector superior.
         </div>
       )}
 
@@ -192,28 +274,28 @@ export default async function EjecutivoPage() {
         <div className={styles.metricCard}>
           <p className={styles.metricLabel}>Facturación ARS</p>
           <p className={payments.length > 0 ? styles.metricValue : `${styles.metricValue} ${styles.metricEmpty}`}>
-            {payments.length > 0 ? formatARS(totalARS) : 'Sin datos registrados'}
+            {payments.length > 0 ? formatARS(totalARS) : totalInDb > 0 ? '$ 0' : 'Sin datos registrados'}
           </p>
-          <p className={styles.metricSub}>{payments.length} pagos</p>
+          <p className={styles.metricSub}>{payments.length} pagos en este período</p>
         </div>
         <div className={styles.metricCard}>
           <p className={styles.metricLabel}>Facturación USD</p>
           <p className={payments.length > 0 ? styles.metricValue : `${styles.metricValue} ${styles.metricEmpty}`}>
-            {payments.length > 0 ? formatUSD(totalUSD) : 'Sin datos registrados'}
+            {payments.length > 0 ? formatUSD(totalUSD) : totalInDb > 0 ? 'US$ 0' : 'Sin datos registrados'}
           </p>
-          <p className={styles.metricSub}>equivalente del mes</p>
+          <p className={styles.metricSub}>equivalente del período</p>
         </div>
         <div className={styles.metricCard}>
           <p className={styles.metricLabel}>Neto para el consultorio</p>
           <p className={payments.length > 0 ? `${styles.metricValue} ${styles.metricHighlight}` : `${styles.metricValue} ${styles.metricEmpty}`}>
-            {payments.length > 0 ? formatARS(totalDraCommission) : 'Sin datos registrados'}
+            {payments.length > 0 ? formatARS(totalDraCommission) : totalInDb > 0 ? '$ 0' : 'Sin datos registrados'}
           </p>
-          <p className={styles.metricSub}>neto del mes</p>
+          <p className={styles.metricSub}>neto del período</p>
         </div>
         <div className={styles.metricCard}>
           <p className={styles.metricLabel}>Comisión Mercedes (30%)</p>
           <p className={payments.length > 0 ? styles.metricValue : `${styles.metricValue} ${styles.metricEmpty}`}>
-            {payments.length > 0 ? formatARS(totalMercedesCommission) : 'Sin datos registrados'}
+            {payments.length > 0 ? formatARS(totalMercedesCommission) : totalInDb > 0 ? '$ 0' : 'Sin datos registrados'}
           </p>
           <p className={styles.metricSub}>cosmetología</p>
         </div>
@@ -260,7 +342,7 @@ export default async function EjecutivoPage() {
 
       {/* Payments table */}
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Últimos pagos del mes</h2>
+        <h2 className={styles.sectionTitle}>Pagos registrados de {monthLabel}</h2>
         {payments.length === 0 ? (
           <p className={styles.emptyState}>
             No hay pagos registrados para este período.
@@ -299,34 +381,6 @@ export default async function EjecutivoPage() {
             </table>
           </div>
         )}
-      </section>
-
-      {/* Estado de Integración Mercado Pago — Lectura de variables de entorno del servidor */}
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Estado de Mercado Pago</h2>
-        <div className={styles.mpStatusCard}>
-          <div className={styles.mpStatusRow}>
-            <span className={styles.mpStatusLabel}>Access Token (Backend Checkout):</span>
-            <span className={process.env.MP_ACCESS_TOKEN ? styles.badgeSuccess : styles.badgeWarning}>
-              {process.env.MP_ACCESS_TOKEN ? '✓ Configurado en entorno' : 'Pendiente (MP_ACCESS_TOKEN no configurado)'}
-            </span>
-          </div>
-          <div className={styles.mpStatusRow}>
-            <span className={styles.mpStatusLabel}>Webhook Secret (Firma HMAC obligatoria):</span>
-            <span className={process.env.MP_WEBHOOK_SECRET ? styles.badgeSuccess : styles.badgeWarning}>
-              {process.env.MP_WEBHOOK_SECRET ? '✓ Configurado en entorno' : 'Pendiente (MP_WEBHOOK_SECRET no configurado)'}
-            </span>
-          </div>
-          <div className={styles.mpStatusRow}>
-            <span className={styles.mpStatusLabel}>Public Key (Frontend SDK):</span>
-            <span className={process.env.NEXT_PUBLIC_MP_PUBLIC_KEY ? styles.badgeSuccess : styles.badgeWarning}>
-              {process.env.NEXT_PUBLIC_MP_PUBLIC_KEY ? '✓ Configurado en entorno' : 'Pendiente (NEXT_PUBLIC_MP_PUBLIC_KEY no configurado)'}
-            </span>
-          </div>
-          <p className={styles.mpStatusHelper}>
-            Por seguridad, las credenciales de Mercado Pago se gestionan exclusivamente mediante variables de entorno en el servidor (.env.local) y nunca se almacenan en la base de datos.
-          </p>
-        </div>
       </section>
     </div>
   );

@@ -47,6 +47,24 @@
   line-height: 1.5;
 }
 
+.emptyPeriodBanner {
+  padding: 0.85rem 1.15rem;
+  background-color: rgba(113, 128, 150, 0.08);
+  border: 1px solid rgba(113, 128, 150, 0.25);
+  border-radius: var(--radius-md);
+  color: var(--color-negro);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.periodControls {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .metricEmpty {
   font-size: var(--text-lg);
   font-weight: 500;

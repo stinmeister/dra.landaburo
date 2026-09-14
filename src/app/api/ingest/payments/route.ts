@@ -357,7 +357,37 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
-    // ── 5.2 B2 — Filtrado por estado ─────────────────────────────────────────
+    // ── 5.2 B3 — Deduplicación Nivel 1 (exacta por clave_unica / external_id) ──
+    // Short-circuit inmediato: si el cobro ya fue insertado previamente,
+    // saltear de forma inmediata sin evaluar estado, moneda, paciente ni profesional.
+    {
+      const { data: existingByExtId, error: extIdError } = await supabaseAdmin
+        .from("payments")
+        .select("id")
+        .eq("external_id", rec.clave_unica)
+        .maybeSingle();
+
+      if (extIdError) {
+        const isDdlPending =
+          extIdError.message.includes("column") ||
+          extIdError.message.includes("does not exist") ||
+          extIdError.code === "42703";
+
+        if (!isDdlPending) {
+          rejected.push({
+            index: i,
+            reason: `Error al verificar external_id: ${extIdError.message}`,
+            record: rec,
+          });
+          continue;
+        }
+      } else if (existingByExtId) {
+        duplicates_exact++;
+        continue;
+      }
+    }
+
+    // ── 5.3 B2 — Filtrado por estado ─────────────────────────────────────────
     const estadoNorm = rec.estado.trim();
 
     if (!ESTADOS_FACTURABLES.has(estadoNorm)) {
@@ -498,40 +528,6 @@ export async function POST(req: NextRequest) {
         continue;
       }
       professionalId = mapped;
-    }
-
-    // ── 5.8 B3 — Deduplicación Nivel 1 (exacta por clave_unica / external_id) ──
-    // DDL_PENDING: esta query fallará si la columna external_id no existe aún.
-    // En ese caso el error se atrapa y el registro va a rejected con DDL_PENDING.
-    {
-      const { data: existingByExtId, error: extIdError } = await supabaseAdmin
-        .from("payments")
-        .select("id")
-        .eq("external_id", rec.clave_unica)
-        .maybeSingle();
-
-      if (extIdError) {
-        // Si el error es por columna inexistente → DDL_PENDING, seguir con nivel 2
-        const isDdlPending =
-          extIdError.message.includes("column") ||
-          extIdError.message.includes("does not exist") ||
-          extIdError.code === "42703";
-
-        if (!isDdlPending) {
-          // Error inesperado de DB → rejected
-          rejected.push({
-            index: i,
-            reason: `Error al verificar external_id: ${extIdError.message}`,
-            record: rec,
-          });
-          continue;
-        }
-        // DDL_PENDING detectado → continuar al nivel 2
-      } else if (existingByExtId) {
-        // Duplicado exacto encontrado → ignorar silenciosamente
-        duplicates_exact++;
-        continue;
-      }
     }
 
     // ── 5.9 B3 — Deduplicación Nivel 2 (aproximada: patient_id + hora/fecha + monto) ─
