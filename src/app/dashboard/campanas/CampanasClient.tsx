@@ -322,7 +322,7 @@ export default function CampanasClient({ initialCampaigns, isAdmin }: Props) {
                     💬 Respuesta sugerida para WhatsApp / Recepción
                   </label>
                   <p style={{ margin: '0 0 0.4rem', fontSize: '0.78rem', color: '#848484' }}>
-                    Formato WhatsApp: máx. 4 líneas · máx. 2 emojis (✨ 💫 🌿) · empezar con el nombre de la paciente · sin ofrecer disponibilidad inmediata (agenda con espera &gt;1 mes)
+                    Formato WhatsApp: máx. 4 líneas · máx. 2 emojis (✨ 💫 🌿) · empezar con el nombre de la paciente · ⛔ NO ofrecer turnos inmediatos ni disponibilidad a corto plazo (agenda con espera &gt;1 mes; informar lista de espera o evaluación previa)
                   </p>
                   <textarea
                     name="suggested_response"
