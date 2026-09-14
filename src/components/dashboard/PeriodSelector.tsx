@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import styles from './PeriodSelector.module.css';
 
@@ -23,33 +24,33 @@ export default function PeriodSelector({ currentPeriod, options }: Props) {
   };
 
   const currentIndex = options.findIndex((o) => o.value === currentPeriod);
-
-  const handlePrev = () => {
-    // options are usually ordered latest to earliest or earliest to latest
-    // Let's assume options are ordered chronologically (earlier -> later)
-    if (currentIndex > 0) {
-      handlePeriodChange(options[currentIndex - 1].value);
-    }
-  };
-
-  const handleNext = () => {
-    if (currentIndex < options.length - 1 && currentIndex !== -1) {
-      handlePeriodChange(options[currentIndex + 1].value);
-    }
-  };
+  const prevPeriod = currentIndex > 0 ? options[currentIndex - 1].value : null;
+  const nextPeriod =
+    currentIndex < options.length - 1 && currentIndex !== -1
+      ? options[currentIndex + 1].value
+      : null;
 
   return (
     <div className={styles.container}>
-      <button
-        type="button"
-        className={styles.navBtn}
-        onClick={handlePrev}
-        disabled={currentIndex <= 0}
-        title="Mes anterior"
-        aria-label="Mes anterior"
-      >
-        ‹
-      </button>
+      {prevPeriod ? (
+        <Link
+          href={`/dashboard/ejecutivo?period=${encodeURIComponent(prevPeriod)}`}
+          className={styles.navBtn}
+          title="Mes anterior"
+          aria-label="Mes anterior"
+        >
+          ‹
+        </Link>
+      ) : (
+        <span
+          className={`${styles.navBtn} ${styles.navBtnDisabled}`}
+          title="Mes anterior"
+          aria-label="Mes anterior"
+          aria-disabled="true"
+        >
+          ‹
+        </span>
+      )}
 
       <span className={styles.label}>Período:</span>
 
@@ -66,16 +67,25 @@ export default function PeriodSelector({ currentPeriod, options }: Props) {
         ))}
       </select>
 
-      <button
-        type="button"
-        className={styles.navBtn}
-        onClick={handleNext}
-        disabled={currentIndex >= options.length - 1 || currentIndex === -1}
-        title="Mes siguiente"
-        aria-label="Mes siguiente"
-      >
-        ›
-      </button>
+      {nextPeriod ? (
+        <Link
+          href={`/dashboard/ejecutivo?period=${encodeURIComponent(nextPeriod)}`}
+          className={styles.navBtn}
+          title="Mes siguiente"
+          aria-label="Mes siguiente"
+        >
+          ›
+        </Link>
+      ) : (
+        <span
+          className={`${styles.navBtn} ${styles.navBtnDisabled}`}
+          title="Mes siguiente"
+          aria-label="Mes siguiente"
+          aria-disabled="true"
+        >
+          ›
+        </span>
+      )}
     </div>
   );
 }

@@ -50,15 +50,18 @@
   justify-content: center;
   cursor: pointer;
   transition: all 0.15s ease;
+  text-decoration: none;
 }
 
-.navBtn:hover:not(:disabled) {
+.navBtn:hover:not(:disabled):not(.navBtnDisabled) {
   background-color: rgba(197, 164, 126, 0.15);
   border-color: var(--color-champagne);
   color: var(--color-champagne-dark);
 }
 
-.navBtn:disabled {
+.navBtn:disabled,
+.navBtnDisabled {
   opacity: 0.3;
   cursor: not-allowed;
+  pointer-events: none;
 }
