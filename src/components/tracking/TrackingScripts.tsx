@@ -16,9 +16,15 @@ export default function TrackingScripts() {
   const pixelInitializedRef = useRef(false);
   const initialPageViewTrackedRef = useRef(false);
 
+  // Rutas internas donde NO debe haber ningún tipo de tracking analítico ni publicitario
+  const isInternalRoute =
+    pathname?.startsWith('/dashboard') ||
+    pathname?.startsWith('/portal') ||
+    pathname?.startsWith('/kiosco');
+
   // 1. Inicialización condicional de GA4
   useEffect(() => {
-    if (!isLoaded || !consent?.analytics || !GA_ID) return;
+    if (isInternalRoute || !isLoaded || !consent?.analytics || !GA_ID) return;
     if (gaInitializedRef.current) return;
 
     // Verificar si ya existe el script en el DOM
@@ -41,11 +47,11 @@ export default function TrackingScripts() {
 
       gaInitializedRef.current = true;
     }
-  }, [consent?.analytics, isLoaded]);
+  }, [consent?.analytics, isLoaded, isInternalRoute]);
 
   // 2. Inicialización condicional de Meta Pixel
   useEffect(() => {
-    if (!isLoaded || !consent?.marketing || !PIXEL_ID) return;
+    if (isInternalRoute || !isLoaded || !consent?.marketing || !PIXEL_ID) return;
     if (pixelInitializedRef.current) return;
 
     if (!document.getElementById('meta-pixel-script')) {
@@ -76,11 +82,11 @@ export default function TrackingScripts() {
 
       pixelInitializedRef.current = true;
     }
-  }, [consent?.marketing, isLoaded]);
+  }, [consent?.marketing, isLoaded, isInternalRoute]);
 
   // 3. Tracking de cambios de ruta en SPA (Next.js Navigation)
   useEffect(() => {
-    if (!isLoaded) return;
+    if (isInternalRoute || !isLoaded) return;
     const url = pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : '');
 
     // Evitar duplicar el pageview inicial si los scripts ya lo hicieron en init
@@ -90,7 +96,7 @@ export default function TrackingScripts() {
     }
 
     trackPageView(url);
-  }, [pathname, searchParams, isLoaded, consent]);
+  }, [pathname, searchParams, isLoaded, consent, isInternalRoute]);
 
   return null;
 }

@@ -1,13 +1,20 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { useConsent } from '@/contexts/ConsentContext';
 import styles from './CookieBanner.module.css';
 
 export default function CookieBanner() {
   const { consent, isLoaded, setConsent } = useConsent();
+  const pathname = usePathname();
 
-  // No mostrar mientras carga el estado local o si el paciente ya tomó una decisión
-  if (!isLoaded || consent !== null) {
+  const isInternalRoute =
+    pathname?.startsWith('/dashboard') ||
+    pathname?.startsWith('/portal') ||
+    pathname?.startsWith('/kiosco');
+
+  // No mostrar en rutas internas ni mientras carga el estado local o si el paciente ya tomó una decisión
+  if (isInternalRoute || !isLoaded || consent !== null) {
     return null;
   }
 

@@ -1,6 +1,7 @@
 // Dashboard Ejecutivo — acceso exclusivo rol `admin`.
 // Server Component: queries run at request time, no client-side loading states.
 // Shows monthly financials (ARS/USD + commissions), low-stock alerts, and MP config.
+import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import Link from 'next/link';
@@ -184,7 +185,10 @@ export default async function EjecutivoPage({
     : [];
 
   // Aggregate metrics
-  const totalARS = payments.reduce((sum, p) => sum + Number(p.amount_ars), 0);
+  const paidPayments = payments.filter((p) => Number(p.amount_ars) > 0);
+  const zeroPayments = payments.filter((p) => Number(p.amount_ars) === 0);
+
+  const totalARS = paidPayments.reduce((sum, p) => sum + Number(p.amount_ars), 0);
   const totalUSD = payments.reduce((sum, p) => sum + Number(p.amount_usd ?? 0), 0);
   const totalMercedesCommission = payments.reduce(
     (sum, p) => sum + Number(p.commission_amount_ars),
@@ -217,7 +221,9 @@ export default async function EjecutivoPage({
           <span className={styles.period}>{monthLabel}</span>
         </div>
         <div className={styles.periodControls}>
-          <PeriodSelector currentPeriod={selectedPeriod} options={periodOptions} />
+          <Suspense fallback={<div className={styles.periodControls} />}>
+            <PeriodSelector currentPeriod={selectedPeriod} options={periodOptions} />
+          </Suspense>
         </div>
       </div>
 
@@ -279,10 +285,17 @@ export default async function EjecutivoPage({
       <section className={styles.metricsGrid}>
         <div className={styles.metricCard}>
           <p className={styles.metricLabel}>Facturación ARS</p>
-          <p className={payments.length > 0 ? styles.metricValue : `${styles.metricValue} ${styles.metricEmpty}`}>
-            {payments.length > 0 ? formatARS(totalARS) : totalInDb > 0 ? '$ 0' : 'Sin datos registrados'}
+          <p className={paidPayments.length > 0 ? styles.metricValue : `${styles.metricValue} ${styles.metricEmpty}`}>
+            {paidPayments.length > 0 ? formatARS(totalARS) : totalInDb > 0 ? '$ 0' : 'Sin datos registrados'}
           </p>
-          <p className={styles.metricSub}>{payments.length} pagos en este período</p>
+          <p className={styles.metricSub}>
+            {paidPayments.length} {paidPayments.length === 1 ? 'pago' : 'pagos'} en este período
+            {zeroPayments.length > 0 && (
+              <span style={{ display: 'block', marginTop: '0.2rem', fontSize: '0.78rem', color: 'var(--color-gris)' }}>
+                ({zeroPayments.length} {zeroPayments.length === 1 ? 'atención' : 'atenciones'} sin cobro registrado)
+              </span>
+            )}
+          </p>
         </div>
         <div className={styles.metricCard}>
           <p className={styles.metricLabel}>Facturación USD</p>
@@ -367,22 +380,43 @@ export default async function EjecutivoPage({
                 </tr>
               </thead>
               <tbody>
-                {payments.map((payment) => (
-                  <tr key={payment.id} className={styles.tr}>
-                    <td className={styles.td}>{formatDate(payment.payment_date)}</td>
-                    <td className={styles.td}>
-                      {payment.patients?.full_name ?? '—'}
-                    </td>
-                    <td className={styles.td}>{payment.payment_method}</td>
-                    <td className={styles.td}>{payment.currency}</td>
-                    <td className={`${styles.td} ${styles.tdRight}`}>
-                      {formatARS(Number(payment.amount_ars))}
-                    </td>
-                    <td className={`${styles.td} ${styles.tdRight}`}>
-                      {formatARS(Number(payment.commission_amount_ars))}
-                    </td>
-                  </tr>
-                ))}
+                {payments.map((payment) => {
+                  const isZero = Number(payment.amount_ars) === 0;
+                  return (
+                    <tr key={payment.id} className={styles.tr}>
+                      <td className={styles.td}>{formatDate(payment.payment_date)}</td>
+                      <td className={styles.td}>
+                        {payment.patients?.full_name ?? '—'}
+                      </td>
+                      <td className={styles.td}>{payment.payment_method}</td>
+                      <td className={styles.td}>{payment.currency}</td>
+                      <td className={`${styles.td} ${styles.tdRight}`}>
+                        {formatARS(Number(payment.amount_ars))}
+                        {isZero && (
+                          <span
+                            style={{
+                              display: 'inline-block',
+                              marginLeft: '0.5rem',
+                              fontSize: '0.72rem',
+                              padding: '0.12rem 0.4rem',
+                              borderRadius: '4px',
+                              backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                              color: 'var(--color-gris)',
+                              border: '1px solid var(--color-gris-claro)',
+                              fontWeight: 500,
+                              verticalAlign: 'middle',
+                            }}
+                          >
+                            Sin cobro
+                          </span>
+                        )}
+                      </td>
+                      <td className={`${styles.td} ${styles.tdRight}`}>
+                        {formatARS(Number(payment.commission_amount_ars))}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

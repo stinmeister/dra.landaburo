@@ -277,11 +277,6 @@ const STATIC_PROFESSIONAL_MAP: Record<string, string> = {
 async function getProfesionalMap(): Promise<Map<string, string>> {
   const map = new Map<string, string>();
 
-  // Pre-poblar con el mapa estático de respaldo
-  for (const [k, v] of Object.entries(STATIC_PROFESSIONAL_MAP)) {
-    map.set(k, v);
-  }
-
   try {
     const { data: profiles, error } = await supabaseAdmin
       .from("profiles")
@@ -289,11 +284,16 @@ async function getProfesionalMap(): Promise<Map<string, string>> {
       .in("role", ["admin", "medico", "cosmetologa"]);
 
     if (error) {
-      console.warn("[ingest_payments] Error al leer profiles de DB:", error.message);
+      console.warn("[ingest_payments] ADVERTENCIA: Error al leer profiles de DB:", error.message, "— Se recurrirá a STATIC_PROFESSIONAL_MAP.");
       return map;
     }
 
-    for (const p of profiles ?? []) {
+    if (!profiles || profiles.length === 0) {
+      console.warn("[ingest_payments] ADVERTENCIA: La consulta a profiles no devolvió filas. Se recurrirá a STATIC_PROFESSIONAL_MAP.");
+      return map;
+    }
+
+    for (const p of profiles) {
       if (!p.full_name || !p.id) continue;
       const nameLower = p.full_name.toLowerCase();
 
@@ -324,7 +324,7 @@ async function getProfesionalMap(): Promise<Map<string, string>> {
       }
     }
   } catch (err) {
-    console.warn("[ingest_payments] Error de red al consultar profiles:", err);
+    console.warn("[ingest_payments] ADVERTENCIA: Excepción al consultar profiles:", err, "— Se recurrirá a STATIC_PROFESSIONAL_MAP.");
   }
 
   return map;
@@ -566,10 +566,14 @@ export async function POST(req: NextRequest) {
     if (!professionalId) {
       const rawProf = (rec.profesional ?? "").trim();
       const normProf = rawProf.toLowerCase();
-      const mapped =
+      let mapped =
         profesionalMap.get(rawProf) ||
-        profesionalMap.get(normProf) ||
-        STATIC_PROFESSIONAL_MAP[normProf];
+        profesionalMap.get(normProf);
+
+      if (!mapped && STATIC_PROFESSIONAL_MAP[normProf]) {
+        console.warn(`[ingest_payments] Respaldo estático utilizado para "${rec.profesional}" (no resuelto desde la tabla profiles).`);
+        mapped = STATIC_PROFESSIONAL_MAP[normProf];
+      }
 
       if (!mapped) {
         needs_review_uninserted++;

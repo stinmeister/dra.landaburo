@@ -19,10 +19,19 @@ declare global {
 const STORAGE_KEY = 'cookie_consent_v1';
 
 /**
+ * Detecta rutas internas que no deben registrar analítica ni balizas publicitarias.
+ */
+function isInternalPath(): boolean {
+  if (typeof window === 'undefined') return false;
+  const p = window.location.pathname;
+  return p.startsWith('/dashboard') || p.startsWith('/portal') || p.startsWith('/kiosco');
+}
+
+/**
  * Verifica si el usuario otorgó consentimiento para analítica (GA4)
  */
 export function hasAnalyticsConsent(): boolean {
-  if (typeof window === 'undefined') return false;
+  if (typeof window === 'undefined' || isInternalPath()) return false;
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return false;
@@ -37,7 +46,7 @@ export function hasAnalyticsConsent(): boolean {
  * Verifica si el usuario otorgó consentimiento para marketing (Meta Pixel)
  */
 export function hasMarketingConsent(): boolean {
-  if (typeof window === 'undefined') return false;
+  if (typeof window === 'undefined' || isInternalPath()) return false;
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return false;

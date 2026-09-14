@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import styles from './PeriodSelector.module.css';
 
 export interface PeriodOption {
@@ -17,12 +17,9 @@ interface Props {
 
 export default function PeriodSelector({ currentPeriod, options }: Props) {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const handlePeriodChange = (newPeriod: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('period', newPeriod);
-    router.push(`/dashboard/ejecutivo?${params.toString()}`);
+    router.push(`/dashboard/ejecutivo?period=${encodeURIComponent(newPeriod)}`);
   };
 
   const currentIndex = options.findIndex((o) => o.value === currentPeriod);
