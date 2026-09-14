@@ -247,39 +247,86 @@ async function resolvePatientByDni(
   return data[0];
 }
 
+// ─── Mapa estático de respaldo de profesionales conocidos ─────────────────────
+// Blindaje contra caídas de conexión o latencia en el select de profiles.
+const STATIC_PROFESSIONAL_MAP: Record<string, string> = {
+  // Dra. Paula Natalia Landaburo
+  "landaburo, natalia": "ed7a0c98-3333-4f08-8c44-09b8587652bd",
+  "landaburo, paula": "ed7a0c98-3333-4f08-8c44-09b8587652bd",
+  "paula natalia landaburo": "ed7a0c98-3333-4f08-8c44-09b8587652bd",
+  "paula landaburo": "ed7a0c98-3333-4f08-8c44-09b8587652bd",
+  "natalia landaburo": "ed7a0c98-3333-4f08-8c44-09b8587652bd",
+  "dra. landaburo": "ed7a0c98-3333-4f08-8c44-09b8587652bd",
+  "dra landaburo": "ed7a0c98-3333-4f08-8c44-09b8587652bd",
+  "dra paula landaburo": "ed7a0c98-3333-4f08-8c44-09b8587652bd",
+  "dra. paula landaburo": "ed7a0c98-3333-4f08-8c44-09b8587652bd",
+
+  // Mercedes Pasquet (Cosmetología)
+  "pasquet, mercedes": "11123745-1a5a-428c-9bed-29de4355d59c",
+  "mercedes pasquet": "11123745-1a5a-428c-9bed-29de4355d59c",
+  "mechi pasquet": "11123745-1a5a-428c-9bed-29de4355d59c",
+  "pasquet mercedes": "11123745-1a5a-428c-9bed-29de4355d59c",
+  "pasquet": "11123745-1a5a-428c-9bed-29de4355d59c",
+};
+
 /**
  * Lee los perfiles de profesionales desde la DB y construye un mapa
  * 'nombre en planilla' → uuid.
  * Se llama UNA SOLA VEZ por request para evitar N queries.
  */
 async function getProfesionalMap(): Promise<Map<string, string>> {
-  const { data: profiles } = await supabaseAdmin
-    .from("profiles")
-    .select("id, full_name, role")
-    .in("role", ["admin", "medico", "cosmetologa"]);
-
   const map = new Map<string, string>();
-  for (const p of profiles ?? []) {
-    if (!p.full_name || !p.id) continue;
-    const nameLower = p.full_name.toLowerCase();
 
-    // Match exacto del nombre completo tal como aparece en la planilla
-    map.set(p.full_name, p.id);
-
-    // Alias por nombre conocido (formato 'Apellido, Nombre' o 'Nombre Apellido'):
-    if (nameLower.includes("natalia") || nameLower.includes("paula")) {
-      map.set("Landaburo, Natalia", p.id);
-      map.set("Landaburo, Paula", p.id);
-      map.set("Dra. Landaburo", p.id);
-      map.set("Dra Landaburo", p.id);
-    }
-    if (nameLower.includes("pasquet") || nameLower.includes("mercedes")) {
-      map.set("Pasquet, Mercedes", p.id);
-      map.set("Mercedes Pasquet", p.id);
-      map.set("Mechi Pasquet", p.id);
-      map.set("Pasquet Mercedes", p.id);
-    }
+  // Pre-poblar con el mapa estático de respaldo
+  for (const [k, v] of Object.entries(STATIC_PROFESSIONAL_MAP)) {
+    map.set(k, v);
   }
+
+  try {
+    const { data: profiles, error } = await supabaseAdmin
+      .from("profiles")
+      .select("id, full_name, role")
+      .in("role", ["admin", "medico", "cosmetologa"]);
+
+    if (error) {
+      console.warn("[ingest_payments] Error al leer profiles de DB:", error.message);
+      return map;
+    }
+
+    for (const p of profiles ?? []) {
+      if (!p.full_name || !p.id) continue;
+      const nameLower = p.full_name.toLowerCase();
+
+      // Match exacto y lowercase
+      map.set(p.full_name, p.id);
+      map.set(nameLower, p.id);
+
+      // Alias por nombre conocido (formato 'Apellido, Nombre' o 'Nombre Apellido'):
+      if (nameLower.includes("natalia") || nameLower.includes("paula")) {
+        map.set("Landaburo, Natalia", p.id);
+        map.set("landaburo, natalia", p.id);
+        map.set("Landaburo, Paula", p.id);
+        map.set("landaburo, paula", p.id);
+        map.set("Dra. Landaburo", p.id);
+        map.set("dra. landaburo", p.id);
+        map.set("Dra Landaburo", p.id);
+        map.set("dra landaburo", p.id);
+      }
+      if (nameLower.includes("pasquet") || nameLower.includes("mercedes")) {
+        map.set("Pasquet, Mercedes", p.id);
+        map.set("pasquet, mercedes", p.id);
+        map.set("Mercedes Pasquet", p.id);
+        map.set("mercedes pasquet", p.id);
+        map.set("Mechi Pasquet", p.id);
+        map.set("mechi pasquet", p.id);
+        map.set("Pasquet Mercedes", p.id);
+        map.set("pasquet mercedes", p.id);
+      }
+    }
+  } catch (err) {
+    console.warn("[ingest_payments] Error de red al consultar profiles:", err);
+  }
+
   return map;
 }
 
@@ -517,7 +564,13 @@ export async function POST(req: NextRequest) {
     let professionalId: string | undefined = rec.professional_profile_id;
 
     if (!professionalId) {
-      const mapped = profesionalMap.get(rec.profesional?.trim() ?? "");
+      const rawProf = (rec.profesional ?? "").trim();
+      const normProf = rawProf.toLowerCase();
+      const mapped =
+        profesionalMap.get(rawProf) ||
+        profesionalMap.get(normProf) ||
+        STATIC_PROFESSIONAL_MAP[normProf];
+
       if (!mapped) {
         needs_review_uninserted++;
         needs_review.push({

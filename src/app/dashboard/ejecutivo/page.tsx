@@ -131,8 +131,14 @@ export default async function EjecutivoPage({
   }
 
   const [sYear, sMonth] = selectedPeriod.split('-').map(Number);
-  const monthStart = new Date(Date.UTC(sYear, sMonth - 1, 1, 0, 0, 0)).toISOString();
-  const monthEnd = new Date(Date.UTC(sYear, sMonth, 0, 23, 59, 59, 999)).toISOString();
+  const sMonthPad = String(sMonth).padStart(2, '0');
+  const lastDay = new Date(sYear, sMonth, 0).getDate();
+  const lastDayPad = String(lastDay).padStart(2, '0');
+
+  // Rango mensual exacto en huso horario argentino (-03:00) para evitar que cobros
+  // a fin de mes (ej: 31/07 a las 21:00) se desplacen al mes siguiente en UTC
+  const monthStart = `${sYear}-${sMonthPad}-01T00:00:00-03:00`;
+  const monthEnd = `${sYear}-${sMonthPad}-${lastDayPad}T23:59:59.999-03:00`;
 
   // Build available period options
   const defaultMonths = ['2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11', '2026-12'];
