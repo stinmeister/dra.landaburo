@@ -122,3 +122,59 @@ export async function setUserSectionOverride(
   revalidatePath("/dashboard/usuarios");
   revalidatePath("/dashboard");
 }
+
+// ── Gestión y Blanqueo de Contraseñas por Admin ───────────────────────────
+export async function adminResetUserPassword(
+  userId: string,
+  newPassword: string
+): Promise<{ success: boolean; error?: string }> {
+  await assertAdmin();
+
+  if (!userId || !newPassword || newPassword.trim().length < 8) {
+    return { success: false, error: 'La contraseña debe tener al menos 8 caracteres.' };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.updateUserById(userId, {
+    password: newPassword.trim(),
+  });
+
+  if (error) {
+    return { success: false, error: `Error al actualizar contraseña: ${error.message}` };
+  }
+
+  revalidatePath('/dashboard/usuarios');
+  return { success: true };
+}
+
+export async function adminGenerateRecoveryLink(
+  email: string
+): Promise<{ success: boolean; recoveryLink?: string; error?: string }> {
+  await assertAdmin();
+
+  if (!email) {
+    return { success: false, error: 'Email no válido.' };
+  }
+
+  const admin = createAdminClient();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://dralandaburo.com';
+  const redirectTo = `${siteUrl}/auth/callback?next=/actualizar-contrasena`;
+
+  const { data, error } = await admin.auth.admin.generateLink({
+    type: 'recovery',
+    email: email.trim(),
+    options: {
+      redirectTo,
+    },
+  });
+
+  if (error) {
+    return { success: false, error: `Error al generar enlace: ${error.message}` };
+  }
+
+  return {
+    success: true,
+    recoveryLink: data?.properties?.action_link,
+  };
+}
+

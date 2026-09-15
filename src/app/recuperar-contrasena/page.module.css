@@ -1,0 +1,45 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-negro);
+  padding: var(--space-lg);
+}
+
+.card {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.logo {
+  font-family: var(--font-serif);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  color: var(--color-blanco);
+  text-decoration: none;
+  letter-spacing: var(--tracking-tight);
+  transition: color var(--transition-fast);
+}
+
+.logo:hover {
+  color: var(--color-champagne);
+}
+
+.subtitle {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-gris);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+}

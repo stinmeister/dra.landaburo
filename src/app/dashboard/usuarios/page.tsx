@@ -9,6 +9,7 @@ import { assertSectionAccess, ALL_SECTIONS, type Section } from "@/lib/permissio
 import { changeUserRole, createStaffUser } from "./actions";
 import PermissionsMatrix from "./PermissionsMatrix";
 import type { UserPermRow } from "./PermissionsMatrix";
+import UserActionsDropdown from "@/components/dashboard/UserActionsDropdown";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = { title: "Usuarios | Panel Dra. Landaburo" };
@@ -128,12 +129,13 @@ export default async function UsuariosPage() {
               <th>Rol</th>
               <th>Registrado</th>
               <th>Cambiar rol</th>
+              <th>Contraseña</th>
             </tr>
           </thead>
           <tbody>
             {users.length === 0 && (
               <tr>
-                <td colSpan={5} className={styles.emptyCell}>No hay usuarios aun.</td>
+                <td colSpan={6} className={styles.emptyCell}>No hay usuarios aun.</td>
               </tr>
             )}
             {users.map((u) => (
@@ -164,6 +166,13 @@ export default async function UsuariosPage() {
                       <button type="submit" className={styles.saveBtn}>Guardar</button>
                     </div>
                   </form>
+                </td>
+                <td>
+                  <UserActionsDropdown
+                    userId={u.id}
+                    userName={u.full_name || ""}
+                    userEmail={u.email}
+                  />
                 </td>
               </tr>
             ))}

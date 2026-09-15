@@ -118,6 +118,12 @@ export default function LoginForm() {
         />
       </div>
 
+      <div className={styles.forgotRow}>
+        <Link href="/recuperar-contrasena" className={styles.forgotLink}>
+          ¿Olvidaste tu contraseña?
+        </Link>
+      </div>
+
       <button
         type="submit"
         className={styles.submitBtn}
