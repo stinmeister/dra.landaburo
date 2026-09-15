@@ -7,6 +7,7 @@ import TratamientosTable from './TratamientosTable';
 import { createTreatment } from './actions';
 import styles from './page.module.css';
 
+export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Tratamientos | Panel Dra. Landaburo' };
 
 const CATEGORIES = [
@@ -37,7 +38,7 @@ export default async function TratamientosDashboardPage() {
   const admin = createAdminClient();
   const { data: treatments } = await admin
     .from('treatments')
-    .select('id, slug, title, category, price_ars, duration_minutes, description, professional_role, is_active')
+    .select('id, slug, title, category, price_ars, price_usd, duration_minutes, description, professional_role, is_active')
     .order('category', { ascending: true })
     .order('title', { ascending: true });
 
@@ -89,9 +90,20 @@ export default async function TratamientosDashboardPage() {
                 type="number"
                 min="0"
                 step="0.01"
-                required
                 className={styles.input}
                 placeholder="65000"
+              />
+            </div>
+
+            <div className={styles.field}>
+              <label className={styles.label}>Precio USD (opcional)</label>
+              <input
+                name="price_usd"
+                type="number"
+                min="0"
+                step="1"
+                className={styles.input}
+                placeholder="320"
               />
             </div>
 

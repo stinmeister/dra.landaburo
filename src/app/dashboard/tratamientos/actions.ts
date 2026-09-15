@@ -33,12 +33,15 @@ export async function createTreatment(formData: FormData) {
 
   const title             = (formData.get('title') as string)?.trim();
   const category          = (formData.get('category') as string)?.trim();
-  const price_ars         = parseFloat(formData.get('price_ars') as string);
+  const rawArs            = (formData.get('price_ars') as string)?.trim();
+  const rawUsd            = (formData.get('price_usd') as string)?.trim();
+  const price_ars         = rawArs && !isNaN(parseFloat(rawArs)) ? parseFloat(rawArs) : null;
+  const price_usd         = rawUsd && !isNaN(parseFloat(rawUsd)) ? parseFloat(rawUsd) : null;
   const duration_minutes  = parseInt(formData.get('duration_minutes') as string, 10) || 45;
   const description       = (formData.get('description') as string)?.trim() ?? '';
   const professional_role = (formData.get('professional_role') as string)?.trim() || 'medico';
 
-  if (!title || !category || isNaN(price_ars)) return;
+  if (!title || !category) return;
 
   const slug = slugify(title);
   const admin = createAdminClient();
@@ -48,6 +51,7 @@ export async function createTreatment(formData: FormData) {
     slug,
     category,
     price_ars,
+    price_usd,
     duration_minutes,
     description,
     professional_role,
@@ -65,18 +69,22 @@ export async function updateTreatment(formData: FormData) {
   const id                = (formData.get('id') as string)?.trim();
   const title             = (formData.get('title') as string)?.trim();
   const category          = (formData.get('category') as string)?.trim();
-  const price_ars         = parseFloat(formData.get('price_ars') as string);
+  const rawArs            = (formData.get('price_ars') as string)?.trim();
+  const rawUsd            = (formData.get('price_usd') as string)?.trim();
+  const price_ars         = rawArs && !isNaN(parseFloat(rawArs)) ? parseFloat(rawArs) : null;
+  const price_usd         = rawUsd && !isNaN(parseFloat(rawUsd)) ? parseFloat(rawUsd) : null;
   const duration_minutes  = parseInt(formData.get('duration_minutes') as string, 10) || 45;
   const description       = (formData.get('description') as string)?.trim() ?? '';
   const professional_role = (formData.get('professional_role') as string)?.trim() || 'medico';
 
-  if (!id || !title || !category || isNaN(price_ars)) return;
+  if (!id || !title || !category) return;
 
   const admin = createAdminClient();
   await admin.from('treatments').update({
     title,
     category,
     price_ars,
+    price_usd,
     duration_minutes,
     description,
     professional_role,

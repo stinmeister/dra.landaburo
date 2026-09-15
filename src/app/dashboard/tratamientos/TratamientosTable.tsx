@@ -10,7 +10,8 @@ interface Treatment {
   slug: string;
   title: string;
   category: string;
-  price_ars: number;
+  price_ars: number | null;
+  price_usd?: number | null;
   duration_minutes: number;
   description: string | null;
   professional_role: string | null;
@@ -64,7 +65,7 @@ export default function TratamientosTable({ treatments, categories }: Props) {
               <th>Familia / Categoría</th>
               <th>Profesional</th>
               <th>Duración</th>
-              <th>Precio ARS</th>
+              <th>Precio</th>
               <th>Estado</th>
               <th>Acciones</th>
             </tr>
@@ -93,7 +94,18 @@ export default function TratamientosTable({ treatments, categories }: Props) {
                 </td>
                 <td className={styles.durationCell}>{t.duration_minutes || 45} min</td>
                 <td className={styles.priceCell}>
-                  ${Number(t.price_ars).toLocaleString('es-AR', { minimumFractionDigits: 0 })}
+                  {t.price_ars && t.price_usd ? (
+                    <div>
+                      <span>${Number(t.price_ars).toLocaleString('es-AR', { minimumFractionDigits: 0 })}</span>
+                      <span style={{ fontSize: '0.78rem', color: '#047857', display: 'block', fontWeight: 600 }}>USD {t.price_usd}</span>
+                    </div>
+                  ) : t.price_usd ? (
+                    <span style={{ color: '#047857', fontWeight: 600 }}>USD {t.price_usd}</span>
+                  ) : t.price_ars ? (
+                    `$${Number(t.price_ars).toLocaleString('es-AR', { minimumFractionDigits: 0 })}`
+                  ) : (
+                    <span style={{ color: '#9ca3af' }}>A consultar</span>
+                  )}
                 </td>
                 <td>
                   <form action={toggleTreatment}>
@@ -178,9 +190,22 @@ export default function TratamientosTable({ treatments, categories }: Props) {
                     type="number"
                     min="0"
                     step="0.01"
-                    required
-                    defaultValue={editingTreatment.price_ars}
+                    defaultValue={editingTreatment.price_ars ?? ''}
                     className={styles.input}
+                    placeholder="Ej. 95000"
+                  />
+                </div>
+
+                <div className={styles.field}>
+                  <label className={styles.label}>Precio USD (opcional)</label>
+                  <input
+                    name="price_usd"
+                    type="number"
+                    min="0"
+                    step="1"
+                    defaultValue={editingTreatment.price_usd ?? ''}
+                    className={styles.input}
+                    placeholder="Ej. 320"
                   />
                 </div>
 
