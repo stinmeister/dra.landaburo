@@ -21,7 +21,8 @@ const CATEGORIES = [
   'Protección solar',
   'Sérum',
   'Contorno de ojos',
-  'Tratamiento específico',
+  'Acné',
+  'Rosácea',
   'Post-tratamiento',
 ] as const;
 

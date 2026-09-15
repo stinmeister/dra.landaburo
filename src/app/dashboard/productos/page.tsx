@@ -9,11 +9,18 @@ import ProductTable from './ProductTable';
 import { createProduct } from './actions';
 import styles from './page.module.css';
 
+export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Productos | Panel Dra. Landaburo' };
 
 const CATEGORIES = [
-  'Limpieza', 'Hidratación', 'Protección solar',
-  'Sérum', 'Contorno de ojos', 'Tratamiento específico', 'Post-tratamiento',
+  'Limpieza',
+  'Hidratación',
+  'Protección solar',
+  'Sérum',
+  'Contorno de ojos',
+  'Acné',
+  'Rosácea',
+  'Post-tratamiento',
 ];
 
 export default async function ProductosPage() {
@@ -69,7 +76,8 @@ export default async function ProductosPage() {
             </div>
             <div className={styles.field}>
               <label className={styles.label}>Categoría</label>
-              <select name="category" required className={styles.input}>
+              <select name="category" required defaultValue="" className={styles.input}>
+                <option value="" disabled>Seleccionar categoría...</option>
                 {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>

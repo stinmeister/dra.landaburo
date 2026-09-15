@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useTransition } from 'react';
+import { useState, useRef, useTransition, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Edit2, Plus, Minus, X, Check, Image as ImageIcon, UploadCloud, Loader2 } from 'lucide-react';
@@ -26,8 +26,10 @@ interface Props {
 
 export default function ProductTable({ products, categories }: Props) {
   const router = useRouter();
+  const [items, setItems] = useState<Product[]>(products);
   const [isPending, startTransition] = useTransition();
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedImage, setSelectedImage] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -39,8 +41,13 @@ export default function ProductTable({ products, categories }: Props) {
   const [isSavingProduct, setIsSavingProduct] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    setItems(products);
+  }, [products]);
+
   const handleOpenEdit = (p: Product) => {
     setEditingProduct(p);
+    setSelectedCategory(p.category || '');
     setSelectedImage(p.image_url || '');
     setUploadError(null);
     setEditError(null);
@@ -48,6 +55,7 @@ export default function ProductTable({ products, categories }: Props) {
 
   const handleCloseEdit = () => {
     setEditingProduct(null);
+    setSelectedCategory('');
     setSelectedImage('');
     setUploadError(null);
     setEditError(null);
@@ -81,8 +89,33 @@ export default function ProductTable({ products, categories }: Props) {
     setIsSavingProduct(true);
     try {
       const formData = new FormData(e.currentTarget);
+      formData.set('category', selectedCategory);
       const res = await updateProduct(formData);
       if (res.success) {
+        if (editingProduct) {
+          const newName = (formData.get('name') as string)?.trim() || editingProduct.name;
+          const newPrice = parseFloat(formData.get('price_ars') as string) || editingProduct.price_ars;
+          const newStock = parseInt(formData.get('stock_quantity') as string, 10);
+          const newAlert = parseInt(formData.get('min_stock_alert') as string, 10);
+          const newDesc = (formData.get('description') as string)?.trim() ?? editingProduct.description;
+          const newImg = (formData.get('image_url') as string)?.trim() || null;
+          setItems((prev) =>
+            prev.map((item) =>
+              item.id === editingProduct.id
+                ? {
+                    ...item,
+                    name: newName,
+                    category: selectedCategory,
+                    price_ars: newPrice,
+                    stock_quantity: isNaN(newStock) ? item.stock_quantity : newStock,
+                    min_stock_alert: isNaN(newAlert) ? item.min_stock_alert : newAlert,
+                    description: newDesc,
+                    image_url: newImg,
+                  }
+                : item
+            )
+          );
+        }
         handleCloseEdit();
         router.refresh();
       } else {
@@ -156,14 +189,14 @@ export default function ProductTable({ products, categories }: Props) {
             </tr>
           </thead>
           <tbody>
-            {products.length === 0 && (
+            {items.length === 0 && (
               <tr>
                 <td colSpan={8} className={styles.emptyCell}>
                   No hay productos aún. Agregá el primero abajo.
                 </td>
               </tr>
             )}
-            {products.map((p) => {
+            {items.map((p) => {
               const currentStock = localStock[p.id] ?? (p.stock_quantity ?? 0);
               const threshold = p.min_stock_alert ?? 5;
               const isOut = currentStock === 0;
@@ -277,7 +310,7 @@ export default function ProductTable({ products, categories }: Props) {
               </div>
             )}
 
-            <form onSubmit={handleSubmitEdit} className={styles.modalForm}>
+            <form key={editingProduct.id} onSubmit={handleSubmitEdit} className={styles.modalForm}>
               <input type="hidden" name="id" value={editingProduct.id} />
 
               <div className={styles.formGrid}>
@@ -297,12 +330,19 @@ export default function ProductTable({ products, categories }: Props) {
                   <select
                     name="category"
                     required
-                    defaultValue={editingProduct.category}
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
                     className={styles.input}
                   >
+                    {!selectedCategory && (
+                      <option value="" disabled>Seleccionar categoría...</option>
+                    )}
                     {categories.map((c) => (
                       <option key={c} value={c}>{c}</option>
                     ))}
+                    {selectedCategory && !categories.includes(selectedCategory) && (
+                      <option value={selectedCategory}>{selectedCategory}</option>
+                    )}
                   </select>
                 </div>
 
