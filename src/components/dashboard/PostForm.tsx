@@ -227,12 +227,12 @@ export default function PostForm({ action, post }: Props) {
             {uploadError && <p className={styles.uploadError}>{uploadError}</p>}
 
             <div className={styles.manualUrlRow}>
-              <span className={styles.manualUrlLabel}>O ingresá la URL manualmente:</span>
+              <span className={styles.manualUrlLabel}>O ingresá la ruta o URL manualmente:</span>
               <input
-                type="url"
+                type="text"
                 value={coverUrl}
                 onChange={(e) => setCoverUrl(e.target.value)}
-                placeholder="https://..."
+                placeholder="/images/... o https://..."
                 className={styles.input}
               />
             </div>

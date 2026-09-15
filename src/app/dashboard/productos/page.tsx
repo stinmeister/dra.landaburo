@@ -95,7 +95,7 @@ export default async function ProductosPage() {
             </div>
             <div className={`${styles.field} ${styles.colSpan2}`}>
               <label className={styles.label}>URL de imagen (opcional)</label>
-              <input name="image_url" type="url" className={styles.input} placeholder="https://..." />
+              <input name="image_url" type="text" className={styles.input} placeholder="/images/... o https://..." />
             </div>
           </div>
           <button type="submit" className={styles.createBtn}>Agregar producto</button>
