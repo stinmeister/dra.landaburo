@@ -32,3 +32,34 @@ export async function updateReviewStatusAction(
   revalidatePath('/dashboard/ejecutivo');
   return { success: true };
 }
+
+export async function bulkUpdateReviewStatusAction(
+  ids: string[],
+  newStatus: 'resolved' | 'dismissed',
+  notes?: string
+) {
+  if (!ids || ids.length === 0) return { success: true, count: 0 };
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('No autenticado');
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from('ingest_review')
+    .update({
+      status: newStatus,
+      resolution_notes: notes ?? null,
+      resolved_by: user.id,
+      resolved_at: new Date().toISOString(),
+    })
+    .in('id', ids);
+
+  if (error) {
+    throw new Error(`Error en actualización masiva: ${error.message}`);
+  }
+
+  revalidatePath('/dashboard/revision');
+  revalidatePath('/dashboard/ejecutivo');
+  return { success: true, count: ids.length };
+}

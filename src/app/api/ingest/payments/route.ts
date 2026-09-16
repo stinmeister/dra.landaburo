@@ -8,116 +8,132 @@ import { persistReviewItems } from "@/lib/ingest-review";
 // Acepta un array de registros de cobros exportados desde la hoja Citas_Raw
 // (Base Unificada v2) procesados por n8n.
 //
-// ────────────────────────────────────────────────────────────────────────────
-// DDL_PENDING — columnas que AÚN NO existen en payments:
-//   ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS external_id TEXT UNIQUE;
-//   ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS notes TEXT;
-// DDL_PENDING — valores de payment_method pendientes de agregar al CHECK constraint:
-//   tarjeta_debito | efectivo_usd | cheque
-// ────────────────────────────────────────────────────────────────────────────
-//
-// CORRECCIONES implementadas respecto a versión anterior:
-//
-//  B1 — Nuevo schema de entrada: PaymentRecord representa Citas_Raw campo a campo.
-//       (clave_unica, dni, fecha, servicio, estado, monto_pagado_ars, …)
-//
-//  B2 — Filtrado por Estado antes de cualquier procesamiento:
-//       Solo 'Finalizado' genera un pago. ESTADOS_IGNORAR se descartan en silencio.
-//       Estados desconocidos van a needs_review('estado_desconocido').
-//
-//  B3 — Doble deduplicación:
-//       Nivel 1 (exacta): por clave_unica si la columna external_id existe (DDL_PENDING).
-//       Nivel 2 (aproximada): por patient_id + payment_date (rango del día) + amount_ars.
-//
-//  B4 — Detección de moneda (ARS / USD / SUSPICIOUS).
-//
-//  B5 — Mapa de profesionales leído en runtime desde profiles (sin UUIDs hardcodeados).
-//
-//  B6 — Normalización de medio_pago con tabla explícita. Valores DDL_PENDING marcados.
-//
-//  B7 — Lookup de paciente por DNI (no por teléfono como en la versión anterior).
-//
-//  B8 — INGEST_SECRET: sin la variable, el endpoint devuelve 401. Esto es ESPERADO
-//       hasta que se cargue la variable en el servidor.
+// Reglas y Filtros Aplicados:
+//  1. Regla de corte: Ignora cobros anteriores a PAYMENTS_CUTOFF_DATE (default: 2026-08-01).
+//  2. Filtrado por Estado:
+//     - Facturable: 'Finalizado'.
+//     - Descarte silencioso: 'Cancelado', 'Ausente', 'Programado', 'Confirmado',
+//       'En sala de espera', 'En curso', 'Cita Eliminada por...'.
+//     - Estados desconocidos van a needs_review ('estado_desconocido').
+//  3. Deduplicación doble: exacta por clave_unica (external_id) y por ventana solapada.
+//  4. Detección de moneda por rango de monto (sin heurísticas por nombre de servicio):
+//     - < $2.000: Dólares (USD) -> needs_review ('moneda_usd') para conversión/confirmación.
+//     - $2.000 a $30.000: Rango ambiguo -> needs_review ('monto_rango_ambiguo').
+//     - >= $30.000: Pesos (ARS), incluso si medio_pago dice 'Efectivo USD'.
+//  5. Multi-servicio: Se detecta contra catálogo (no por comas en nombres compuestos como
+//     'Lp Rostro, Cuello Y Escote'). Los multi-servicios reales ingresan a payments normalmente
+//     y ya no generan registro de revisión.
+//  6. Medios de pago: Mapeo exhaustivo sincronizado con el constraint de Postgres.
+//  7. Normalización de DNI y Hashes alfanuméricos de Calu.
+//  8. Asignación de profesionales dinámico con respaldo estático.
 
 // ─── Supabase admin ───────────────────────────────────────────────────────────
 
 const supabaseAdmin = createAdminClient();
 
+// ─── Configuraciones y Umbrales ───────────────────────────────────────────────
+
+function getCutoffDate(): Date {
+  const envVal = process.env.PAYMENTS_CUTOFF_DATE || "2026-08-01T00:00:00-03:00";
+  const dt = new Date(envVal);
+  return isNaN(dt.getTime()) ? new Date("2026-08-01T00:00:00-03:00") : dt;
+}
+
+function getCurrencyThresholds() {
+  const usdMax = Number(process.env.INGEST_USD_MAX_THRESHOLD || 2000);
+  const arsMin = Number(process.env.INGEST_ARS_MIN_THRESHOLD || 30000);
+  return {
+    usdMax: isNaN(usdMax) ? 2000 : usdMax,
+    arsMin: isNaN(arsMin) ? 30000 : arsMin,
+  };
+}
+
 // ─── Constantes de estado ─────────────────────────────────────────────────────
 
-const ESTADOS_FACTURABLES = new Set(["Finalizado"]);
+const ESTADOS_FACTURABLES = new Set(["finalizado"]);
 
-// Estos estados representan citas que no generaron ingreso real.
-// Se descartan en silencio (no son errores, no son pagos).
-const ESTADOS_IGNORAR = new Set([
-  "Programado",
-  "Confirmado",
-  "Cancelado",
-  "Ausente",
+const ESTADOS_IGNORAR_BASE = new Set([
+  "programado",
+  "confirmado",
+  "cancelado",
+  "ausente",
+  "en sala de espera",
+  "en curso",
 ]);
 
-// ─── Constantes de moneda ─────────────────────────────────────────────────────
-
-const MONTO_SOSPECHOSO_UMBRAL = 5000; // < 5000 ARS en servicios USD = sospechoso
-
-const SERVICIOS_USD = [
-  "botox",
-  "ácido hialurónico",
-  "acido hialuronico",
-  "sculptra",
-  "elleva",
-  "skinvive",
-  "sunekos",
-];
+function shouldIgnoreEstado(rawEstado: string): boolean {
+  if (!rawEstado) return false;
+  const norm = rawEstado.toLowerCase().trim();
+  if (ESTADOS_IGNORAR_BASE.has(norm)) return true;
+  // C1: Cita eliminada por cualquier usuario se descarta en silencio
+  if (norm.startsWith("cita eliminada")) return true;
+  return false;
+}
 
 // ─── Mapa de medios de pago ───────────────────────────────────────────────────
-// Clave: valor raw de la hoja (lowercase). Valor: valor normalizado para la DB.
-//
-// PAYMENT_METHOD_MAP_ACCEPTED: el CHECK constraint actual en payments acepta estos.
-// PAYMENT_METHOD_MAP_DDL_PENDING: métodos reconocidos pero que aún NO están en el
-//   constraint. El endpoint los envía a needs_review con 'metodo_pago_ddl_pendiente'
-//   en lugar de dejar que Postgres los rechace con un error críptico.
-//   DDL a aplicar para habilitarlos:
-//     ALTER TABLE public.payments DROP CONSTRAINT payments_payment_method_check;
-//     ALTER TABLE public.payments ADD CONSTRAINT payments_payment_method_check
-//       CHECK (payment_method IN ('efectivo','transferencia','mercadopago',
-//                                 'tarjeta_debito','efectivo_usd','cheque'));
 
-const PAYMENT_METHOD_MAP_ACCEPTED: Record<string, string> = {
+const PAYMENT_METHOD_MAP: Record<string, string> = {
   efectivo: "efectivo",
   transferencia: "transferencia",
   mercadopago: "mercadopago",
   "mercado pago": "mercadopago",
-};
-
-const PAYMENT_METHOD_MAP_DDL_PENDING: Record<string, string> = {
+  mp: "mercadopago",
   "tarjeta de debito": "tarjeta_debito",
   "tarjeta de débito": "tarjeta_debito",
   debito: "tarjeta_debito",
+  débito: "tarjeta_debito",
+  tarjeta_debito: "tarjeta_debito",
+  "tarjeta de credito": "tarjeta_credito",
+  "tarjeta de crédito": "tarjeta_credito",
+  credito: "tarjeta_credito",
+  crédito: "tarjeta_credito",
+  tarjeta_credito: "tarjeta_credito",
   "efectivo usd": "efectivo_usd",
+  usd: "efectivo_usd",
+  dolar: "efectivo_usd",
+  dólar: "efectivo_usd",
   cheque: "cheque",
 };
 
+function normalizePaymentMethod(raw: string): string | null {
+  if (!raw) return null;
+  const key = raw.toLowerCase().trim();
+  return PAYMENT_METHOD_MAP[key] || null;
+}
+
+// ─── Catálogo de tratamientos únicos que contienen coma ───────────────────────
+
+const KNOWN_SINGLE_TREATMENTS_WITH_COMMAS = new Set([
+  "lp rostro, cuello y escote",
+  "lp rostro, cuello y escote, frax",
+  "limpieza + electroporación/radio/peeling/dermapen",
+  "limpieza + electroporacion/radio/peeling/dermapen",
+]);
+
+function isRealMultiService(servicioRaw: string): boolean {
+  if (!servicioRaw || !servicioRaw.includes(",")) return false;
+  const lower = servicioRaw.toLowerCase().trim();
+  if (KNOWN_SINGLE_TREATMENTS_WITH_COMMAS.has(lower)) return false;
+  return true;
+}
+
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
-/** Payload que n8n envía por cada fila de Citas_Raw. */
 interface PaymentRecord {
-  // ── Campos de Citas_Raw ──
-  clave_unica: string;               // Clave_Unica (external_id primario)
-  dni: string;                       // DNI del paciente (puede tener puntos/espacios)
-  fecha: string;                     // Fecha en formato 'D/M/YYYY' e.g. '31/7/2026'
-  servicio: string;                  // Servicio (string libre, puede ser multi)
-  estado: string;                    // Estado raw — el endpoint filtra
-  monto_pagado_ars: number;          // Puede ser 0 o negativo
-  deuda_ars: number;                 // Deuda residual (trazabilidad)
-  medio_pago: string;                // Medio_Pago raw — el endpoint normaliza
-  profesional: string;               // e.g. 'Landaburo, Natalia'
-  archivo_origen?: string;           // Trazabilidad: nombre del archivo fuente
+  clave_unica: string;
+  dni: string;
+  fecha: string;
+  servicio: string;
+  estado: string;
+  monto_pagado_ars: number;
+  deuda_ars: number;
+  medio_pago: string;
+  profesional: string;
+  archivo_origen?: string;
+  telefono?: string;
 
-  // ── Resolución opcional (si n8n ya los resolvió) ──
-  patient_id?: string;               // uuid si n8n ya lo resolvió por DNI
-  professional_profile_id?: string;  // uuid si n8n ya lo resolvió
+  patient_id?: string;
+  professional_profile_id?: string;
 }
 
 interface NeedsReviewItem {
@@ -139,10 +155,9 @@ interface ParsedPaymentDate {
 
 /**
  * Parsea fecha y hora completas.
- * Prioridad 1: Clave_Unica (DNI|YYYY-MM-DDTHH:mm:ss|Servicio o YYYYMMDD_HHmmss_DNI) preservando la hora del cobro.
- * Prioridad 2: Columna fecha en formato D/M/YYYY HH:mm:ss o D/M/YYYY (00:00).
+ * Prioridad 1: Clave_Unica (DNI|YYYY-MM-DDTHH:mm:ss|Servicio o YYYYMMDD_HHmmss_DNI)
+ * Prioridad 2: Columna fecha en formato D/M/YYYY HH:mm:ss o D/M/YYYY
  * Zona horaria Argentina (-03:00).
- * No aplica doble correccion del bug de Calu (WF-01 ya lo corrige al escribir la Sheet).
  */
 function parsePaymentDate(claveUnica: string | undefined, fechaRaw: string | undefined): ParsedPaymentDate | null {
   if (claveUnica) {
@@ -193,62 +208,64 @@ function parsePaymentDate(claveUnica: string | undefined, fechaRaw: string | und
   return null;
 }
 
-/**
- * Normaliza DNI: elimina puntos, espacios y caracteres no numéricos.
- */
 function normalizeDni(raw: string): string {
   return raw.replace(/[^0-9]/g, "");
 }
 
-/**
- * Detecta si el monto/servicio/medio_pago corresponde a USD, es sospechoso, o es ARS.
- */
-function detectCurrency(
-  medioPago: string,
-  montoArs: number,
-  servicio: string
-): "ARS" | "USD" | "SUSPICIOUS" {
-  const mp = medioPago.toLowerCase();
-  if (mp.includes("usd") || mp.includes("dolar") || mp.includes("dólar")) {
-    return "USD";
-  }
-  const servicioLower = servicio.toLowerCase();
-  if (
-    montoArs > 0 &&
-    montoArs < MONTO_SOSPECHOSO_UMBRAL &&
-    SERVICIOS_USD.some((s) => servicioLower.includes(s))
-  ) {
-    return "SUSPICIOUS";
-  }
-  return "ARS";
+function isAlphanumericHash(raw: string): boolean {
+  const trimmed = (raw || "").trim();
+  return /[a-zA-Z]/.test(trimmed) && trimmed.length >= 7;
 }
 
 /**
- * Lookup de paciente por DNI normalizado.
- * Retorna:
- *   - { id: string } si hay exactamente un match
- *   - 'ambiguous'   si hay más de un match
- *   - null          si no hay match o DNI inválido
+ * Lookup de paciente por DNI, Hash o Teléfono.
  */
-async function resolvePatientByDni(
-  dni: string
+async function resolvePatient(
+  rawDni: string,
+  rawPhone?: string
 ): Promise<{ id: string } | "ambiguous" | null> {
-  const normDni = normalizeDni(dni);
-  if (!normDni || normDni.length < 7) return null;
+  const trimmed = (rawDni || "").trim();
+  if (!trimmed) return null;
 
-  const { data, error } = await supabaseAdmin
-    .from("patients")
-    .select("id")
-    .eq("dni", normDni);
+  if (isAlphanumericHash(trimmed)) {
+    // Buscar directamente por el hash exacto (sin eliminar letras)
+    const { data, error } = await supabaseAdmin
+      .from("patients")
+      .select("id")
+      .ilike("dni", trimmed);
 
-  if (error || !data) return null;
-  if (data.length === 0) return null;
-  if (data.length > 1) return "ambiguous";
-  return data[0];
+    if (!error && data && data.length === 1) return data[0];
+    if (data && data.length > 1) return "ambiguous";
+  } else {
+    // DNI numérico tradicional
+    const normDni = normalizeDni(trimmed);
+    if (normDni && normDni.length >= 6) {
+      const { data, error } = await supabaseAdmin
+        .from("patients")
+        .select("id")
+        .eq("dni", normDni);
+
+      if (!error && data && data.length === 1) return data[0];
+      if (data && data.length > 1) return "ambiguous";
+    }
+  }
+
+  // Búsqueda alternativa por teléfono si existe
+  if (rawPhone && rawPhone.trim().length >= 6) {
+    const cleanPhone = rawPhone.replace(/[^0-9+]/g, "");
+    const { data: phoneMatches } = await supabaseAdmin
+      .from("patients")
+      .select("id")
+      .ilike("phone", `%${cleanPhone.slice(-8)}%`);
+
+    if (phoneMatches && phoneMatches.length === 1) return phoneMatches[0];
+  }
+
+  return null;
 }
 
-// ─── Mapa estático de respaldo de profesionales conocidos ─────────────────────
-// Blindaje contra caídas de conexión o latencia en el select de profiles.
+// ─── Mapa de profesionales ────────────────────────────────────────────────────
+
 const STATIC_PROFESSIONAL_MAP: Record<string, string> = {
   // Dra. Paula Natalia Landaburo
   "landaburo, natalia": "ed7a0c98-3333-4f08-8c44-09b8587652bd",
@@ -269,11 +286,6 @@ const STATIC_PROFESSIONAL_MAP: Record<string, string> = {
   "pasquet": "11123745-1a5a-428c-9bed-29de4355d59c",
 };
 
-/**
- * Lee los perfiles de profesionales desde la DB y construye un mapa
- * 'nombre en planilla' → uuid.
- * Se llama UNA SOLA VEZ por request para evitar N queries.
- */
 async function getProfesionalMap(): Promise<Map<string, string>> {
   const map = new Map<string, string>();
 
@@ -283,48 +295,36 @@ async function getProfesionalMap(): Promise<Map<string, string>> {
       .select("id, full_name, role")
       .in("role", ["admin", "medico", "cosmetologa"]);
 
-    if (error) {
-      console.warn("[ingest_payments] ADVERTENCIA: Error al leer profiles de DB:", error.message, "— Se recurrirá a STATIC_PROFESSIONAL_MAP.");
-      return map;
-    }
+    if (!error && profiles) {
+      for (const p of profiles) {
+        if (!p.full_name || !p.id) continue;
+        const nameLower = p.full_name.toLowerCase();
 
-    if (!profiles || profiles.length === 0) {
-      console.warn("[ingest_payments] ADVERTENCIA: La consulta a profiles no devolvió filas. Se recurrirá a STATIC_PROFESSIONAL_MAP.");
-      return map;
-    }
+        map.set(p.full_name, p.id);
+        map.set(nameLower, p.id);
 
-    for (const p of profiles) {
-      if (!p.full_name || !p.id) continue;
-      const nameLower = p.full_name.toLowerCase();
-
-      // Match exacto y lowercase
-      map.set(p.full_name, p.id);
-      map.set(nameLower, p.id);
-
-      // Alias por nombre conocido (formato 'Apellido, Nombre' o 'Nombre Apellido'):
-      if (nameLower.includes("natalia") || nameLower.includes("paula")) {
-        map.set("Landaburo, Natalia", p.id);
-        map.set("landaburo, natalia", p.id);
-        map.set("Landaburo, Paula", p.id);
-        map.set("landaburo, paula", p.id);
-        map.set("Dra. Landaburo", p.id);
-        map.set("dra. landaburo", p.id);
-        map.set("Dra Landaburo", p.id);
-        map.set("dra landaburo", p.id);
-      }
-      if (nameLower.includes("pasquet") || nameLower.includes("mercedes")) {
-        map.set("Pasquet, Mercedes", p.id);
-        map.set("pasquet, mercedes", p.id);
-        map.set("Mercedes Pasquet", p.id);
-        map.set("mercedes pasquet", p.id);
-        map.set("Mechi Pasquet", p.id);
-        map.set("mechi pasquet", p.id);
-        map.set("Pasquet Mercedes", p.id);
-        map.set("pasquet mercedes", p.id);
+        if (nameLower.includes("natalia") || nameLower.includes("paula")) {
+          map.set("Landaburo, Natalia", p.id);
+          map.set("landaburo, natalia", p.id);
+          map.set("Landaburo, Paula", p.id);
+          map.set("landaburo, paula", p.id);
+          map.set("Dra. Landaburo", p.id);
+          map.set("dra. landaburo", p.id);
+          map.set("Dra Landaburo", p.id);
+          map.set("dra landaburo", p.id);
+        }
+        if (nameLower.includes("pasquet") || nameLower.includes("mercedes")) {
+          map.set("Pasquet, Mercedes", p.id);
+          map.set("pasquet, mercedes", p.id);
+          map.set("Mercedes Pasquet", p.id);
+          map.set("mercedes pasquet", p.id);
+          map.set("Mechi Pasquet", p.id);
+          map.set("mechi pasquet", p.id);
+        }
       }
     }
   } catch (err) {
-    console.warn("[ingest_payments] ADVERTENCIA: Excepción al consultar profiles:", err, "— Se recurrirá a STATIC_PROFESSIONAL_MAP.");
+    console.warn("[ingest_payments] Excepción al consultar profiles:", err);
   }
 
   return map;
@@ -333,11 +333,7 @@ async function getProfesionalMap(): Promise<Map<string, string>> {
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-
   // ── 1. Autenticación ────────────────────────────────────────────────────────
-  // NOTA B8: INGEST_SECRET aún no está cargado en el servidor.
-  // Todo request devolverá 401 hasta que la variable esté disponible.
-  // Esto es comportamiento esperado y correcto — NO deshabilitar este bloque.
   const authHeader = req.headers.get("authorization");
   const secret = process.env.INGEST_SECRET;
   if (!secret || authHeader !== `Bearer ${secret}`) {
@@ -365,13 +361,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // ── 3. Carga de mapa de profesionales (una sola vez por request) ────────────
+  // ── 3. Carga de mapa de profesionales y corte ──────────────────────────────
   const profesionalMap = await getProfesionalMap();
+  const cutoffDate = getCutoffDate();
+  const { usdMax, arsMin } = getCurrencyThresholds();
 
   // ── 4. Acumuladores ─────────────────────────────────────────────────────────
   let inserted = 0;
-  let inserted_with_warnings = 0;
   let skipped_estado = 0;
+  let skipped_fuera_de_rango = 0;
   let duplicates_exact = 0;
   let duplicates_approx = 0;
   let needs_review_uninserted = 0;
@@ -382,7 +380,7 @@ export async function POST(req: NextRequest) {
   for (let i = 0; i < records.length; i++) {
     const rec = records[i];
 
-    // ── 5.1 Validación mínima de campos requeridos → rejected ────────────────
+    // ── 5.1 Validación mínima de campos requeridos ────────────────────────────
     if (!rec.clave_unica?.trim()) {
       rejected.push({ index: i, reason: "clave_unica es requerida", record: rec });
       continue;
@@ -404,9 +402,24 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
-    // ── 5.2 B3 — Deduplicación Nivel 1 (exacta por clave_unica / external_id) ──
-    // Short-circuit inmediato: si el cobro ya fue insertado previamente,
-    // saltear de forma inmediata sin evaluar estado, moneda, paciente ni profesional.
+    // ── 5.2 Parseo y Filtro de Fecha de Corte (Regla A) ──────────────────────
+    const dateParseResult = parsePaymentDate(rec.clave_unica, rec.fecha);
+    if (!dateParseResult) {
+      rejected.push({
+        index: i,
+        reason: `fecha inválida: "${rec.fecha}" (o clave_unica "${rec.clave_unica}") — se espera formato D/M/YYYY o timestamp ISO`,
+        record: rec,
+      });
+      continue;
+    }
+    const { date: parsedDate, hasSpecificTime } = dateParseResult;
+
+    if (parsedDate < cutoffDate) {
+      skipped_fuera_de_rango++;
+      continue;
+    }
+
+    // ── 5.3 Deduplicación Nivel 1 (exacta por external_id / clave_unica) ──────
     {
       const { data: existingByExtId, error: extIdError } = await supabaseAdmin
         .from("payments")
@@ -434,115 +447,92 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── 5.3 B2 — Filtrado por estado ─────────────────────────────────────────
-    const estadoNorm = rec.estado.trim();
+    // ── 5.4 Filtrado por Estado (Reglas C1 y C2) ─────────────────────────────
+    const estadoRaw = rec.estado.trim();
+    const estadoLower = estadoRaw.toLowerCase();
 
-    if (!ESTADOS_FACTURABLES.has(estadoNorm)) {
-      if (ESTADOS_IGNORAR.has(estadoNorm)) {
-        // Cita no generó ingreso — descartar en silencio
+    if (!ESTADOS_FACTURABLES.has(estadoLower)) {
+      if (shouldIgnoreEstado(estadoRaw)) {
+        // Cita cancelada, ausente, en sala de espera, eliminada o futura -> silencio
         skipped_estado++;
         continue;
       }
-      // Estado desconocido o 'Cita Eliminada...' → needs_review
+
+      // Estado desconocido no contemplado -> a revisión
       needs_review_uninserted++;
       needs_review.push({
         index: i,
-        reason: `estado_desconocido: "${estadoNorm}" no es facturable ni ignorable`,
+        reason: `estado_desconocido: Estado "${estadoRaw}" no es facturable ni ignorable`,
         record: rec,
       });
       continue;
     }
 
-    // ── 5.3 Parseo de fecha y hora ───────────────────────────────────────────
-    const dateParseResult = parsePaymentDate(rec.clave_unica, rec.fecha);
-    if (!dateParseResult) {
-      rejected.push({
-        index: i,
-        reason: `fecha inválida: "${rec.fecha}" (o clave_unica "${rec.clave_unica}") — se espera formato D/M/YYYY o timestamp ISO`,
-        record: rec,
-      });
-      continue;
-    }
-    const { date: parsedDate, hasSpecificTime } = dateParseResult;
-
-    // ── 5.4 B4 — Detección de moneda ─────────────────────────────────────────
+    // ── 5.5 Detección de Moneda por Rango de Monto (Regla C3) ─────────────────
     const montoRaw = rec.monto_pagado_ars;
+    const medioPagoKey = (rec.medio_pago || "").toLowerCase().trim();
+    const isLabeledUSD =
+      medioPagoKey.includes("usd") ||
+      medioPagoKey.includes("dolar") ||
+      medioPagoKey.includes("dólar");
 
     if (montoRaw < 0) {
       needs_review_uninserted++;
       needs_review.push({
         index: i,
-        reason: `monto_negativo: anomalia de fuente (monto_pagado_ars=${montoRaw})`,
+        reason: `monto_negativo: Monto negativo (${montoRaw}) en registro de origen`,
         record: rec,
       });
       continue;
     }
 
-    const currencyResult = detectCurrency(
-      rec.medio_pago ?? "",
-      montoRaw,
-      rec.servicio ?? ""
-    );
+    let detectedCurrency: "ARS" | "USD" = "ARS";
+    let effectiveMedioPago = normalizePaymentMethod(rec.medio_pago) || "efectivo";
 
-    if (currencyResult === "USD") {
+    if (montoRaw > 0 && montoRaw < usdMax) {
+      // Menor a $2.000 -> Dólares (USD)
+      detectedCurrency = "USD";
+      effectiveMedioPago = "efectivo_usd";
       needs_review_uninserted++;
       needs_review.push({
         index: i,
-        reason: `moneda_usd: el registro parece estar en USD (medio_pago="${rec.medio_pago}", monto=${montoRaw})`,
+        reason: `moneda_usd: Cobro parece estar en dólares (monto = ${montoRaw} USD, medio de pago = "${rec.medio_pago}"). Requiere cotización o confirmación.`,
         record: rec,
       });
       continue;
-    }
-
-    if (currencyResult === "SUSPICIOUS") {
+    } else if (montoRaw >= usdMax && montoRaw < arsMin) {
+      // Entre $2.000 y $30.000 -> Rango ambiguo
+      detectedCurrency = isLabeledUSD ? "USD" : "ARS";
       needs_review_uninserted++;
       needs_review.push({
         index: i,
-        reason: `monto_sospechoso_posible_usd: monto ${montoRaw} ARS es muy bajo para servicio "${rec.servicio}"`,
+        reason: `monto_rango_ambiguo: Monto ${montoRaw} está fuera del rango habitual ($${usdMax.toLocaleString("es-AR")} a $${arsMin.toLocaleString("es-AR")}). Verificar si es saldo en pesos o cobro en USD.`,
         record: rec,
       });
       continue;
+    } else {
+      // $30.000 o más -> Pesos (ARS), incluso si dice Efectivo USD (error de tipeo en planilla)
+      detectedCurrency = "ARS";
+      if (isLabeledUSD) {
+        effectiveMedioPago = "efectivo";
+      }
     }
 
-    // ── 5.5 B6 — Normalización de medio de pago ───────────────────────────────
-    const medioPagoKey = rec.medio_pago?.toLowerCase()?.trim() ?? "";
-
-    // Verificar primero si es un método DDL_PENDING para dar razón precisa
-    if (PAYMENT_METHOD_MAP_DDL_PENDING[medioPagoKey]) {
-      needs_review_uninserted++;
-      needs_review.push({
-        index: i,
-        reason: `metodo_pago_ddl_pendiente: "${rec.medio_pago}" → "${PAYMENT_METHOD_MAP_DDL_PENDING[medioPagoKey]}" reconocido pero no habilitado en el CHECK constraint aún (aplicar DDL)`,
-        record: rec,
-      });
-      continue;
+    // ── 5.6 Normalización de Medio de Pago (Regla C5) ─────────────────────────
+    if (!effectiveMedioPago) {
+      effectiveMedioPago = "efectivo";
     }
 
-    const medioPagoNorm = PAYMENT_METHOD_MAP_ACCEPTED[medioPagoKey];
-    if (!medioPagoNorm) {
-      needs_review_uninserted++;
-      needs_review.push({
-        index: i,
-        reason: `medio_pago_desconocido: "${rec.medio_pago}" no está en el mapa de métodos aceptados`,
-        record: rec,
-      });
-      continue;
-    }
-
-    // ── Multi-servicio: flag para trazabilidad ────────────────────────────────
-    const isMultiService = (rec.servicio ?? "").includes(",");
-
-    // ── 5.6 B7 — Resolución de patient_id por DNI ────────────────────────────
-    // patient_id es NOT NULL en DB — si no se resuelve, NO se puede insertar.
+    // ── 5.7 Resolución de Paciente (Regla C6) ─────────────────────────────────
     let patientId: string | undefined = rec.patient_id;
 
     if (!patientId) {
-      const lookupResult = await resolvePatientByDni(rec.dni);
+      const lookupResult = await resolvePatient(rec.dni, rec.telefono);
       if (lookupResult === "ambiguous") {
         needs_review_uninserted++;
         needs_review.push({
           index: i,
-          reason: `ambiguous_ref: múltiples pacientes coinciden con DNI "${normalizeDni(rec.dni)}"`,
+          reason: `ambiguous_ref: Múltiples pacientes coinciden con el identificador "${rec.dni}"`,
           record: rec,
         });
         continue;
@@ -551,7 +541,7 @@ export async function POST(req: NextRequest) {
         needs_review_uninserted++;
         needs_review.push({
           index: i,
-          reason: `sin_paciente: no se encontró paciente con DNI "${normalizeDni(rec.dni)}"`,
+          reason: `sin_paciente: No se encontró paciente registrada con DNI/identificador "${rec.dni}"`,
           record: rec,
         });
         continue;
@@ -559,19 +549,27 @@ export async function POST(req: NextRequest) {
       patientId = lookupResult.id;
     }
 
-    // ── 5.7 B5 — Resolución de professional_profile_id ───────────────────────
-    // professional_profile_id es NOT NULL en DB — obligatorio.
+    // ── 5.8 Resolución de Profesional (Regla C6) ──────────────────────────────
     let professionalId: string | undefined = rec.professional_profile_id;
 
     if (!professionalId) {
       const rawProf = (rec.profesional ?? "").trim();
+      if (!rawProf) {
+        needs_review_uninserted++;
+        needs_review.push({
+          index: i,
+          reason: `sin_professional: Falta asignar la profesional en la planilla de origen`,
+          record: rec,
+        });
+        continue;
+      }
+
       const normProf = rawProf.toLowerCase();
       let mapped =
         profesionalMap.get(rawProf) ||
         profesionalMap.get(normProf);
 
       if (!mapped && STATIC_PROFESSIONAL_MAP[normProf]) {
-        console.warn(`[ingest_payments] Respaldo estático utilizado para "${rec.profesional}" (no resuelto desde la tabla profiles).`);
         mapped = STATIC_PROFESSIONAL_MAP[normProf];
       }
 
@@ -579,7 +577,7 @@ export async function POST(req: NextRequest) {
         needs_review_uninserted++;
         needs_review.push({
           index: i,
-          reason: `sin_professional: "${rec.profesional}" no encontrado en profiles (asignar manualmente)`,
+          reason: `sin_professional: Profesional "${rawProf}" no encontrada en perfiles (asignar manualmente)`,
           record: rec,
         });
         continue;
@@ -587,9 +585,7 @@ export async function POST(req: NextRequest) {
       professionalId = mapped;
     }
 
-    // ── 5.9 B3 — Deduplicación Nivel 2 (aproximada: patient_id + hora/fecha + monto) ─
-    // Si tiene hora específica, busca en rango de ±15 minutos.
-    // Si solo tiene fecha (sin hora), busca en el rango del día (24 horas).
+    // ── 5.9 Deduplicación Nivel 2 (ventana solapada) ──────────────────────────
     {
       const winStart = hasSpecificTime
         ? new Date(parsedDate.getTime() - 15 * 60 * 1000)
@@ -612,28 +608,32 @@ export async function POST(req: NextRequest) {
         duplicates_approx++;
         needs_review.push({
           index: i,
-          reason: `posible_duplicado_ventana_solapada: coincide con payment id=${existingApprox.id} por patient_id+fecha_hora+monto_ars (clave_unica="${rec.clave_unica}")`,
+          reason: `posible_duplicado_ventana_solapada: Coincide con cobro ID=${existingApprox.id} por paciente+fecha+monto (${rec.clave_unica})`,
           record: rec,
         });
         continue;
       }
     }
 
-    // ── 5.10 Insert en DB ─────────────────────────────────────────────────────
-    // external_id y notes ya existen en la tabla payments (verificado en DB).
+    // ── 5.10 Multi-servicio y Guardado en DB (Regla C4) ───────────────────────
+    const isMulti = isRealMultiService(rec.servicio ?? "");
+    const paymentNotes = isMulti
+      ? `[MULTI-SERVICIO] ${rec.servicio ?? ""}`
+      : (rec.servicio ?? null);
+
     const insertPayload: Record<string, unknown> = {
       patient_id: patientId,
       professional_profile_id: professionalId,
       amount_ars: montoRaw,
       amount_usd: null,
       currency: "ARS",
-      payment_method: medioPagoNorm,
-      commission_amount_ars: 0,   // siempre 0 hasta que se cablee commission_rates
+      payment_method: effectiveMedioPago,
+      commission_amount_ars: 0,
       payment_date: parsedDate.toISOString(),
       appointment_id: null,
       order_id: null,
       external_id: rec.clave_unica,
-      notes: rec.servicio ?? null,
+      notes: paymentNotes,
     };
 
     const { error: insertError } = await supabaseAdmin
@@ -646,17 +646,6 @@ export async function POST(req: NextRequest) {
     }
 
     inserted++;
-
-    // Multi-servicio: registrar en needs_review para revisión manual
-    // (el pago ya fue insertado; esto es advertencia sobre cobro insertado)
-    if (isMultiService) {
-      inserted_with_warnings++;
-      needs_review.push({
-        index: i,
-        reason: `is_multi_service: servicio contiene múltiples tratamientos — verificar si debe dividirse en pagos separados (servicio="${rec.servicio}")`,
-        record: rec,
-      });
-    }
   }
 
   // ── 6. Persistir items en ingest_review (idempotente) ─────────────────────
@@ -671,10 +660,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // ── 7. Respuesta estandarizada reconciliada ──────────────────────────────
+  // ── 7. Respuesta reconciliada ────────────────────────────────────────────
   const reconciliationCheck =
     inserted +
     skipped_estado +
+    skipped_fuera_de_rango +
     duplicates_exact +
     duplicates_approx +
     needs_review_uninserted +
@@ -686,8 +676,8 @@ export async function POST(req: NextRequest) {
     summary: {
       total_received: records.length,
       inserted,
-      inserted_with_warnings,
       skipped_estado,
+      skipped_fuera_de_rango,
       duplicates_exact,
       duplicates_approx,
       needs_review_uninserted,

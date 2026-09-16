@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import styles from './PeriodSelector.module.css';
@@ -29,6 +29,22 @@ export default function PeriodSelector({ currentPeriod, options }: Props) {
     currentIndex < options.length - 1 && currentIndex !== -1
       ? options[currentIndex + 1].value
       : null;
+
+  // Agrupar opciones por año (orden descendente de años: 2026, 2025...)
+  const groupedByYear = useMemo(() => {
+    const groups: Record<string, PeriodOption[]> = {};
+    options.forEach((opt) => {
+      const year = opt.value.slice(0, 4);
+      if (!groups[year]) groups[year] = [];
+      groups[year].push(opt);
+    });
+
+    const years = Object.keys(groups).sort((a, b) => Number(b) - Number(a));
+    return years.map((year) => ({
+      year,
+      options: groups[year],
+    }));
+  }, [options]);
 
   return (
     <div className={styles.container}>
@@ -60,10 +76,14 @@ export default function PeriodSelector({ currentPeriod, options }: Props) {
         className={styles.select}
         aria-label="Seleccionar período"
       >
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label} {opt.hasData ? '●' : ''}
-          </option>
+        {groupedByYear.map((group) => (
+          <optgroup key={group.year} label={`Año ${group.year}`}>
+            {group.options.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label} {opt.hasData ? '●' : ''}
+              </option>
+            ))}
+          </optgroup>
         ))}
       </select>
 

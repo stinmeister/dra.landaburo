@@ -1,6 +1,6 @@
 .page {
   padding: 2rem;
-  max-width: 1280px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -27,11 +27,13 @@
   margin: 0;
 }
 
+/* ── Filtros principales ── */
 .filterBar {
   display: flex;
   gap: 0.75rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .filterBtn {
@@ -39,7 +41,7 @@
   font-size: 0.85rem;
   padding: 0.45rem 0.9rem;
   border-radius: 4px;
-  border: 1px solid rgba(210, 211, 211, 0.3);
+  border: 1px solid rgba(210, 211, 211, 0.35);
   background-color: transparent;
   color: var(--color-gris, #718096);
   cursor: pointer;
@@ -53,6 +55,148 @@
   font-weight: 600;
 }
 
+/* ── Grupos de motivo ── */
+.categoryGroupBar {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 1rem;
+  background-color: #fafafa;
+  border: 1px solid rgba(210, 211, 211, 0.3);
+  border-radius: 6px;
+  align-items: center;
+}
+
+.categoryGroupLabel {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-gris, #718096);
+  margin-right: 0.5rem;
+}
+
+.categoryChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 20px;
+  border: 1px solid rgba(210, 211, 211, 0.35);
+  background: #ffffff;
+  color: #4a5568;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.categoryChip:hover {
+  border-color: var(--color-champagne, #c5a47e);
+  background-color: rgba(197, 164, 126, 0.08);
+}
+
+.categoryChipActive {
+  background-color: #1c1c1c;
+  color: #ffffff;
+  border-color: #1c1c1c;
+  font-weight: 600;
+}
+
+.categoryCountBadge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 10px;
+  background: rgba(197, 164, 126, 0.25);
+  color: #8c6d46;
+}
+
+.categoryChipActive .categoryCountBadge {
+  background: var(--color-champagne, #c5a47e);
+  color: #1c1c1c;
+}
+
+/* ── Barra de acciones masivas ── */
+.bulkActionBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  background-color: #1c1c1c;
+  color: #ffffff;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bulkInfo {
+  font-size: 0.85rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.bulkButtons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.bulkBtnResolve {
+  background-color: var(--color-champagne, #c5a47e);
+  color: #1c1c1c;
+  border: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.4rem 0.85rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.bulkBtnResolve:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.bulkBtnDismiss {
+  background-color: transparent;
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  font-size: 0.8rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.bulkBtnDismiss:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.bulkBtnClear {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.75rem;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+/* ── Tabla de revisión ── */
 .tableWrap {
   overflow-x: auto;
   border: 1px solid rgba(210, 211, 211, 0.25);
@@ -64,7 +208,7 @@
   width: 100%;
   border-collapse: collapse;
   font-family: var(--font-body, "IBM Plex Sans"), sans-serif;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
 }
 
 .table th {
@@ -72,10 +216,11 @@
   color: #ffffff;
   text-align: left;
   padding: 0.75rem 1rem;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 500;
   letter-spacing: 0.05em;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .table td {
@@ -88,11 +233,28 @@
   border-bottom: none;
 }
 
+.selectedRow {
+  background-color: rgba(197, 164, 126, 0.08) !important;
+}
+
+.checkboxCell {
+  width: 36px;
+  text-align: center;
+  vertical-align: middle !important;
+}
+
+.checkbox {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  accent-color: #c5a47e;
+}
+
 .badgeSource {
   display: inline-block;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 600;
-  padding: 0.2rem 0.5rem;
+  padding: 0.15rem 0.45rem;
   border-radius: 3px;
   text-transform: uppercase;
 }
@@ -107,16 +269,72 @@
   color: #2d3748;
 }
 
-.reasonText {
-  font-weight: 500;
+/* ── Formato de Motivo Humanizado ── */
+.reasonContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.reasonTitle {
+  font-weight: 600;
   color: #1c1c1c;
-  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.reasonDetails {
+  font-size: 0.82rem;
+  color: #4a5568;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.reasonMetaPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  background-color: #edf2f7;
+  color: #2d3748;
+  font-weight: 500;
+}
+
+.reasonMetaPillHighlight {
+  background-color: rgba(197, 164, 126, 0.2);
+  color: #8c6d46;
+  font-weight: 600;
+}
+
+.technicalCode {
+  font-size: 0.7rem;
+  color: #a0aec0;
+  font-family: monospace;
 }
 
 .identifierText {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   color: var(--color-gris, #718096);
   font-family: monospace;
+}
+
+.dateCellText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.paymentDateText {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1c1c1c;
+}
+
+.detectedDateText {
+  font-size: 0.72rem;
+  color: #a0aec0;
 }
 
 .statusPending {
@@ -135,7 +353,7 @@
 
 .actionsCell {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.4rem;
   align-items: center;
 }
 
@@ -143,9 +361,9 @@
   background-color: #c5a47e;
   color: #1c1c1c;
   border: none;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  padding: 0.35rem 0.65rem;
+  padding: 0.35rem 0.6rem;
   border-radius: 3px;
   cursor: pointer;
   transition: opacity 0.15s ease;
@@ -158,9 +376,9 @@
 .actionBtnDismiss {
   background-color: transparent;
   color: var(--color-gris, #718096);
-  border: 1px solid rgba(210, 211, 211, 0.3);
-  font-size: 0.78rem;
-  padding: 0.35rem 0.65rem;
+  border: 1px solid rgba(210, 211, 211, 0.35);
+  font-size: 0.75rem;
+  padding: 0.35rem 0.6rem;
   border-radius: 3px;
   cursor: pointer;
 }
@@ -174,8 +392,8 @@
   padding: 0.5rem;
   background-color: #f7fafc;
   border-radius: 4px;
-  font-size: 0.75rem;
-  max-width: 450px;
+  font-size: 0.72rem;
+  max-width: 500px;
   overflow-x: auto;
   border: 1px solid #edf2f7;
 }
