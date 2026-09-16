@@ -368,6 +368,7 @@ export async function POST(req: NextRequest) {
 
   // ── 4. Acumuladores ─────────────────────────────────────────────────────────
   let inserted = 0;
+  let updated = 0;
   let skipped_estado = 0;
   let skipped_fuera_de_rango = 0;
   let duplicates_exact = 0;
@@ -419,11 +420,20 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
-    // ── 5.3 Deduplicación Nivel 1 (exacta por external_id / clave_unica) ──────
+    // ── 5.3 Búsqueda Nivel 1 (por external_id / clave_unica) ─────────────────
+    let existingByExtId: {
+      id: string;
+      amount_ars: number | null;
+      amount_usd: number | null;
+      currency: string | null;
+      payment_method: string | null;
+      notes: string | null;
+    } | null = null;
+
     {
-      const { data: existingByExtId, error: extIdError } = await supabaseAdmin
+      const { data: existingData, error: extIdError } = await supabaseAdmin
         .from("payments")
-        .select("id")
+        .select("id, amount_ars, amount_usd, currency, payment_method, notes")
         .eq("external_id", rec.clave_unica)
         .maybeSingle();
 
@@ -441,9 +451,8 @@ export async function POST(req: NextRequest) {
           });
           continue;
         }
-      } else if (existingByExtId) {
-        duplicates_exact++;
-        continue;
+      } else if (existingData) {
+        existingByExtId = existingData;
       }
     }
 
@@ -453,7 +462,21 @@ export async function POST(req: NextRequest) {
 
     if (!ESTADOS_FACTURABLES.has(estadoLower)) {
       if (shouldIgnoreEstado(estadoRaw)) {
-        // Cita cancelada, ausente, en sala de espera, eliminada o futura -> silencio
+        // Caso Inverso: ¿Estaba previamente registrado con dinero en DB?
+        if (
+          existingByExtId &&
+          (Number(existingByExtId.amount_ars ?? 0) > 0 || Number(existingByExtId.amount_usd ?? 0) > 0)
+        ) {
+          needs_review_uninserted++;
+          needs_review.push({
+            index: i,
+            reason: `posible_anulacion: Turno previamente registrado con $${Number(existingByExtId.amount_ars ?? 0).toLocaleString("es-AR")} ahora figura como "${estadoRaw}". Verificar si corresponde anular el cobro o si fue un error en Calu.`,
+            record: rec,
+          });
+          continue;
+        }
+
+        // Cita cancelada, ausente, en sala de espera, eliminada o futura sin cobro -> silencio
         skipped_estado++;
         continue;
       }
@@ -521,6 +544,83 @@ export async function POST(req: NextRequest) {
     // ── 5.6 Normalización de Medio de Pago (Regla C5) ─────────────────────────
     if (!effectiveMedioPago) {
       effectiveMedioPago = "efectivo";
+    }
+
+    // ── 5.6.1 Si ya existía por external_id, comparar y actualizar (Regla A) ──
+    if (existingByExtId) {
+      const oldAmountArs = Number(existingByExtId.amount_ars ?? 0);
+      const newAmountArs = montoRaw;
+      const oldAmountUsd = existingByExtId.amount_usd != null ? Number(existingByExtId.amount_usd) : null;
+      const newAmountUsd: number | null = null;
+      const oldPaymentMethod = existingByExtId.payment_method;
+      const newPaymentMethod = effectiveMedioPago;
+
+      const amountChanged = oldAmountArs !== newAmountArs || oldAmountUsd !== newAmountUsd;
+      const methodChanged = oldPaymentMethod !== newPaymentMethod;
+      const currencyChanged = existingByExtId.currency !== detectedCurrency;
+
+      if (!amountChanged && !methodChanged && !currencyChanged) {
+        // Registro idéntico sin cambios relevantes
+        duplicates_exact++;
+        continue;
+      }
+
+      // ── Hubo cambios: ACTUALIZAR registro existente en payments ──
+      const currentNotes = existingByExtId.notes || "";
+      const changeAudit = amountChanged
+        ? ` [Actualizado: antes $${oldAmountArs.toLocaleString("es-AR")}]`
+        : ` [Medio pago: ${oldPaymentMethod} -> ${newPaymentMethod}]`;
+
+      const updatedNotes = currentNotes.includes("[Actualizado")
+        ? `${currentNotes};${changeAudit}`
+        : `${currentNotes || rec.servicio || ""}${changeAudit}`;
+
+      const { error: updateError } = await supabaseAdmin
+        .from("payments")
+        .update({
+          amount_ars: newAmountArs,
+          amount_usd: newAmountUsd,
+          currency: detectedCurrency,
+          payment_method: newPaymentMethod,
+          notes: updatedNotes,
+        })
+        .eq("id", existingByExtId.id);
+
+      if (updateError) {
+        rejected.push({
+          index: i,
+          reason: `Error al actualizar cobro existente: ${updateError.message}`,
+          record: rec,
+        });
+        continue;
+      }
+
+      // Dejar constancia en ingest_review si cambió el monto
+      if (amountChanged) {
+        await supabaseAdmin.from("ingest_review").insert({
+          source: "payments",
+          record_identifier: rec.clave_unica,
+          reason: `monto_actualizado: Cobro modificado de $${oldAmountArs.toLocaleString("es-AR")} a $${newAmountArs.toLocaleString("es-AR")} (${newPaymentMethod})`,
+          payload: {
+            clave_unica: rec.clave_unica,
+            dni: rec.dni,
+            fecha: rec.fecha,
+            monto_anterior_ars: oldAmountArs,
+            monto_nuevo_ars: newAmountArs,
+            medio_pago_anterior: oldPaymentMethod,
+            medio_pago_nuevo: newPaymentMethod,
+            servicio: rec.servicio,
+            payment_id: existingByExtId.id,
+          },
+          status: "resolved",
+          resolution_notes: `Actualización automática durante ingesta: cambio de monto de $${oldAmountArs} a $${newAmountArs}`,
+          resolved_by: "system_ingest",
+          resolved_at: new Date().toISOString(),
+        });
+      }
+
+      updated++;
+      continue;
     }
 
     // ── 5.7 Resolución de Paciente (Regla C6) ─────────────────────────────────
@@ -663,6 +763,7 @@ export async function POST(req: NextRequest) {
   // ── 7. Respuesta reconciliada ────────────────────────────────────────────
   const reconciliationCheck =
     inserted +
+    updated +
     skipped_estado +
     skipped_fuera_de_rango +
     duplicates_exact +
@@ -676,6 +777,7 @@ export async function POST(req: NextRequest) {
     summary: {
       total_received: records.length,
       inserted,
+      updated,
       skipped_estado,
       skipped_fuera_de_rango,
       duplicates_exact,

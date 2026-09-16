@@ -12,6 +12,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export const ALL_SECTIONS = [
   "ejecutivo",
   "operativo",
+  "cierre-diario",
   "campanas",
   "tratamientos",
   "productos",
@@ -69,6 +70,12 @@ export async function getUserSections(
   // Aplicar defaults
   for (const d of defaults ?? []) {
     if (d.allowed) fromRole.add(d.section as Section);
+  }
+
+  // Fallback seguro si la sección "cierre-diario" no está en DB todavía:
+  // admin, operativo y medico la tienen por default.
+  if (["admin", "operativo", "medico"].includes(role) && !defaults?.some(d => d.section === "cierre-diario")) {
+    fromRole.add("cierre-diario");
   }
 
   // Aplicar overrides (sobreescriben el default)

@@ -1,0 +1,582 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-bottom: 3rem;
+}
+
+/* ── Encabezado ── */
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: 1.75rem;
+  font-weight: 400;
+  color: var(--color-negro);
+  margin: 0;
+}
+
+.subtitle {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-gris);
+  margin: 0;
+}
+
+/* ── Selector de Fecha ── */
+.dateNavCard {
+  background: var(--color-blanco);
+  border: 1px solid var(--color-gris-claro);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.dateNavControls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.navArrowBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.85rem;
+  background: var(--color-blanco);
+  border: 1px solid var(--color-gris-claro);
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-negro);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.navArrowBtn:hover {
+  border-color: var(--color-champagne);
+  background: #fafafa;
+}
+
+.dateInputWrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #fafafa;
+  border: 1px solid var(--color-gris-claro);
+  border-radius: var(--radius-md);
+  padding: 0.35rem 0.75rem;
+}
+
+.dateIcon {
+  color: var(--color-gris);
+}
+
+.dateInput {
+  border: none;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-negro);
+  outline: none;
+  cursor: pointer;
+}
+
+.todayBtn {
+  padding: 0.45rem 0.85rem;
+  background: var(--color-negro);
+  color: var(--color-blanco);
+  border: none;
+  border-radius: 999px;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.todayBtn:hover {
+  background: var(--color-champagne-dark);
+}
+
+.dateDisplayLarge {
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--color-gris);
+}
+
+/* ── Hero Métricas ── */
+.heroGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.totalHeroCard {
+  background: linear-gradient(135deg, #18181b 0%, #27272a 100%);
+  color: var(--color-blanco);
+  border-radius: var(--radius-md);
+  padding: 1.75rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.heroLabel {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #a1a1aa;
+}
+
+.heroAmountRow {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.heroTotal {
+  font-family: var(--font-serif);
+  font-size: 2.75rem;
+  font-weight: 400;
+  color: #ffffff;
+  line-height: 1.1;
+}
+
+.heroTotalUsd {
+  font-family: var(--font-sans);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.15);
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+}
+
+.heroMeta {
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  color: #d4d4d8;
+  margin-top: 0.25rem;
+}
+
+/* ── Desglose por Medio de Pago ── */
+.breakdownSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sectionTitle {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-weight: 400;
+  color: var(--color-negro);
+  margin: 0;
+}
+
+.methodsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.85rem;
+}
+
+.methodCard {
+  background: var(--color-blanco);
+  border: 1px solid var(--color-gris-claro);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  transition: transform var(--transition-fast), border-color var(--transition-fast);
+}
+
+.methodCard:hover {
+  border-color: var(--color-champagne);
+  transform: translateY(-2px);
+}
+
+.methodCardCash {
+  border-left: 4px solid #10b981;
+}
+
+.methodCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.methodName {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-gris);
+}
+
+.cashTag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #065f46;
+  background: #d1fae5;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+
+.methodAmount {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 400;
+  color: var(--color-negro);
+}
+
+.methodCount {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  color: var(--color-gris);
+}
+
+/* ── Alerta de Revisión ── */
+.alertCard {
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  border-left: 4px solid #f59e0b;
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.alertContent {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.alertIcon {
+  color: #d97706;
+  flex-shrink: 0;
+}
+
+.alertTitle {
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #92400e;
+  margin: 0;
+}
+
+.alertDesc {
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  color: #b45309;
+  margin: 0.15rem 0 0;
+}
+
+.alertBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.85rem;
+  background: #d97706;
+  color: #ffffff;
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color var(--transition-fast);
+}
+
+.alertBtn:hover {
+  background: #b45309;
+}
+
+/* ── Tablas y Listas de Cobros ── */
+.tableCard {
+  background: var(--color-blanco);
+  border: 1px solid var(--color-gris-claro);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.tableHeader {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--color-gris-claro);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.tableCount {
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  color: var(--color-gris);
+}
+
+/* Tabla Desktop */
+.desktopTableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+}
+
+.table th {
+  text-align: left;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-gris);
+  background: #fafafa;
+  border-bottom: 1px solid var(--color-gris-claro);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 0.85rem 1.25rem;
+  color: var(--color-negro);
+  border-bottom: 1px solid var(--color-gris-claro);
+  vertical-align: middle;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.table tr:hover td {
+  background: #fcfcfc;
+}
+
+.timeCell {
+  font-weight: 600;
+  color: var(--color-negro);
+  white-space: nowrap;
+}
+
+.patientCell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.patientName {
+  font-weight: 600;
+}
+
+.patientDni {
+  font-size: 0.75rem;
+  color: var(--color-gris);
+}
+
+.methodBadge {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  text-transform: capitalize;
+  background: #f3f4f6;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.badgeEfectivo {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.amountCell {
+  font-weight: 600;
+  color: var(--color-negro);
+  white-space: nowrap;
+}
+
+.amountUsd {
+  display: block;
+  font-size: 0.78rem;
+  color: #047857;
+  font-weight: 600;
+}
+
+.serviceCell {
+  max-width: 240px;
+}
+
+.serviceText {
+  display: block;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.serviceAudit {
+  display: block;
+  font-size: 0.72rem;
+  color: #d97706;
+  margin-top: 0.15rem;
+}
+
+.emptyState {
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: var(--color-gris);
+}
+
+/* Lista Mobile (visible solo en celulares) */
+.mobileList {
+  display: none;
+  flex-direction: column;
+  divide-y: 1px solid var(--color-gris-claro);
+}
+
+.mobileCard {
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  border-bottom: 1px solid var(--color-gris-claro);
+}
+
+.mobileCard:last-child {
+  border-bottom: none;
+}
+
+.mobileCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mobilePatient {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-negro);
+}
+
+.mobileAmount {
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--color-negro);
+  text-align: right;
+}
+
+.mobileDetails {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--color-gris);
+}
+
+/* ── Atenciones en Cero ── */
+.zeroCard {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.zeroToggleHeader {
+  width: 100%;
+  padding: 1rem 1.25rem;
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  text-align: left;
+}
+
+.zeroTitle {
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.zeroBadge {
+  background: #cbd5e1;
+  color: #1e293b;
+  font-size: 0.72rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+}
+
+/* ── Responsive Mobile First ── */
+@media (max-width: 768px) {
+  .heroTotal {
+    font-size: 2.15rem;
+  }
+  
+  .methodsGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .desktopTableWrap {
+    display: none;
+  }
+
+  .mobileList {
+    display: flex;
+  }
+
+  .dateNavCard {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dateNavControls {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .dateInputWrapper {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .methodsGrid {
+    grid-template-columns: 1fr;
+  }
+}

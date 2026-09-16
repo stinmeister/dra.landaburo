@@ -8,14 +8,15 @@ import styles from "./page.module.css";
 export type { Section };
 
 const SECTION_LABELS: Record<Section, string> = {
-  ejecutivo:    "Ejecutivo",
-  operativo:    "Operativo",
-  campanas:     "Campañas",
-  tratamientos: "Tratamientos",
-  productos:    "Productos",
-  usuarios:     "Usuarios",
-  blog:         "Blog",
-  revision:     "Revisión",
+  ejecutivo:       "Ejecutivo",
+  operativo:       "Operativo",
+  "cierre-diario": "Cierre Diario",
+  campanas:        "Campañas",
+  tratamientos:    "Tratamientos",
+  productos:       "Productos",
+  usuarios:        "Usuarios",
+  blog:            "Blog",
+  revision:        "Revisión",
 };
 
 export interface UserPermRow {

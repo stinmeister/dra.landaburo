@@ -19,14 +19,15 @@ const STAFF_ROLES = ["admin", "medico", "operativo", "cosmetologa"];
 
 // Labels legibles para cada seccion
 const SECTION_LABELS: Record<string, string> = {
-  ejecutivo:    "Ejecutivo",
-  operativo:    "Operativo",
-  campanas:     "Campañas",
-  tratamientos: "Tratamientos",
-  productos:    "Productos",
-  usuarios:     "Usuarios",
-  blog:         "Blog",
-  revision:     "Revisión",
+  ejecutivo:       "Ejecutivo",
+  operativo:       "Operativo",
+  "cierre-diario": "Cierre Diario",
+  campanas:        "Campañas",
+  tratamientos:    "Tratamientos",
+  productos:       "Productos",
+  usuarios:        "Usuarios",
+  blog:            "Blog",
+  revision:        "Revisión",
 };
 
 export default async function DashboardLayout({
