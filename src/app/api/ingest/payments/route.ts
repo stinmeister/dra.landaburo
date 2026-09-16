@@ -614,7 +614,7 @@ export async function POST(req: NextRequest) {
           },
           status: "resolved",
           resolution_notes: `Actualización automática durante ingesta: cambio de monto de $${oldAmountArs} a $${newAmountArs}`,
-          resolved_by: "system_ingest",
+          resolved_by: null,
           resolved_at: new Date().toISOString(),
         });
       }
