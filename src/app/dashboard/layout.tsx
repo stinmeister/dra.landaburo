@@ -55,15 +55,44 @@ export default async function DashboardLayout({
 
   // Calcular secciones permitidas (cacheable por request)
   const perms = await getUserSections(user.id, role);
-  const serialized = serializePermissions(perms);
 
-  // Construir nav items en el orden canonico (ALL_SECTIONS ya incluye revision de forma unificada)
-  const navItems = ALL_SECTIONS
-    .filter((s) => perms.allowed.has(s))
-    .map((s) => ({
-      href: `/dashboard/${s}`,
-      label: SECTION_LABELS[s] ?? s,
-    }));
+  // Construir nav items en el orden canónico.
+  // Reestructura Ejecutivo (Punto A): 'cierre-diario' y 'revision' ahora son pestañas
+  // de Ejecutivo y desaparecen como ítems de primer nivel en el sidebar.
+  // Si el usuario no tiene acceso a Ejecutivo completo pero sí a Cierre Diario (ej: rol operativo),
+  // se muestra 'Cierre Diario' direccionando a su pestaña en /dashboard/ejecutivo?tab=cierre-diario.
+  const hasEjecutivo = perms.allowed.has("ejecutivo");
+  const hasCierreDiario = perms.allowed.has("cierre-diario");
+
+  const navItems: { href: string; label: string }[] = [];
+
+  for (const s of ALL_SECTIONS) {
+    if (s === "cierre-diario" || s === "revision") {
+      continue;
+    }
+
+    if (s === "ejecutivo") {
+      if (hasEjecutivo) {
+        navItems.push({
+          href: "/dashboard/ejecutivo",
+          label: SECTION_LABELS.ejecutivo ?? "Ejecutivo",
+        });
+      } else if (hasCierreDiario) {
+        navItems.push({
+          href: "/dashboard/ejecutivo?tab=cierre-diario",
+          label: "Cierre Diario",
+        });
+      }
+      continue;
+    }
+
+    if (perms.allowed.has(s)) {
+      navItems.push({
+        href: `/dashboard/${s}`,
+        label: SECTION_LABELS[s] ?? s,
+      });
+    }
+  }
 
   return (
     <div className={styles.shell}>

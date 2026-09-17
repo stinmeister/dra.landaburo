@@ -264,7 +264,7 @@ async function resolvePatient(
   return null;
 }
 
-// ─── Mapa de profesionales ────────────────────────────────────────────────────
+// ─── Mapa de profesionales y tasas de comisión ────────────────────────────────
 
 const STATIC_PROFESSIONAL_MAP: Record<string, string> = {
   // Dra. Paula Natalia Landaburo
@@ -286,8 +286,18 @@ const STATIC_PROFESSIONAL_MAP: Record<string, string> = {
   "pasquet": "11123745-1a5a-428c-9bed-29de4355d59c",
 };
 
-async function getProfesionalMap(): Promise<Map<string, string>> {
-  const map = new Map<string, string>();
+interface ProfessionalInfo {
+  id: string;
+  fullName: string;
+  role: string;
+}
+
+async function getProfesionalData(): Promise<{
+  nameToIdMap: Map<string, string>;
+  idToInfoMap: Map<string, ProfessionalInfo>;
+}> {
+  const nameToIdMap = new Map<string, string>();
+  const idToInfoMap = new Map<string, ProfessionalInfo>();
 
   try {
     const { data: profiles, error } = await supabaseAdmin
@@ -298,28 +308,34 @@ async function getProfesionalMap(): Promise<Map<string, string>> {
     if (!error && profiles) {
       for (const p of profiles) {
         if (!p.full_name || !p.id) continue;
-        const nameLower = p.full_name.toLowerCase();
+        const info: ProfessionalInfo = {
+          id: p.id,
+          fullName: p.full_name,
+          role: p.role ?? "",
+        };
+        idToInfoMap.set(p.id, info);
 
-        map.set(p.full_name, p.id);
-        map.set(nameLower, p.id);
+        const nameLower = p.full_name.toLowerCase();
+        nameToIdMap.set(p.full_name, p.id);
+        nameToIdMap.set(nameLower, p.id);
 
         if (nameLower.includes("natalia") || nameLower.includes("paula")) {
-          map.set("Landaburo, Natalia", p.id);
-          map.set("landaburo, natalia", p.id);
-          map.set("Landaburo, Paula", p.id);
-          map.set("landaburo, paula", p.id);
-          map.set("Dra. Landaburo", p.id);
-          map.set("dra. landaburo", p.id);
-          map.set("Dra Landaburo", p.id);
-          map.set("dra landaburo", p.id);
+          nameToIdMap.set("Landaburo, Natalia", p.id);
+          nameToIdMap.set("landaburo, natalia", p.id);
+          nameToIdMap.set("Landaburo, Paula", p.id);
+          nameToIdMap.set("landaburo, paula", p.id);
+          nameToIdMap.set("Dra. Landaburo", p.id);
+          nameToIdMap.set("dra. landaburo", p.id);
+          nameToIdMap.set("Dra Landaburo", p.id);
+          nameToIdMap.set("dra landaburo", p.id);
         }
         if (nameLower.includes("pasquet") || nameLower.includes("mercedes")) {
-          map.set("Pasquet, Mercedes", p.id);
-          map.set("pasquet, mercedes", p.id);
-          map.set("Mercedes Pasquet", p.id);
-          map.set("mercedes pasquet", p.id);
-          map.set("Mechi Pasquet", p.id);
-          map.set("mechi pasquet", p.id);
+          nameToIdMap.set("Pasquet, Mercedes", p.id);
+          nameToIdMap.set("pasquet, mercedes", p.id);
+          nameToIdMap.set("Mercedes Pasquet", p.id);
+          nameToIdMap.set("mercedes pasquet", p.id);
+          nameToIdMap.set("Mechi Pasquet", p.id);
+          nameToIdMap.set("mechi pasquet", p.id);
         }
       }
     }
@@ -327,7 +343,66 @@ async function getProfesionalMap(): Promise<Map<string, string>> {
     console.warn("[ingest_payments] Excepción al consultar profiles:", err);
   }
 
+  return { nameToIdMap, idToInfoMap };
+}
+
+async function getCommissionRatesMap(): Promise<Map<string, number>> {
+  const map = new Map<string, number>();
+  // Defaults estáticos de seguridad
+  map.set("mercedes pasquet", 30);
+  map.set("pasquet, mercedes", 30);
+  map.set("paula natalia landaburo", 0);
+  map.set("landaburo, paula", 0);
+  map.set("landaburo, natalia", 0);
+  map.set("role:cosmetologa", 30);
+  map.set("role:admin", 0);
+
+  try {
+    const { data: rates, error } = await supabaseAdmin
+      .from("commission_rates")
+      .select("professional_name, role, rate_percentage, is_active")
+      .eq("is_active", true);
+
+    if (!error && rates) {
+      for (const r of rates) {
+        const rate = Number(r.rate_percentage ?? 0);
+        if (r.professional_name) {
+          map.set(r.professional_name.toLowerCase().trim(), rate);
+        }
+        if (r.role) {
+          map.set(`role:${r.role.toLowerCase().trim()}`, rate);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("[ingest_payments] Excepción al consultar commission_rates:", err);
+  }
+
   return map;
+}
+
+function resolveCommissionRate(
+  rawProf?: string,
+  profileFullName?: string,
+  profileRole?: string,
+  rateMap?: Map<string, number>
+): number {
+  if (!rateMap) return 0;
+
+  const rawLower = (rawProf || "").toLowerCase().trim();
+  const nameLower = (profileFullName || "").toLowerCase().trim();
+  const roleKey = profileRole ? `role:${profileRole.toLowerCase().trim()}` : "";
+
+  if (nameLower && rateMap.has(nameLower)) return rateMap.get(nameLower)!;
+  if (rawLower && rateMap.has(rawLower)) return rateMap.get(rawLower)!;
+
+  // Substring match
+  if (rawLower.includes("pasquet") || nameLower.includes("pasquet")) return 30;
+  if (rawLower.includes("landaburo") || nameLower.includes("landaburo")) return 0;
+
+  if (roleKey && rateMap.has(roleKey)) return rateMap.get(roleKey)!;
+
+  return 0;
 }
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
@@ -361,8 +436,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // ── 3. Carga de mapa de profesionales y corte ──────────────────────────────
-  const profesionalMap = await getProfesionalMap();
+  // ── 3. Carga de mapa de profesionales, tasas de comisión y corte ──────────
+  const { nameToIdMap: profesionalMap, idToInfoMap } = await getProfesionalData();
+  const commissionRatesMap = await getCommissionRatesMap();
   const cutoffDate = getCutoffDate();
   const { usdMax, arsMin } = getCurrencyThresholds();
 
@@ -491,7 +567,7 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
-    // ── 5.5 Detección de Moneda por Rango de Monto (Regla C3) ─────────────────
+    // ── 5.5 Detección de Moneda por Rango de Monto (Regla C3 & Punto C) ───────
     const montoRaw = rec.monto_pagado_ars;
     const medioPagoKey = (rec.medio_pago || "").toLowerCase().trim();
     const isLabeledUSD =
@@ -513,26 +589,28 @@ export async function POST(req: NextRequest) {
     let effectiveMedioPago = normalizePaymentMethod(rec.medio_pago) || "efectivo";
 
     if (montoRaw > 0 && montoRaw < usdMax) {
-      // Menor a $2.000 -> Dólares (USD)
+      // Menor a $2.000 -> Dólares (USD). Se inserta directamente en payments (Punto C).
       detectedCurrency = "USD";
-      effectiveMedioPago = "efectivo_usd";
-      needs_review_uninserted++;
-      needs_review.push({
-        index: i,
-        reason: `moneda_usd: Cobro parece estar en dólares (monto = ${montoRaw} USD, medio de pago = "${rec.medio_pago}"). Requiere cotización o confirmación.`,
-        record: rec,
-      });
-      continue;
+      effectiveMedioPago = isLabeledUSD
+        ? (normalizePaymentMethod(rec.medio_pago) || "efectivo_usd")
+        : "efectivo_usd";
     } else if (montoRaw >= usdMax && montoRaw < arsMin) {
-      // Entre $2.000 y $30.000 -> Rango ambiguo
-      detectedCurrency = isLabeledUSD ? "USD" : "ARS";
-      needs_review_uninserted++;
-      needs_review.push({
-        index: i,
-        reason: `monto_rango_ambiguo: Monto ${montoRaw} está fuera del rango habitual ($${usdMax.toLocaleString("es-AR")} a $${arsMin.toLocaleString("es-AR")}). Verificar si es saldo en pesos o cobro en USD.`,
-        record: rec,
-      });
-      continue;
+      // Entre $2.000 y $30.000:
+      // Si el medio de pago dice explícitamente USD -> es USD directo.
+      // Si NO dice USD -> Rango ambiguo: va a revisión (Punto C).
+      if (isLabeledUSD) {
+        detectedCurrency = "USD";
+        effectiveMedioPago = normalizePaymentMethod(rec.medio_pago) || "efectivo_usd";
+      } else {
+        detectedCurrency = "ARS";
+        needs_review_uninserted++;
+        needs_review.push({
+          index: i,
+          reason: `monto_rango_ambiguo: Monto ${montoRaw} está fuera del rango habitual ($${usdMax.toLocaleString("es-AR")} a $${arsMin.toLocaleString("es-AR")}). Verificar si es saldo en pesos o cobro en USD.`,
+          record: rec,
+        });
+        continue;
+      }
     } else {
       // $30.000 o más -> Pesos (ARS), incluso si dice Efectivo USD (error de tipeo en planilla)
       detectedCurrency = "ARS";
@@ -541,19 +619,40 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── 5.6 Normalización de Medio de Pago (Regla C5) ─────────────────────────
+    // ── 5.6 Normalización de Medio de Pago ─────────────────────────────────────
     if (!effectiveMedioPago) {
       effectiveMedioPago = "efectivo";
     }
 
+    // ── Resolución anticipada de Profesional y Tasa de Comisión ───────────────
+    let resolvedProfId: string | undefined = rec.professional_profile_id;
+    const rawProf = (rec.profesional ?? "").trim();
+    if (!resolvedProfId && rawProf) {
+      const normProf = rawProf.toLowerCase();
+      let mapped = profesionalMap.get(rawProf) || profesionalMap.get(normProf);
+      if (!mapped && STATIC_PROFESSIONAL_MAP[normProf]) {
+        mapped = STATIC_PROFESSIONAL_MAP[normProf];
+      }
+      if (mapped) resolvedProfId = mapped;
+    }
+    const profInfo = resolvedProfId ? idToInfoMap.get(resolvedProfId) : undefined;
+    const appliedRate = resolveCommissionRate(
+      rawProf,
+      profInfo?.fullName,
+      profInfo?.role,
+      commissionRatesMap
+    );
+
     // ── 5.6.1 Si ya existía por external_id, comparar y actualizar (Regla A) ──
     if (existingByExtId) {
       const oldAmountArs = Number(existingByExtId.amount_ars ?? 0);
-      const newAmountArs = montoRaw;
+      const newAmountArs = detectedCurrency === "USD" ? 0 : montoRaw;
       const oldAmountUsd = existingByExtId.amount_usd != null ? Number(existingByExtId.amount_usd) : null;
-      const newAmountUsd: number | null = null;
+      const newAmountUsd = detectedCurrency === "USD" ? montoRaw : null;
       const oldPaymentMethod = existingByExtId.payment_method;
       const newPaymentMethod = effectiveMedioPago;
+      const calculatedCommission =
+        detectedCurrency === "USD" ? 0 : Math.round(newAmountArs * (appliedRate / 100));
 
       const amountChanged = oldAmountArs !== newAmountArs || oldAmountUsd !== newAmountUsd;
       const methodChanged = oldPaymentMethod !== newPaymentMethod;
@@ -571,9 +670,10 @@ export async function POST(req: NextRequest) {
         ? ` [Actualizado: antes $${oldAmountArs.toLocaleString("es-AR")}]`
         : ` [Medio pago: ${oldPaymentMethod} -> ${newPaymentMethod}]`;
 
+      const commTag = appliedRate > 0 ? ` [Comisión ${appliedRate}%: $${calculatedCommission.toLocaleString("es-AR")}]` : "";
       const updatedNotes = currentNotes.includes("[Actualizado")
-        ? `${currentNotes};${changeAudit}`
-        : `${currentNotes || rec.servicio || ""}${changeAudit}`;
+        ? `${currentNotes};${changeAudit}${commTag}`
+        : `${currentNotes || rec.servicio || ""}${changeAudit}${commTag}`;
 
       const { error: updateError } = await supabaseAdmin
         .from("payments")
@@ -582,6 +682,7 @@ export async function POST(req: NextRequest) {
           amount_usd: newAmountUsd,
           currency: detectedCurrency,
           payment_method: newPaymentMethod,
+          commission_amount_ars: calculatedCommission,
           notes: updatedNotes,
         })
         .eq("id", existingByExtId.id);
@@ -649,11 +750,10 @@ export async function POST(req: NextRequest) {
       patientId = lookupResult.id;
     }
 
-    // ── 5.8 Resolución de Profesional (Regla C6) ──────────────────────────────
-    let professionalId: string | undefined = rec.professional_profile_id;
+    // ── 5.8 Validación de Profesional Resuelto ────────────────────────────────
+    let professionalId: string | undefined = resolvedProfId;
 
     if (!professionalId) {
-      const rawProf = (rec.profesional ?? "").trim();
       if (!rawProf) {
         needs_review_uninserted++;
         needs_review.push({
@@ -664,25 +764,13 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      const normProf = rawProf.toLowerCase();
-      let mapped =
-        profesionalMap.get(rawProf) ||
-        profesionalMap.get(normProf);
-
-      if (!mapped && STATIC_PROFESSIONAL_MAP[normProf]) {
-        mapped = STATIC_PROFESSIONAL_MAP[normProf];
-      }
-
-      if (!mapped) {
-        needs_review_uninserted++;
-        needs_review.push({
-          index: i,
-          reason: `sin_professional: Profesional "${rawProf}" no encontrada en perfiles (asignar manualmente)`,
-          record: rec,
-        });
-        continue;
-      }
-      professionalId = mapped;
+      needs_review_uninserted++;
+      needs_review.push({
+        index: i,
+        reason: `sin_professional: Profesional "${rawProf}" no encontrada en perfiles (asignar manualmente)`,
+        record: rec,
+      });
+      continue;
     }
 
     // ── 5.9 Deduplicación Nivel 2 (ventana solapada) ──────────────────────────
@@ -695,14 +783,20 @@ export async function POST(req: NextRequest) {
         ? new Date(parsedDate.getTime() + 15 * 60 * 1000)
         : new Date(parsedDate.getTime() + 24 * 60 * 60 * 1000 - 1);
 
-      const { data: existingApprox, error: approxError } = await supabaseAdmin
+      const approxQuery = supabaseAdmin
         .from("payments")
         .select("id, payment_date")
         .eq("patient_id", patientId)
-        .eq("amount_ars", montoRaw)
         .gte("payment_date", winStart.toISOString())
-        .lte("payment_date", winEnd.toISOString())
-        .maybeSingle();
+        .lte("payment_date", winEnd.toISOString());
+
+      if (detectedCurrency === "USD") {
+        approxQuery.eq("amount_usd", montoRaw);
+      } else {
+        approxQuery.eq("amount_ars", montoRaw);
+      }
+
+      const { data: existingApprox, error: approxError } = await approxQuery.maybeSingle();
 
       if (!approxError && existingApprox) {
         duplicates_approx++;
@@ -715,20 +809,32 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── 5.10 Multi-servicio y Guardado en DB (Regla C4) ───────────────────────
+    // ── 5.10 Multi-servicio, Productos y Guardado en DB (Regla C4 & Puntos D, E) ─
     const isMulti = isRealMultiService(rec.servicio ?? "");
-    const paymentNotes = isMulti
-      ? `[MULTI-SERVICIO] ${rec.servicio ?? ""}`
-      : (rec.servicio ?? null);
+    const isProduct = (rec.servicio ?? "").toLowerCase().trim().startsWith("venta de producto");
+    let paymentNotes = rec.servicio ?? null;
+    if (isProduct) {
+      paymentNotes = `[VENTA-PRODUCTO] ${rec.servicio ?? ""}`;
+    } else if (isMulti) {
+      paymentNotes = `[MULTI-SERVICIO] ${rec.servicio ?? ""}`;
+    }
+
+    const calculatedCommission =
+      detectedCurrency === "USD" ? 0 : Math.round(montoRaw * (appliedRate / 100));
+
+    if (appliedRate > 0) {
+      const commTag = `[Comisión ${appliedRate}%: $${calculatedCommission.toLocaleString("es-AR")}]`;
+      paymentNotes = paymentNotes ? `${paymentNotes} ${commTag}` : commTag;
+    }
 
     const insertPayload: Record<string, unknown> = {
       patient_id: patientId,
       professional_profile_id: professionalId,
-      amount_ars: montoRaw,
-      amount_usd: null,
-      currency: "ARS",
+      amount_ars: detectedCurrency === "USD" ? 0 : montoRaw,
+      amount_usd: detectedCurrency === "USD" ? montoRaw : null,
+      currency: detectedCurrency,
       payment_method: effectiveMedioPago,
-      commission_amount_ars: 0,
+      commission_amount_ars: calculatedCommission,
       payment_date: parsedDate.toISOString(),
       appointment_id: null,
       order_id: null,

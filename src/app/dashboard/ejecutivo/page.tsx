@@ -1,16 +1,24 @@
-// Dashboard Ejecutivo — acceso exclusivo rol `admin`.
+// Dashboard Ejecutivo — Reestructurado con pestañas (Resumen, Cierre Diario, Revisión).
+// Control de permisos estricto del lado del servidor (R6): cada pestaña evalúa su propio permiso.
 // Server Component: queries run at request time, no client-side loading states.
-// Shows monthly financials (ARS/USD + commissions), low-stock alerts, and MP config.
+
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { assertSectionAccess } from '@/lib/permissions';
-import { getPendingReviewCount } from '@/lib/ingest-review';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { getUserSections } from '@/lib/permissions';
+import { getPendingReviewCount, getReviewItems } from '@/lib/ingest-review';
 import PeriodSelector from '@/components/dashboard/PeriodSelector';
 import type { PeriodOption } from '@/components/dashboard/PeriodSelector';
+import EjecutivoTabs, { TabItem } from './EjecutivoTabs';
+import CierreDiarioClient from '../cierre-diario/CierreDiarioClient';
+import { getCierreDiarioData } from '../cierre-diario/getCierreDiarioData';
+import ReviewTable from '../revision/ReviewTable';
 import styles from './page.module.css';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Dashboard Ejecutivo | Dra. Landaburo',
@@ -30,14 +38,9 @@ type Payment = {
   payment_method: string;
   commission_amount_ars: number;
   payment_date: string;
+  notes: string | null;
   patients: { full_name: string } | null;
-};
-
-type Product = {
-  id: string;
-  name: string;
-  stock_quantity: number;
-  min_stock_alert: number;
+  profiles: { full_name: string } | null;
 };
 
 function formatARS(value: number): string {
@@ -64,10 +67,19 @@ function formatDate(isoString: string): string {
   }).format(new Date(isoString));
 }
 
+function isProductSale(notes: string | null): boolean {
+  const n = (notes || '').toLowerCase();
+  return (
+    n.includes('venta de producto') ||
+    n.includes('venta de productos') ||
+    n.includes('[venta-producto]')
+  );
+}
+
 export default async function EjecutivoPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string }>;
+  searchParams: Promise<{ tab?: string; period?: string; fecha?: string }>;
 }) {
   const supabase = await createClient();
 
@@ -88,28 +100,124 @@ export default async function EjecutivoPage({
   const role = profile?.role ?? '';
   if (!role || role === 'paciente') redirect('/portal/paciente');
 
-  // Guard server-side: la matriz de permisos es la unica fuente de verdad (R6)
-  await assertSectionAccess(user.id, role, 'ejecutivo');
+  // Guard server-side: matriz de permisos unificada
+  const perms = await getUserSections(user.id, role);
+  const canEjecutivo = perms.allowed.has('ejecutivo');
+  const canCierreDiario = perms.allowed.has('cierre-diario');
+  const canRevision = perms.allowed.has('revision');
 
-  // 1. Total payments in entire DB to distinguish "no data imported" from "empty month"
-  const { count: totalPaymentsCount } = await supabase
+  if (!canEjecutivo && !canCierreDiario && !canRevision) {
+    redirect('/dashboard/sin-acceso');
+  }
+
+  const pendingReviewCount = await getPendingReviewCount();
+
+  // Construir pestañas disponibles según los permisos del usuario
+  const availableTabs: TabItem[] = [];
+  if (canEjecutivo) {
+    availableTabs.push({
+      key: 'resumen',
+      label: 'Resumen Mensual',
+      href: '/dashboard/ejecutivo?tab=resumen',
+    });
+  }
+  if (canCierreDiario) {
+    availableTabs.push({
+      key: 'cierre-diario',
+      label: 'Cierre del Día',
+      href: '/dashboard/ejecutivo?tab=cierre-diario',
+    });
+  }
+  if (canRevision) {
+    availableTabs.push({
+      key: 'revision',
+      label: 'Revisión',
+      href: '/dashboard/ejecutivo?tab=revision',
+      badge: pendingReviewCount,
+    });
+  }
+
+  // Determinar pestaña activa (default: primera permitida)
+  const resolvedParams = await searchParams;
+  const requestedTab = resolvedParams?.tab?.trim();
+  let activeTab: string = availableTabs[0].key;
+
+  if (requestedTab === 'resumen' && canEjecutivo) {
+    activeTab = 'resumen';
+  } else if (requestedTab === 'cierre-diario' && canCierreDiario) {
+    activeTab = 'cierre-diario';
+  } else if (requestedTab === 'revision' && canRevision) {
+    activeTab = 'revision';
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PESTAÑA: CIERRE DEL DÍA
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (activeTab === 'cierre-diario') {
+    const cierreData = await getCierreDiarioData(resolvedParams?.fecha);
+    return (
+      <div className={styles.page}>
+        <EjecutivoTabs tabs={availableTabs} activeTab={activeTab} />
+        <CierreDiarioClient
+          currentDate={cierreData.currentDate}
+          todayDate={cierreData.todayDate}
+          formattedDisplayDate={cierreData.formattedDisplayDate}
+          totalArs={cierreData.totalArs}
+          totalUsd={cierreData.totalUsd}
+          paidPayments={cierreData.paidPayments}
+          zeroPayments={cierreData.zeroPayments}
+          methodTotals={cierreData.methodTotals}
+          pendingReviews={cierreData.pendingReviews}
+        />
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PESTAÑA: REVISIÓN DE REGISTROS
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (activeTab === 'revision') {
+    const items = await getReviewItems({ limit: 200 });
+    return (
+      <div className={styles.page}>
+        <EjecutivoTabs tabs={availableTabs} activeTab={activeTab} />
+        <header className={styles.pageHeader}>
+          <div>
+            <h1 className={styles.title}>Registros para Revisión</h1>
+            <p className={styles.period}>
+              Incidencias detectadas durante la ingesta de pacientes y cobros (rango ambiguo, omisiones de profesional o duplicados).
+            </p>
+          </div>
+        </header>
+        <ReviewTable initialItems={items} />
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PESTAÑA: RESUMEN MENSUAL (EJECUTIVO)
+  // ═══════════════════════════════════════════════════════════════════════════
+  const adminClient = createAdminClient();
+
+  // 1. Total payments en la DB
+  const { count: totalPaymentsCount } = await adminClient
     .from('payments')
     .select('id', { count: 'exact', head: true });
   const totalInDb = totalPaymentsCount ?? 0;
 
-  // 2. Fetch latest payment date to default to month with data if current month has no payments
-  const { data: latestPayment } = await supabase
+  // 2. Último cobro para mes por defecto
+  const { data: latestPayment } = await adminClient
     .from('payments')
     .select('payment_date')
     .order('payment_date', { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  // 3. Find distinct months that have payments
-  const { data: dateRows } = await supabase
+  // 3. Meses con datos
+  const { data: dateRows } = await adminClient
     .from('payments')
     .select('payment_date');
-  
+
   const monthsWithData = new Set<string>();
   (dateRows ?? []).forEach((r) => {
     if (r.payment_date) {
@@ -117,8 +225,8 @@ export default async function EjecutivoPage({
     }
   });
 
-  // 4. Resolve selected period
-  const { period: requestedPeriod } = await searchParams;
+  // 4. Período seleccionado
+  const requestedPeriod = resolvedParams?.period;
   const now = new Date();
   const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
@@ -136,15 +244,13 @@ export default async function EjecutivoPage({
   const lastDay = new Date(sYear, sMonth, 0).getDate();
   const lastDayPad = String(lastDay).padStart(2, '0');
 
-  // Rango mensual exacto en huso horario argentino (-03:00) para evitar que cobros
-  // a fin de mes (ej: 31/07 a las 21:00) se desplacen al mes siguiente en UTC
   const monthStart = `${sYear}-${sMonthPad}-01T00:00:00-03:00`;
   const monthEnd = `${sYear}-${sMonthPad}-${lastDayPad}T23:59:59.999-03:00`;
 
-  // Build available period options
+  // Opciones de período
   const defaultMonths = ['2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11', '2026-12'];
   const allPeriodKeys = Array.from(new Set([...defaultMonths, ...monthsWithData, selectedPeriod])).sort();
-  
+
   const periodOptions: PeriodOption[] = allPeriodKeys.map((key) => {
     const [y, m] = key.split('-').map(Number);
     const d = new Date(y, m - 1, 15);
@@ -171,50 +277,61 @@ export default async function EjecutivoPage({
     latestMonthLabel = lRaw.charAt(0).toUpperCase() + lRaw.slice(1);
   }
 
-  // Fetch payments for selected month
-  const { data: paymentsRaw, error: paymentsError } = await supabase
+  // Consulta de cobros del mes con profesional asignado
+  const { data: paymentsRaw, error: paymentsError } = await adminClient
     .from('payments')
-    .select('id, amount_ars, amount_usd, currency, payment_method, commission_amount_ars, payment_date, patients(full_name)')
+    .select(`
+      id,
+      amount_ars,
+      amount_usd,
+      currency,
+      payment_method,
+      commission_amount_ars,
+      payment_date,
+      notes,
+      patients ( full_name ),
+      profiles ( full_name )
+    `)
     .gte('payment_date', monthStart)
     .lte('payment_date', monthEnd)
     .order('payment_date', { ascending: false })
-    .limit(50);
+    .limit(100);
 
   const payments: Payment[] = paymentsRaw
     ? (paymentsRaw as unknown as Payment[])
     : [];
 
-  // Aggregate metrics
-  const paidPayments = payments.filter((p) => Number(p.amount_ars) > 0);
-  const zeroPayments = payments.filter((p) => Number(p.amount_ars) === 0);
+  // Clasificación de cobros
+  const paidPayments = payments.filter((p) => Number(p.amount_ars) > 0 || Number(p.amount_usd ?? 0) > 0);
+  const zeroPayments = payments.filter((p) => Number(p.amount_ars) === 0 && Number(p.amount_usd ?? 0) === 0);
 
-  const totalARS = paidPayments.reduce((sum, p) => sum + Number(p.amount_ars), 0);
-  const totalUSD = payments.reduce((sum, p) => sum + Number(p.amount_usd ?? 0), 0);
+  // Separación de Tratamientos vs Venta de Productos (Punto E)
+  const productPayments = paidPayments.filter((p) => isProductSale(p.notes));
+  const treatmentPayments = paidPayments.filter((p) => !isProductSale(p.notes));
+
+  const totalTreatmentsARS = treatmentPayments.reduce((sum, p) => sum + Number(p.amount_ars || 0), 0);
+  const totalProductsARS = productPayments.reduce((sum, p) => sum + Number(p.amount_ars || 0), 0);
+  const totalARS = totalTreatmentsARS + totalProductsARS;
+
+  // Facturación USD sin mezclar con pesos (Punto C)
+  const usdPayments = payments.filter(
+    (p) => p.currency === 'USD' || (p.amount_usd != null && Number(p.amount_usd) > 0)
+  );
+  const totalUSD = usdPayments.reduce((sum, p) => sum + Number(p.amount_usd ?? 0), 0);
+
+  // Comisiones
   const totalMercedesCommission = payments.reduce(
-    (sum, p) => sum + Number(p.commission_amount_ars),
+    (sum, p) => sum + Number(p.commission_amount_ars || 0),
     0
   );
-  const totalDraCommission = totalARS - totalMercedesCommission;
 
-  // Products with low stock
-  const { data: allProductsRaw } = await supabase
-    .from('products')
-    .select('id, name, stock_quantity, min_stock_alert')
-    .eq('is_active', true)
-    .order('stock_quantity', { ascending: true });
-
-  const allProducts: Product[] = allProductsRaw
-    ? (allProductsRaw as unknown as Product[])
-    : [];
-
-  const lowStock = allProducts.filter(
-    (p) => (p.stock_quantity ?? 0) <= (p.min_stock_alert ?? 5)
-  );
-
-  const pendingReviewCount = await getPendingReviewCount();
+  // Facturación menos comisiones (Punto F)
+  const facturacionMenosComisiones = totalARS - totalMercedesCommission;
 
   return (
     <div className={styles.page}>
+      <EjecutivoTabs tabs={availableTabs} activeTab={activeTab} />
+
       <div className={styles.pageHeader}>
         <div>
           <h1 className={styles.title}>Dashboard Ejecutivo</h1>
@@ -233,7 +350,7 @@ export default async function EjecutivoPage({
         </div>
       )}
 
-      {pendingReviewCount > 0 && (
+      {pendingReviewCount > 0 && canRevision && (
         <div
           style={{
             backgroundColor: 'rgba(197, 164, 126, 0.12)',
@@ -248,10 +365,10 @@ export default async function EjecutivoPage({
           }}
         >
           <div>
-            ⚠️ <strong>Atención:</strong> Hay <strong>{pendingReviewCount}</strong> registro(s) pendiente(s) de revisión (cobros en USD, posibles duplicados, incidencias de datos).
+            ⚠️ <strong>Atención:</strong> Hay <strong>{pendingReviewCount}</strong> registro(s) pendiente(s) de revisión (rango ambiguo, omisiones de profesional o duplicados).
           </div>
           <Link
-            href="/dashboard/revision"
+            href="/dashboard/ejecutivo?tab=revision"
             style={{
               color: '#1c1c1c',
               backgroundColor: 'var(--color-champagne)',
@@ -281,85 +398,85 @@ export default async function EjecutivoPage({
         </div>
       )}
 
-      {/* Metric cards */}
+      {/* Tarjetas métricas (Stock removido, USD dedicado, Tratamientos vs Productos, Facturación menos comisiones) */}
       <section className={styles.metricsGrid}>
+        {/* Tratamientos ARS */}
         <div className={styles.metricCard}>
-          <p className={styles.metricLabel}>Facturación ARS</p>
-          <p className={paidPayments.length > 0 ? styles.metricValue : `${styles.metricValue} ${styles.metricEmpty}`}>
-            {paidPayments.length > 0 ? formatARS(totalARS) : totalInDb > 0 ? '$ 0' : 'Sin datos registrados'}
+          <p className={styles.metricLabel}>Facturación Tratamientos</p>
+          <p className={treatmentPayments.length > 0 ? styles.metricValue : `${styles.metricValue} ${styles.metricEmpty}`}>
+            {treatmentPayments.length > 0 ? formatARS(totalTreatmentsARS) : totalInDb > 0 ? '$ 0' : 'Sin datos'}
           </p>
           <p className={styles.metricSub}>
-            {paidPayments.length} {paidPayments.length === 1 ? 'pago' : 'pagos'} en este período
-            {zeroPayments.length > 0 && (
-              <span style={{ display: 'block', marginTop: '0.2rem', fontSize: '0.78rem', color: 'var(--color-gris)' }}>
-                ({zeroPayments.length} {zeroPayments.length === 1 ? 'atención' : 'atenciones'} sin cobro registrado)
-              </span>
-            )}
+            {treatmentPayments.length} {treatmentPayments.length === 1 ? 'tratamiento' : 'tratamientos'}
           </p>
         </div>
+
+        {/* Venta de Productos ARS (Punto E) */}
+        <div className={styles.metricCard}>
+          <p className={styles.metricLabel}>Venta de Productos</p>
+          <p className={productPayments.length > 0 ? styles.metricValue : `${styles.metricValue} ${styles.metricEmpty}`}>
+            {productPayments.length > 0 ? formatARS(totalProductsARS) : totalInDb > 0 ? '$ 0' : 'Sin ventas'}
+          </p>
+          <p className={styles.metricSub}>
+            {productPayments.length} {productPayments.length === 1 ? 'producto' : 'productos'} vendidos
+          </p>
+        </div>
+
+        {/* Facturación USD dedicada sin conversión (Punto C) */}
         <div className={styles.metricCard}>
           <p className={styles.metricLabel}>Facturación USD</p>
-          <p className={payments.length > 0 ? styles.metricValue : `${styles.metricValue} ${styles.metricEmpty}`}>
-            {payments.length > 0 ? formatUSD(totalUSD) : totalInDb > 0 ? 'US$ 0' : 'Sin datos registrados'}
+          <p className={usdPayments.length > 0 ? styles.metricValue : `${styles.metricValue} ${styles.metricEmpty}`}>
+            {usdPayments.length > 0 ? formatUSD(totalUSD) : totalInDb > 0 ? 'US$ 0' : 'Sin datos'}
           </p>
-          <p className={styles.metricSub}>equivalente del período</p>
+          <p className={styles.metricSub}>
+            {usdPayments.length} {usdPayments.length === 1 ? 'cobro' : 'cobros'} en dólares (sin conversión)
+          </p>
         </div>
+
+        {/* Facturación menos comisiones (Punto F) */}
         <div className={styles.metricCard}>
-          <p className={styles.metricLabel}>Neto para el consultorio</p>
-          <p className={payments.length > 0 ? `${styles.metricValue} ${styles.metricHighlight}` : `${styles.metricValue} ${styles.metricEmpty}`}>
-            {payments.length > 0 ? formatARS(totalDraCommission) : totalInDb > 0 ? '$ 0' : 'Sin datos registrados'}
+          <p className={styles.metricLabel}>Facturación menos comisiones</p>
+          <p className={paidPayments.length > 0 ? `${styles.metricValue} ${styles.metricHighlight}` : `${styles.metricValue} ${styles.metricEmpty}`}>
+            {paidPayments.length > 0 ? formatARS(facturacionMenosComisiones) : totalInDb > 0 ? '$ 0' : 'Sin datos'}
           </p>
-          <p className={styles.metricSub}>neto del período</p>
+          <p className={styles.metricSub} style={{ fontSize: '0.72rem', color: 'var(--color-gris)' }}>
+            (no incluye costos operativos ni insumos)
+          </p>
         </div>
+
+        {/* Comisión Mercedes (30%) */}
         <div className={styles.metricCard}>
           <p className={styles.metricLabel}>Comisión Mercedes (30%)</p>
-          <p className={payments.length > 0 ? styles.metricValue : `${styles.metricValue} ${styles.metricEmpty}`}>
-            {payments.length > 0 ? formatARS(totalMercedesCommission) : totalInDb > 0 ? '$ 0' : 'Sin datos registrados'}
+          <p className={totalMercedesCommission > 0 ? styles.metricValue : `${styles.metricValue} ${styles.metricEmpty}`}>
+            {totalMercedesCommission > 0 ? formatARS(totalMercedesCommission) : totalInDb > 0 ? '$ 0' : 'Sin datos'}
           </p>
           <p className={styles.metricSub}>cosmetología</p>
         </div>
-        <div className={styles.metricCard}>
-          <p className={styles.metricLabel}>En Revisión</p>
-          <p className={pendingReviewCount > 0 ? `${styles.metricValue} ${styles.metricHighlight}` : `${styles.metricValue} ${styles.metricEmpty}`}>
-            {pendingReviewCount}
-          </p>
-          <p className={styles.metricSub}>
-            <Link
-              href="/dashboard/revision"
-              style={{
-                color: 'var(--color-champagne)',
-                textDecoration: 'underline',
-                textUnderlineOffset: '2px',
-              }}
-            >
-              Ver registros →
-            </Link>
-          </p>
-        </div>
+
+        {/* En Revisión */}
+        {canRevision && (
+          <div className={styles.metricCard}>
+            <p className={styles.metricLabel}>En Revisión</p>
+            <p className={pendingReviewCount > 0 ? `${styles.metricValue} ${styles.metricHighlight}` : `${styles.metricValue} ${styles.metricEmpty}`}>
+              {pendingReviewCount}
+            </p>
+            <p className={styles.metricSub}>
+              <Link
+                href="/dashboard/ejecutivo?tab=revision"
+                style={{
+                  color: 'var(--color-champagne)',
+                  textDecoration: 'underline',
+                  textUnderlineOffset: '2px',
+                }}
+              >
+                Ver incidencias →
+              </Link>
+            </p>
+          </div>
+        )}
       </section>
 
-      {/* Low stock alerts */}
-      {lowStock.length > 0 && (
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>
-            Alertas de stock bajo
-            <span className={styles.alertBadge}>{lowStock.length}</span>
-          </h2>
-          <div className={styles.alertGrid}>
-            {lowStock.map((product) => (
-              <div key={product.id} className={styles.alertCard}>
-                <p className={styles.alertName}>{product.name}</p>
-                <p className={styles.alertStock}>
-                  <span className={styles.alertQty}>{product.stock_quantity}</span>
-                  {' '}unidades (mín. {product.min_stock_alert})
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Payments table */}
+      {/* Tabla mensual con columna de Profesional (Punto D) */}
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Pagos registrados de {monthLabel}</h2>
         {payments.length === 0 ? (
@@ -373,25 +490,31 @@ export default async function EjecutivoPage({
                 <tr>
                   <th className={styles.th}>Fecha</th>
                   <th className={styles.th}>Paciente</th>
+                  <th className={styles.th}>Profesional</th>
                   <th className={styles.th}>Método</th>
                   <th className={styles.th}>Moneda</th>
                   <th className={`${styles.th} ${styles.thRight}`}>Monto ARS</th>
+                  <th className={`${styles.th} ${styles.thRight}`}>Monto USD</th>
                   <th className={`${styles.th} ${styles.thRight}`}>Comisión</th>
                 </tr>
               </thead>
               <tbody>
                 {payments.map((payment) => {
-                  const isZero = Number(payment.amount_ars) === 0;
+                  const isZero = Number(payment.amount_ars) === 0 && Number(payment.amount_usd ?? 0) === 0;
+                  const isUSD = payment.currency === 'USD' || (payment.amount_usd != null && Number(payment.amount_usd) > 0);
                   return (
                     <tr key={payment.id} className={styles.tr}>
                       <td className={styles.td}>{formatDate(payment.payment_date)}</td>
                       <td className={styles.td}>
                         {payment.patients?.full_name ?? '—'}
                       </td>
+                      <td className={styles.td} style={{ fontWeight: 500 }}>
+                        {payment.profiles?.full_name ?? '—'}
+                      </td>
                       <td className={styles.td}>{payment.payment_method}</td>
                       <td className={styles.td}>{payment.currency}</td>
                       <td className={`${styles.td} ${styles.tdRight}`}>
-                        {formatARS(Number(payment.amount_ars))}
+                        {Number(payment.amount_ars) > 0 ? formatARS(Number(payment.amount_ars)) : isUSD ? '—' : '$ 0'}
                         {isZero && (
                           <span
                             style={{
@@ -412,7 +535,14 @@ export default async function EjecutivoPage({
                         )}
                       </td>
                       <td className={`${styles.td} ${styles.tdRight}`}>
-                        {formatARS(Number(payment.commission_amount_ars))}
+                        {payment.amount_usd != null && Number(payment.amount_usd) > 0
+                          ? formatUSD(Number(payment.amount_usd))
+                          : '—'}
+                      </td>
+                      <td className={`${styles.td} ${styles.tdRight}`}>
+                        {Number(payment.commission_amount_ars) > 0
+                          ? formatARS(Number(payment.commission_amount_ars))
+                          : '—'}
                       </td>
                     </tr>
                   );

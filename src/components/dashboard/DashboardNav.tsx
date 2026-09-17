@@ -15,8 +15,9 @@ export default function DashboardNav({ items }: { items: NavItem[] }) {
   return (
     <nav className={styles.sidebarNav}>
       {items.map((item) => {
-        // Mark active if pathname starts with item.href (covers sub-routes)
-        const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+        // Mark active if pathname matches base path (ignoring query strings)
+        const itemBasePath = item.href.split("?")[0];
+        const isActive = pathname === itemBasePath || pathname.startsWith(itemBasePath + "/");
         return (
           <Link
             key={item.href}

@@ -98,7 +98,7 @@ export default function CierreDiarioClient({
 
   const handleDateChange = (newDate: string) => {
     if (!newDate) return;
-    router.push(`/dashboard/cierre-diario?fecha=${newDate}`);
+    router.push(`/dashboard/ejecutivo?tab=cierre-diario&fecha=${newDate}`);
   };
 
   const handleOffsetDay = (offsetDays: number) => {
@@ -184,7 +184,7 @@ export default function CierreDiarioClient({
               </p>
             </div>
           </div>
-          <Link href="/dashboard/revision" className={styles.alertBtn}>
+          <Link href="/dashboard/ejecutivo?tab=revision" className={styles.alertBtn}>
             <span>Ver en Revisión</span>
             <ArrowRight size={14} />
           </Link>

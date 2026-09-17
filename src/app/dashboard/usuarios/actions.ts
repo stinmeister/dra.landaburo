@@ -123,27 +123,32 @@ export async function setUserSectionOverride(
   revalidatePath("/dashboard");
 }
 
-// ── Gestión y Blanqueo de Contraseñas por Admin ───────────────────────────
-export async function adminResetUserPassword(
-  userId: string,
-  newPassword: string
+// ── Gestión Segura de Recuperación de Contraseñas (Solo Enlaces y Correo) ────
+// SEGURIDAD (17/09/2026): Eliminada la asignación manual directa de contraseñas
+// para prevenir suplantación de identidad. Solo se permite el envío de enlaces
+// al correo registrado del usuario o la generación del enlace oficial de recuperación.
+
+export async function adminSendRecoveryEmail(
+  email: string
 ): Promise<{ success: boolean; error?: string }> {
   await assertAdmin();
 
-  if (!userId || !newPassword || newPassword.trim().length < 8) {
-    return { success: false, error: 'La contraseña debe tener al menos 8 caracteres.' };
+  if (!email) {
+    return { success: false, error: 'Email no válido.' };
   }
 
   const admin = createAdminClient();
-  const { error } = await admin.auth.admin.updateUserById(userId, {
-    password: newPassword.trim(),
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://dralandaburo.com';
+  const redirectTo = `${siteUrl}/auth/callback?next=/actualizar-contrasena`;
+
+  const { error } = await admin.auth.resetPasswordForEmail(email.trim(), {
+    redirectTo,
   });
 
   if (error) {
-    return { success: false, error: `Error al actualizar contraseña: ${error.message}` };
+    return { success: false, error: `Error al enviar correo: ${error.message}` };
   }
 
-  revalidatePath('/dashboard/usuarios');
   return { success: true };
 }
 
