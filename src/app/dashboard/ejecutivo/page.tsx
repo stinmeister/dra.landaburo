@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getUserSections } from '@/lib/permissions';
-import { getPendingReviewCount, getReviewItems } from '@/lib/ingest-review';
+import { getPendingReviewCount, getActionableReviewCount, getReviewItems } from '@/lib/ingest-review';
 import PeriodSelector from '@/components/dashboard/PeriodSelector';
 import type { PeriodOption } from '@/components/dashboard/PeriodSelector';
 import EjecutivoTabs, { TabItem } from './EjecutivoTabs';
@@ -111,6 +111,7 @@ export default async function EjecutivoPage({
   }
 
   const pendingReviewCount = await getPendingReviewCount();
+  const actionableReviewCount = await getActionableReviewCount();
 
   // Construir pestañas disponibles según los permisos del usuario
   const availableTabs: TabItem[] = [];
@@ -133,7 +134,7 @@ export default async function EjecutivoPage({
       key: 'revision',
       label: 'Revisión',
       href: '/dashboard/ejecutivo?tab=revision',
-      badge: pendingReviewCount,
+      badge: actionableReviewCount,
     });
   }
 
@@ -359,7 +360,7 @@ export default async function EjecutivoPage({
         </div>
       )}
 
-      {pendingReviewCount > 0 && canRevision && (
+      {actionableReviewCount > 0 && canRevision && (
         <div
           style={{
             backgroundColor: 'rgba(197, 164, 126, 0.12)',
@@ -374,7 +375,7 @@ export default async function EjecutivoPage({
           }}
         >
           <div>
-            ⚠️ <strong>Atención:</strong> Hay <strong>{pendingReviewCount}</strong> cobro(s) con datos pendientes de completar (asignar profesional o vincular paciente en el padrón).
+            ⚠️ <strong>Atención:</strong> Hay <strong>{actionableReviewCount}</strong> cobro(s) con datos pendientes de completar (asignar profesional o vincular paciente en el padrón).
           </div>
           <Link
             href="/dashboard/ejecutivo?tab=revision"
@@ -462,12 +463,12 @@ export default async function EjecutivoPage({
           <p className={styles.metricSub}>cosmetología</p>
         </div>
 
-        {/* En Revisión */}
+        {/* Datos Pendientes */}
         {canRevision && (
           <div className={styles.metricCard}>
-            <p className={styles.metricLabel}>En Revisión</p>
-            <p className={pendingReviewCount > 0 ? `${styles.metricValue} ${styles.metricHighlight}` : `${styles.metricValue} ${styles.metricEmpty}`}>
-              {pendingReviewCount}
+            <p className={styles.metricLabel}>Por Completar</p>
+            <p className={actionableReviewCount > 0 ? `${styles.metricValue} ${styles.metricHighlight}` : `${styles.metricValue} ${styles.metricEmpty}`}>
+              {actionableReviewCount}
             </p>
             <p className={styles.metricSub}>
               <Link

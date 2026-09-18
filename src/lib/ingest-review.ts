@@ -89,7 +89,28 @@ export async function persistReviewItems(items: IngestReviewInput[]): Promise<nu
 }
 
 /**
- * Retorna la cantidad de registros en estado 'pending'.
+ * Retorna la cantidad de registros en estado 'pending' que efectivamente requieren acción
+ * (asignar profesional o vincular paciente en el padrón).
+ * Excluye informativos, multi-servicio y estados no accionables.
+ */
+export async function getActionableReviewCount(): Promise<number> {
+  try {
+    const admin = createAdminClient();
+    const { count, error } = await admin
+      .from("ingest_review")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending")
+      .or("reason.ilike.%sin_professional%,reason.ilike.%sin_paciente%,reason.ilike.%ambiguous_ref%");
+
+    if (error) return 0;
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Retorna la cantidad total bruta de registros en estado 'pending'.
  * Devuelve 0 si la tabla no existe o ante cualquier error.
  */
 export async function getPendingReviewCount(): Promise<number> {

@@ -175,15 +175,44 @@ function parseReason(reason: string, payload: Record<string, unknown>): ParsedRe
 function parsePaymentDateFromPayload(payload: Record<string, unknown>, createdAt: string): { display: string; timestamp: number } {
   const clave = payload.clave_unica as string | undefined;
   const fecha = payload.fecha as string | undefined;
+  const fuenteDatos = payload.Fuente_Datos as string | undefined;
 
-  if (clave) {
-    if (clave.includes('|')) {
-      const parts = clave.split('|');
-      if (parts.length >= 2) {
-        const dt = new Date(parts[1].trim());
+  // 1. Clave única (ej. DNI|YYYY-MM-DD|Servicio o DNI|YYYY-MM-DDTHH:mm|Servicio)
+  if (clave && clave.includes('|')) {
+    const parts = clave.split('|');
+    if (parts.length >= 2) {
+      const tsPart = parts[1].trim();
+      // Caso 1a: Solo fecha YYYY-MM-DD (sin hora) -> Interpretar al mediodía argentino (-03:00) y mostrar fecha pura sin hora
+      if (/^\d{4}-\d{2}-\d{2}$/.test(tsPart)) {
+        const [y, m, d] = tsPart.split('-');
+        const dt = new Date(`${y}-${m}-${d}T12:00:00-03:00`);
         if (!isNaN(dt.getTime())) {
           return {
-            display: dt.toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+            display: dt.toLocaleDateString('es-AR', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+              timeZone: 'America/Argentina/Buenos_Aires',
+            }),
+            timestamp: dt.getTime(),
+          };
+        }
+      }
+      // Caso 1b: Fecha con hora ISO (YYYY-MM-DDTHH:mm[:ss])
+      if (tsPart.includes('T')) {
+        const hasTz = tsPart.endsWith('Z') || tsPart.includes('+') || tsPart.slice(10).includes('-');
+        const withTz = hasTz ? tsPart : `${tsPart}-03:00`;
+        const dt = new Date(withTz);
+        if (!isNaN(dt.getTime())) {
+          const hasTime = !tsPart.includes('T00:00:00');
+          return {
+            display: dt.toLocaleDateString('es-AR', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+              ...(hasTime ? { hour: '2-digit', minute: '2-digit' } : {}),
+              timeZone: 'America/Argentina/Buenos_Aires',
+            }),
             timestamp: dt.getTime(),
           };
         }
@@ -191,6 +220,7 @@ function parsePaymentDateFromPayload(payload: Record<string, unknown>, createdAt
     }
   }
 
+  // 2. Campo fecha D/M/YYYY o DD/MM/YYYY
   if (fecha) {
     const parts = fecha.trim().split(' ')[0].split('/');
     if (parts.length === 3) {
@@ -198,16 +228,47 @@ function parsePaymentDateFromPayload(payload: Record<string, unknown>, createdAt
       const dt = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T12:00:00-03:00`);
       if (!isNaN(dt.getTime())) {
         return {
-          display: dt.toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' }),
+          display: dt.toLocaleDateString('es-AR', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            timeZone: 'America/Argentina/Buenos_Aires',
+          }),
           timestamp: dt.getTime(),
         };
       }
     }
   }
 
+  // 3. Extraer fecha de Fuente_Datos si existe (ej. "Alta desde citas (22/07/2026)")
+  if (fuenteDatos) {
+    const m = fuenteDatos.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (m) {
+      const [, d, mo, y] = m;
+      const dt = new Date(`${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}T12:00:00-03:00`);
+      if (!isNaN(dt.getTime())) {
+        return {
+          display: dt.toLocaleDateString('es-AR', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            timeZone: 'America/Argentina/Buenos_Aires',
+          }),
+          timestamp: dt.getTime(),
+        };
+      }
+    }
+  }
+
+  // 4. Fallback a createdAt
   const created = new Date(createdAt);
   return {
-    display: created.toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' }),
+    display: created.toLocaleDateString('es-AR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      timeZone: 'America/Argentina/Buenos_Aires',
+    }),
     timestamp: created.getTime(),
   };
 }

@@ -166,12 +166,18 @@ function parsePaymentDate(claveUnica: string | undefined, fechaRaw: string | und
       const parts = claveUnica.split("|");
       if (parts.length >= 2) {
         const tsPart = parts[1].trim();
-        if (tsPart.includes("T") || tsPart.match(/^\d{4}-\d{2}-\d{2}/)) {
+        // Caso 1a: Solo fecha YYYY-MM-DD -> medianoche argentina (-03:00) = 03:00 UTC
+        if (/^\d{4}-\d{2}-\d{2}$/.test(tsPart)) {
+          const dt = new Date(`${tsPart}T00:00:00-03:00`);
+          if (!isNaN(dt.getTime())) {
+            return { date: dt, hasSpecificTime: false };
+          }
+        } else if (tsPart.includes("T")) {
           const hasTz = tsPart.endsWith("Z") || tsPart.includes("+") || tsPart.slice(10).includes("-");
           const withTz = hasTz ? tsPart : `${tsPart}-03:00`;
           const dt = new Date(withTz);
           if (!isNaN(dt.getTime())) {
-            const hasTime = tsPart.includes("T") && !tsPart.includes("T00:00:00");
+            const hasTime = !tsPart.includes("T00:00:00");
             return { date: dt, hasSpecificTime: hasTime };
           }
         }
@@ -533,11 +539,28 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── 5.4 Filtrado por Estado (Reglas C1 y C2) ─────────────────────────────
+    // ── 5.4 Filtrado por Estado (Reglas C1, C2 y Punto E) ────────────────────
     const estadoRaw = rec.estado.trim();
     const estadoLower = estadoRaw.toLowerCase();
 
     if (!ESTADOS_FACTURABLES.has(estadoLower)) {
+      // Regla Punto E: Citas eliminadas
+      if (estadoLower.startsWith("cita eliminada")) {
+        if (Number(rec.monto_pagado_ars ?? 0) > 0) {
+          needs_review_uninserted++;
+          needs_review.push({
+            index: i,
+            reason: `cita_eliminada_con_pago: Cita con estado "${estadoRaw}" pero registra un cobro de $${Number(rec.monto_pagado_ars).toLocaleString("es-AR")}. Requiere verificación manual.`,
+            record: rec,
+          });
+          continue;
+        } else {
+          // Eliminada con monto cero -> omitir en silencio
+          skipped_estado++;
+          continue;
+        }
+      }
+
       if (shouldIgnoreEstado(estadoRaw)) {
         // Caso Inverso: ¿Estaba previamente registrado con dinero en DB?
         if (
@@ -553,7 +576,7 @@ export async function POST(req: NextRequest) {
           continue;
         }
 
-        // Cita cancelada, ausente, en sala de espera, eliminada o futura sin cobro -> silencio
+        // Cita cancelada, ausente, en sala de espera o futura sin cobro -> silencio
         skipped_estado++;
         continue;
       }
@@ -568,7 +591,7 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
-    // ── 5.5 Detección de Moneda por Rango de Monto (Regla C3 & Punto C) ───────
+    // ── 5.5 Detección de Moneda (Punto D: La etiqueta Efectivo USD manda sin ambigüedad) ───────
     const montoRaw = rec.monto_pagado_ars;
     const medioPagoKey = (rec.medio_pago || "").toLowerCase().trim();
     const isLabeledUSD =
@@ -589,37 +612,31 @@ export async function POST(req: NextRequest) {
     let detectedCurrency: "ARS" | "USD" = "ARS";
     let effectiveMedioPago = normalizePaymentMethod(rec.medio_pago) || "efectivo";
 
-    // ¿Es venta de productos? (Punto D: la regla de $30.000 no aplica a productos)
+    // ¿Es venta de productos?
     const isProductSale = (rec.servicio ?? "").toLowerCase().trim().startsWith("venta de producto");
-
     let montoAmbiguoReason: string | null = null;
 
     if (isProductSale && !isLabeledUSD) {
       // Venta de productos en pesos: no aplica umbral mínimo de $30.000 ni clasificación como USD
       detectedCurrency = "ARS";
       effectiveMedioPago = normalizePaymentMethod(rec.medio_pago) || "efectivo";
-    } else if (montoRaw > 0 && montoRaw < usdMax) {
-      // Menor a $2.000 -> Dólares (USD). Se inserta directamente en payments (Punto C).
+    } else if (isLabeledUSD) {
+      // Definición Punto D: Efectivo USD es dólares, sin ambigüedad (la etiqueta manda)
       detectedCurrency = "USD";
-      effectiveMedioPago = isLabeledUSD
-        ? (normalizePaymentMethod(rec.medio_pago) || "efectivo_usd")
-        : "efectivo_usd";
+      effectiveMedioPago = "efectivo_usd";
+    } else if (montoRaw > 0 && montoRaw < usdMax) {
+      // Menor a $2.000 sin etiqueta USD: heurística de rango por posible omisión de etiqueta
+      detectedCurrency = "USD";
+      effectiveMedioPago = "efectivo_usd";
     } else if (montoRaw >= usdMax && montoRaw < arsMin) {
-      // Entre $2.000 y $30.000 (Punto B: señas y saldos parciales NO retienen, entran en pesos):
-      if (isLabeledUSD) {
-        detectedCurrency = "USD";
-        effectiveMedioPago = normalizePaymentMethod(rec.medio_pago) || "efectivo_usd";
-      } else {
-        detectedCurrency = "ARS";
-        effectiveMedioPago = normalizePaymentMethod(rec.medio_pago) || "efectivo";
-        montoAmbiguoReason = `monto_parcial_seña: Monto $${montoRaw.toLocaleString("es-AR")} registrado como saldo parcial o seña`;
-      }
-    } else {
-      // $30.000 o más -> Pesos (ARS), incluso si dice Efectivo USD (error de tipeo en planilla)
+      // Entre $2.000 y $30.000 sin etiqueta USD: saldo parcial o seña en pesos
       detectedCurrency = "ARS";
-      if (isLabeledUSD) {
-        effectiveMedioPago = "efectivo";
-      }
+      effectiveMedioPago = normalizePaymentMethod(rec.medio_pago) || "efectivo";
+      montoAmbiguoReason = `monto_parcial_seña: Monto $${montoRaw.toLocaleString("es-AR")} registrado como saldo parcial o seña`;
+    } else {
+      // $30.000 o más sin etiqueta USD -> Pesos (ARS)
+      detectedCurrency = "ARS";
+      effectiveMedioPago = normalizePaymentMethod(rec.medio_pago) || "efectivo";
     }
 
     // ── 5.6 Normalización de Medio de Pago ─────────────────────────────────────
