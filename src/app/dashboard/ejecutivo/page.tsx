@@ -277,7 +277,43 @@ export default async function EjecutivoPage({
     latestMonthLabel = lRaw.charAt(0).toUpperCase() + lRaw.slice(1);
   }
 
-  // Consulta de cobros del mes con profesional asignado
+  // 1. Consulta agregada completa del mes (sin límite) para métricas exactas (Punto B)
+  const { data: monthTotalsRaw } = await adminClient
+    .from('payments')
+    .select('id, amount_ars, amount_usd, currency, commission_amount_ars, notes')
+    .gte('payment_date', monthStart)
+    .lte('payment_date', monthEnd);
+
+  const monthRows = monthTotalsRaw || [];
+
+  // Clasificación de cobros del mes
+  const paidRows = monthRows.filter((p) => Number(p.amount_ars) > 0 || Number(p.amount_usd ?? 0) > 0);
+  const zeroRows = monthRows.filter((p) => Number(p.amount_ars) === 0 && Number(p.amount_usd ?? 0) === 0);
+
+  // Separación de Tratamientos vs Venta de Productos (Punto E)
+  const productRows = paidRows.filter((p) => isProductSale(p.notes));
+  const treatmentRows = paidRows.filter((p) => !isProductSale(p.notes));
+
+  const totalTreatmentsARS = treatmentRows.reduce((sum, p) => sum + Number(p.amount_ars || 0), 0);
+  const totalProductsARS = productRows.reduce((sum, p) => sum + Number(p.amount_ars || 0), 0);
+  const totalARS = totalTreatmentsARS + totalProductsARS;
+
+  // Facturación USD sin mezclar con pesos (Punto C)
+  const usdRows = monthRows.filter(
+    (p) => p.currency === 'USD' || (p.amount_usd != null && Number(p.amount_usd) > 0)
+  );
+  const totalUSD = usdRows.reduce((sum, p) => sum + Number(p.amount_usd ?? 0), 0);
+
+  // Comisiones
+  const totalMercedesCommission = monthRows.reduce(
+    (sum, p) => sum + Number(p.commission_amount_ars || 0),
+    0
+  );
+
+  // Facturación menos comisiones (Punto F)
+  const facturacionMenosComisiones = totalARS - totalMercedesCommission;
+
+  // 2. Consulta de cobros del mes para la tabla paginada (Punto B)
   const { data: paymentsRaw, error: paymentsError } = await adminClient
     .from('payments')
     .select(`
@@ -295,38 +331,11 @@ export default async function EjecutivoPage({
     .gte('payment_date', monthStart)
     .lte('payment_date', monthEnd)
     .order('payment_date', { ascending: false })
-    .limit(100);
+    .limit(200);
 
   const payments: Payment[] = paymentsRaw
     ? (paymentsRaw as unknown as Payment[])
     : [];
-
-  // Clasificación de cobros
-  const paidPayments = payments.filter((p) => Number(p.amount_ars) > 0 || Number(p.amount_usd ?? 0) > 0);
-  const zeroPayments = payments.filter((p) => Number(p.amount_ars) === 0 && Number(p.amount_usd ?? 0) === 0);
-
-  // Separación de Tratamientos vs Venta de Productos (Punto E)
-  const productPayments = paidPayments.filter((p) => isProductSale(p.notes));
-  const treatmentPayments = paidPayments.filter((p) => !isProductSale(p.notes));
-
-  const totalTreatmentsARS = treatmentPayments.reduce((sum, p) => sum + Number(p.amount_ars || 0), 0);
-  const totalProductsARS = productPayments.reduce((sum, p) => sum + Number(p.amount_ars || 0), 0);
-  const totalARS = totalTreatmentsARS + totalProductsARS;
-
-  // Facturación USD sin mezclar con pesos (Punto C)
-  const usdPayments = payments.filter(
-    (p) => p.currency === 'USD' || (p.amount_usd != null && Number(p.amount_usd) > 0)
-  );
-  const totalUSD = usdPayments.reduce((sum, p) => sum + Number(p.amount_usd ?? 0), 0);
-
-  // Comisiones
-  const totalMercedesCommission = payments.reduce(
-    (sum, p) => sum + Number(p.commission_amount_ars || 0),
-    0
-  );
-
-  // Facturación menos comisiones (Punto F)
-  const facturacionMenosComisiones = totalARS - totalMercedesCommission;
 
   return (
     <div className={styles.page}>
@@ -392,7 +401,7 @@ export default async function EjecutivoPage({
       )}
 
       {/* Caso B: Hay cobros en la base, pero ninguno en este mes seleccionado */}
-      {totalInDb > 0 && payments.length === 0 && !paymentsError && (
+      {totalInDb > 0 && monthRows.length === 0 && !paymentsError && (
         <div className={styles.emptyPeriodBanner}>
           ℹ️ <strong>Período sin cobros registrados:</strong> No hay cobros registrados en <strong>{monthLabel}</strong>. Hay <strong>{totalInDb}</strong> cobro(s) en otros períodos{latestMonthLabel ? ` (último registrado: ${latestMonthLabel})` : ''}. Podés seleccionar otro mes con el selector superior.
         </div>
@@ -403,41 +412,41 @@ export default async function EjecutivoPage({
         {/* Tratamientos ARS */}
         <div className={styles.metricCard}>
           <p className={styles.metricLabel}>Facturación Tratamientos</p>
-          <p className={treatmentPayments.length > 0 ? styles.metricValue : `${styles.metricValue} ${styles.metricEmpty}`}>
-            {treatmentPayments.length > 0 ? formatARS(totalTreatmentsARS) : totalInDb > 0 ? '$ 0' : 'Sin datos'}
+          <p className={treatmentRows.length > 0 ? styles.metricValue : `${styles.metricValue} ${styles.metricEmpty}`}>
+            {treatmentRows.length > 0 ? formatARS(totalTreatmentsARS) : totalInDb > 0 ? '$ 0' : 'Sin datos'}
           </p>
           <p className={styles.metricSub}>
-            {treatmentPayments.length} {treatmentPayments.length === 1 ? 'tratamiento' : 'tratamientos'}
+            {treatmentRows.length} {treatmentRows.length === 1 ? 'tratamiento' : 'tratamientos'}
           </p>
         </div>
 
         {/* Venta de Productos ARS (Punto E) */}
         <div className={styles.metricCard}>
           <p className={styles.metricLabel}>Venta de Productos</p>
-          <p className={productPayments.length > 0 ? styles.metricValue : `${styles.metricValue} ${styles.metricEmpty}`}>
-            {productPayments.length > 0 ? formatARS(totalProductsARS) : totalInDb > 0 ? '$ 0' : 'Sin ventas'}
+          <p className={productRows.length > 0 ? styles.metricValue : `${styles.metricValue} ${styles.metricEmpty}`}>
+            {productRows.length > 0 ? formatARS(totalProductsARS) : totalInDb > 0 ? '$ 0' : 'Sin ventas'}
           </p>
           <p className={styles.metricSub}>
-            {productPayments.length} {productPayments.length === 1 ? 'producto' : 'productos'} vendidos
+            {productRows.length} {productRows.length === 1 ? 'producto' : 'productos'} vendidos
           </p>
         </div>
 
         {/* Facturación USD dedicada sin conversión (Punto C) */}
         <div className={styles.metricCard}>
           <p className={styles.metricLabel}>Facturación USD</p>
-          <p className={usdPayments.length > 0 ? styles.metricValue : `${styles.metricValue} ${styles.metricEmpty}`}>
-            {usdPayments.length > 0 ? formatUSD(totalUSD) : totalInDb > 0 ? 'US$ 0' : 'Sin datos'}
+          <p className={usdRows.length > 0 ? styles.metricValue : `${styles.metricValue} ${styles.metricEmpty}`}>
+            {usdRows.length > 0 ? formatUSD(totalUSD) : totalInDb > 0 ? 'US$ 0' : 'Sin datos'}
           </p>
           <p className={styles.metricSub}>
-            {usdPayments.length} {usdPayments.length === 1 ? 'cobro' : 'cobros'} en dólares (sin conversión)
+            {usdRows.length} {usdRows.length === 1 ? 'cobro' : 'cobros'} en dólares (sin conversión)
           </p>
         </div>
 
         {/* Facturación menos comisiones (Punto F) */}
         <div className={styles.metricCard}>
           <p className={styles.metricLabel}>Facturación menos comisiones</p>
-          <p className={paidPayments.length > 0 ? `${styles.metricValue} ${styles.metricHighlight}` : `${styles.metricValue} ${styles.metricEmpty}`}>
-            {paidPayments.length > 0 ? formatARS(facturacionMenosComisiones) : totalInDb > 0 ? '$ 0' : 'Sin datos'}
+          <p className={paidRows.length > 0 ? `${styles.metricValue} ${styles.metricHighlight}` : `${styles.metricValue} ${styles.metricEmpty}`}>
+            {paidRows.length > 0 ? formatARS(facturacionMenosComisiones) : totalInDb > 0 ? '$ 0' : 'Sin datos'}
           </p>
           <p className={styles.metricSub} style={{ fontSize: '0.72rem', color: 'var(--color-gris)' }}>
             (no incluye costos operativos ni insumos)

@@ -588,7 +588,14 @@ export async function POST(req: NextRequest) {
     let detectedCurrency: "ARS" | "USD" = "ARS";
     let effectiveMedioPago = normalizePaymentMethod(rec.medio_pago) || "efectivo";
 
-    if (montoRaw > 0 && montoRaw < usdMax) {
+    // ¿Es venta de productos? (Punto D: la regla de $30.000 no aplica a productos)
+    const isProductSale = (rec.servicio ?? "").toLowerCase().trim().startsWith("venta de producto");
+
+    if (isProductSale && !isLabeledUSD) {
+      // Venta de productos en pesos: no aplica umbral mínimo de $30.000 ni clasificación como USD
+      detectedCurrency = "ARS";
+      effectiveMedioPago = normalizePaymentMethod(rec.medio_pago) || "efectivo";
+    } else if (montoRaw > 0 && montoRaw < usdMax) {
       // Menor a $2.000 -> Dólares (USD). Se inserta directamente en payments (Punto C).
       detectedCurrency = "USD";
       effectiveMedioPago = isLabeledUSD
