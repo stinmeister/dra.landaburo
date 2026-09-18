@@ -24,11 +24,11 @@ const guides = [
     name: 'Ceci',
     role: 'Cosmiatría & Fidelización de Pacientes',
     items: [
-      'Control de stock de cremas e insumos de cabina (los viernes)',
+      'Control de stock de productos e insumos de cabina (los viernes)',
       'Descarga de datos de Calu y actualización de Base Unificada (último día hábil del mes)',
       'Envío de saludos de cumpleaños según guía Drive (ver tareas del día)',
       'Solicitar reseña en Google Maps al finalizar cada atención',
-      'Seguimiento de pacientes con cremas por agotarse',
+      'Seguimiento de pacientes con productos por agotarse',
     ],
   },
   {

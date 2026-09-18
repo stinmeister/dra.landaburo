@@ -15,17 +15,6 @@ export const metadata: Metadata = {
   description: 'Productos de skincare recomendados por la Dra. Landaburo. Cuidado y protección para tu piel.',
 };
 
-const CATEGORIES = [
-  'Limpieza',
-  'Hidratación',
-  'Protección solar',
-  'Sérum',
-  'Contorno de ojos',
-  'Acné',
-  'Rosácea',
-  'Post-tratamiento',
-] as const;
-
 type SearchParams = { category?: string };
 
 export default async function TiendaPage({
@@ -36,15 +25,26 @@ export default async function TiendaPage({
   const { category } = await searchParams;
   const supabase = await createClient();
 
-  // Obtenemos las categorías activas únicas directamente de la base de datos
-  const { data: allCategoriesData } = await supabase
-    .from('products')
-    .select('category')
-    .eq('is_active', true);
+  // Obtenemos las categorías activas: desde product_categories si existe, con fallback a products.category
+  let distinctCategories: string[] = [];
+  const { data: catRows, error: catErr } = await supabase
+    .from('product_categories')
+    .select('name')
+    .eq('is_active', true)
+    .order('display_order', { ascending: true });
 
-  const distinctCategories = Array.from(
-    new Set((allCategoriesData || []).map((c) => c.category).filter(Boolean))
-  ).sort() as string[];
+  if (!catErr && catRows && catRows.length > 0) {
+    distinctCategories = catRows.map((c) => c.name);
+  } else {
+    const { data: allCategoriesData } = await supabase
+      .from('products')
+      .select('category')
+      .eq('is_active', true);
+
+    distinctCategories = Array.from(
+      new Set((allCategoriesData || []).map((c) => c.category).filter(Boolean))
+    ).sort() as string[];
+  }
 
   // Traemos todos los productos activos ordenados por nombre.
   // El filtro de categoría se aplica en el servidor para evitar enviar datos innecesarios.
@@ -59,7 +59,10 @@ export default async function TiendaPage({
   }
 
   const { data: productsRaw, error } = await query;
-  const products: Product[] = productsRaw ? (productsRaw as unknown as Product[]) : [];
+  // Excluir productos marcados como no públicos (ej. medicamentos bajo receta como Latisse o uso interno)
+  const products: Product[] = (productsRaw ? (productsRaw as unknown as Product[]) : []).filter(
+    (p) => (p as any).is_public !== false
+  );
 
   return (
     <>

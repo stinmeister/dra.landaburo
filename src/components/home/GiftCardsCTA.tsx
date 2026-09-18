@@ -32,7 +32,7 @@ export default function GiftCardsCTA() {
             <div className={styles.features}>
               <div className={styles.featureItem}>
                 <CheckCircle2 size={16} className={styles.featureIcon} />
-                <span>Tratamientos, cremas o saldo libre</span>
+                <span>Tratamientos, productos o saldo libre</span>
               </div>
               <div className={styles.featureItem}>
                 <CheckCircle2 size={16} className={styles.featureIcon} />

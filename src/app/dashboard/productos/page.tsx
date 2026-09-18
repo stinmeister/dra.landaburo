@@ -35,10 +35,19 @@ export default async function ProductosPage() {
   await assertSectionAccess(user.id, role, 'productos');
 
   const admin = createAdminClient();
+
+  // Categorías dinámicas desde DB (o fallback a categorías existentes en products)
+  let categoryList: string[] = [];
+  const { data: dbCats, error: dbCatsErr } = await admin
+    .from('product_categories')
+    .select('name')
+    .eq('is_active', true)
+    .order('display_order', { ascending: true });
+
   let products: any[] = [];
   const { data: pWithAlert, error: pAlertErr } = await admin
     .from('products')
-    .select('id, name, category, price_ars, stock_quantity, min_stock_alert, is_active, image_url, description')
+    .select('id, name, category, price_ars, stock_quantity, min_stock_alert, is_active, is_public, image_url, description')
     .order('name', { ascending: true });
 
   if (!pAlertErr && pWithAlert) {
@@ -53,6 +62,14 @@ export default async function ProductosPage() {
 
   const rows = products;
 
+  if (!dbCatsErr && dbCats && dbCats.length > 0) {
+    categoryList = dbCats.map((c) => c.name);
+  } else {
+    categoryList = Array.from(
+      new Set(rows.map((p: any) => p.category).filter(Boolean))
+    ).sort() as string[];
+  }
+
   return (
     <div className={styles.page}>
       <div className={styles.header}>
@@ -62,8 +79,8 @@ export default async function ProductosPage() {
         </div>
       </div>
 
-      {/* ── Tabla interactiva con edición ── */}
-      <ProductTable products={rows} categories={CATEGORIES} />
+      {/* ── Tabla interactiva con edición, stock con motivo e historial ── */}
+      <ProductTable products={rows} categories={categoryList} isAdmin={role === 'admin'} />
 
       {/* ── Formulario nuevo producto ── */}
       <div className={styles.newProduct}>
@@ -78,7 +95,7 @@ export default async function ProductosPage() {
               <label className={styles.label}>Categoría</label>
               <select name="category" required defaultValue="" className={styles.input}>
                 <option value="" disabled>Seleccionar categoría...</option>
-                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                {categoryList.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div className={styles.field}>

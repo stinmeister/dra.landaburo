@@ -350,3 +350,180 @@
   transition: background-color var(--transition-fast);
 }
 .saveBtn:hover { background-color: var(--color-champagne-dark); }
+
+/* ── Botones adicionales de acciones y badges ── */
+.actionsCell {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.historyBtn, .adjustBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--color-gris-claro);
+  border-radius: var(--radius-md);
+  background: var(--color-blanco);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-negro);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.historyBtn:hover {
+  border-color: var(--color-champagne);
+  color: var(--color-champagne-dark);
+  background: rgba(197, 164, 126, 0.08);
+}
+.adjustBtn:hover {
+  border-color: var(--color-negro);
+  background: #f4f4f4;
+}
+
+.badgeInternal {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  background: rgba(197, 164, 126, 0.2);
+  color: #8c6d48;
+  margin-left: 0.4rem;
+}
+
+.manageCatBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--color-gris-claro);
+  border-radius: var(--radius-md);
+  background: var(--color-blanco);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-negro);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.manageCatBtn:hover {
+  border-color: var(--color-champagne);
+  color: var(--color-champagne-dark);
+}
+
+/* ── Tabla de Historial de Stock ── */
+.historyTableWrap {
+  max-height: 380px;
+  overflow-y: auto;
+  border: 1px solid var(--color-gris-claro);
+  border-radius: var(--radius-md);
+  margin-top: 1rem;
+}
+
+.historyTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+}
+.historyTable th {
+  padding: 0.6rem 0.8rem;
+  background: #f8f8f8;
+  border-bottom: 1px solid var(--color-gris-claro);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--color-gris);
+  text-align: left;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.historyTable td {
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid var(--color-gris-claro);
+  vertical-align: middle;
+}
+.historyTable tr:last-child td {
+  border-bottom: none;
+}
+
+.badgeType {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  text-transform: capitalize;
+}
+.badgeTypeRecuento { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; }
+.badgeTypeReposicion { background: rgba(34, 197, 94, 0.12); color: #15803d; }
+.badgeTypeVenta { background: rgba(168, 85, 247, 0.12); color: #7e22ce; }
+.badgeTypeAjuste { background: rgba(234, 179, 8, 0.15); color: #a16207; }
+.badgeTypeBaja { background: rgba(239, 68, 68, 0.12); color: #b91c1c; }
+
+.deltaPositive { color: #15803d; font-weight: 600; }
+.deltaNegative { color: #b91c1c; font-weight: 600; }
+.deltaZero { color: var(--color-gris); }
+
+/* ── Modal Administrador de Categorías ── */
+.categoryList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.categoryRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.8rem;
+  background: #fafafa;
+  border: 1px solid var(--color-gris-claro);
+  border-radius: var(--radius-md);
+  gap: 0.5rem;
+}
+.categoryInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1;
+}
+.categoryCount {
+  font-size: 0.7rem;
+  color: var(--color-gris);
+  background: #eaeaea;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+}
+.categoryActions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.iconBtn {
+  background: none;
+  border: none;
+  color: var(--color-gris);
+  cursor: pointer;
+  padding: 0.3rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  transition: all var(--transition-fast);
+}
+.iconBtn:hover:not(:disabled) {
+  color: var(--color-negro);
+  background: #eee;
+}
+.iconBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+

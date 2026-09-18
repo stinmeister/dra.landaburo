@@ -48,7 +48,7 @@ export default async function ProductoPage({ params }: Props) {
     .eq('is_active', true)
     .single();
 
-  if (!productRaw) notFound();
+  if (!productRaw || (productRaw as any).is_public === false) notFound();
 
   const product = productRaw as unknown as Product;
   const hasDiscount =
