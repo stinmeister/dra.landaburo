@@ -591,7 +591,7 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
-    // ── 5.5 Detección de Moneda (Punto D: La etiqueta Efectivo USD manda sin ambigüedad) ───────
+    // ── 5.5 Detección de Moneda (Guardarraíl Agustín 20/09/2026) ───────────────
     const montoRaw = rec.monto_pagado_ars;
     const medioPagoKey = (rec.medio_pago || "").toLowerCase().trim();
     const isLabeledUSD =
@@ -615,28 +615,35 @@ export async function POST(req: NextRequest) {
     // ¿Es venta de productos?
     const isProductSale = (rec.servicio ?? "").toLowerCase().trim().startsWith("venta de producto");
     let montoAmbiguoReason: string | null = null;
+    let isMontoFusionado = false;
 
     if (isProductSale && !isLabeledUSD) {
-      // Venta de productos en pesos: no aplica umbral mínimo de $30.000 ni clasificación como USD
+      // Venta de productos en pesos: no aplica umbral de USD ni clasificación como USD
       detectedCurrency = "ARS";
       effectiveMedioPago = normalizePaymentMethod(rec.medio_pago) || "efectivo";
-    } else if (isLabeledUSD) {
-      // Definición Punto D: Efectivo USD es dólares, sin ambigüedad (la etiqueta manda)
+    } else if (isLabeledUSD && montoRaw <= usdMax) {
+      // Caso 1: Medio de pago dice USD Y monto <= 2.000 (configurable) -> Dólares legítimos
       detectedCurrency = "USD";
       effectiveMedioPago = "efectivo_usd";
-    } else if (montoRaw > 0 && montoRaw < usdMax) {
-      // Menor a $2.000 sin etiqueta USD: heurística de rango por posible omisión de etiqueta
-      detectedCurrency = "USD";
-      effectiveMedioPago = "efectivo_usd";
-    } else if (montoRaw >= usdMax && montoRaw < arsMin) {
-      // Entre $2.000 y $30.000 sin etiqueta USD: saldo parcial o seña en pesos
+    } else if (isLabeledUSD && montoRaw > usdMax) {
+      // Caso 2: Medio de pago dice USD Y monto > 2.000 -> Monto fusionado (USD + ARS)
+      // Entra en ARS, se marca explícitamente y va a revisión
+      detectedCurrency = "ARS";
+      effectiveMedioPago = "efectivo";
+      isMontoFusionado = true;
+      montoAmbiguoReason = `monto_fusionado_usd_ars: Medio de pago dice "${rec.medio_pago}" pero monto ($${montoRaw.toLocaleString("es-AR")}) supera umbral de dólares (${usdMax}). Posible suma de USD y ARS en origen.`;
+    } else if (!isLabeledUSD && montoRaw > 0 && montoRaw < usdMax) {
+      // Caso 3: Sin etiqueta USD y monto < 2.000 -> Ambiguo, entra en pesos y se marca
       detectedCurrency = "ARS";
       effectiveMedioPago = normalizePaymentMethod(rec.medio_pago) || "efectivo";
-      montoAmbiguoReason = `monto_parcial_seña: Monto $${montoRaw.toLocaleString("es-AR")} registrado como saldo parcial o seña`;
+      montoAmbiguoReason = `monto_sospechoso_sub2k: Monto $${montoRaw.toLocaleString("es-AR")} sin etiqueta USD inferior a $${usdMax}. Posible seña o dólares no rotulados.`;
     } else {
-      // $30.000 o más sin etiqueta USD -> Pesos (ARS)
+      // Caso 4: Resto -> Pesos (ARS)
       detectedCurrency = "ARS";
       effectiveMedioPago = normalizePaymentMethod(rec.medio_pago) || "efectivo";
+      if (montoRaw >= usdMax && montoRaw < arsMin) {
+        montoAmbiguoReason = `monto_parcial_seña: Monto $${montoRaw.toLocaleString("es-AR")} registrado como saldo parcial o seña`;
+      }
     }
 
     // ── 5.6 Normalización de Medio de Pago ─────────────────────────────────────
@@ -699,9 +706,10 @@ export async function POST(req: NextRequest) {
         : ` [Medio pago: ${oldPaymentMethod} -> ${newPaymentMethod}]`;
 
       const commTag = appliedRate > 0 && resolvedProfId ? ` [Comisión ${appliedRate}%: $${calculatedCommission.toLocaleString("es-AR")}]` : "";
+      const fusedTag = isMontoFusionado && !currentNotes.includes("[MONTO-FUSIONADO-NO-CONFIABLE]") ? " [MONTO-FUSIONADO-NO-CONFIABLE]" : "";
       const updatedNotes = currentNotes.includes("[Actualizado")
-        ? `${currentNotes};${changeAudit}${commTag}`
-        : `${currentNotes || rec.servicio || ""}${changeAudit}${commTag}`;
+        ? `${currentNotes};${changeAudit}${commTag}${fusedTag}`
+        : `${currentNotes || rec.servicio || ""}${changeAudit}${commTag}${fusedTag}`;
 
       const { error: updateError } = await supabaseAdmin
         .from("payments")
@@ -745,6 +753,14 @@ export async function POST(req: NextRequest) {
           resolution_notes: `Actualización automática durante ingesta: cambio de monto de $${oldAmountArs} a $${newAmountArs}`,
           resolved_by: null,
           resolved_at: new Date().toISOString(),
+        });
+      }
+
+      if (isMontoFusionado && montoAmbiguoReason) {
+        needs_review.push({
+          index: i,
+          reason: `${montoAmbiguoReason}. Cobro actualizado en base con ID ${existingByExtId.id}.`,
+          record: { ...rec, payment_id: existingByExtId.id },
         });
       }
 
@@ -842,6 +858,12 @@ export async function POST(req: NextRequest) {
     if (appliedRate > 0 && professionalId) {
       const commTag = `[Comisión ${appliedRate}%: $${calculatedCommission.toLocaleString("es-AR")}]`;
       paymentNotes = paymentNotes ? `${paymentNotes} ${commTag}` : commTag;
+    }
+
+    if (isMontoFusionado) {
+      paymentNotes = paymentNotes
+        ? `${paymentNotes} [MONTO-FUSIONADO-NO-CONFIABLE]`
+        : `[MONTO-FUSIONADO-NO-CONFIABLE]`;
     }
 
     const insertPayload: Record<string, unknown> = {

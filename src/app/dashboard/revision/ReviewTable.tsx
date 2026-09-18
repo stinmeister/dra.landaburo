@@ -182,10 +182,10 @@ function parsePaymentDateFromPayload(payload: Record<string, unknown>, createdAt
     const parts = clave.split('|');
     if (parts.length >= 2) {
       const tsPart = parts[1].trim();
-      // Caso 1a: Solo fecha YYYY-MM-DD (sin hora) -> Interpretar al mediodía argentino (-03:00) y mostrar fecha pura sin hora
+      // Caso 1a: Solo fecha YYYY-MM-DD (sin hora) -> Interpretar a medianoche argentina (-03:00) y mostrar fecha pura sin hora
       if (/^\d{4}-\d{2}-\d{2}$/.test(tsPart)) {
         const [y, m, d] = tsPart.split('-');
-        const dt = new Date(`${y}-${m}-${d}T12:00:00-03:00`);
+        const dt = new Date(`${y}-${m}-${d}T00:00:00-03:00`);
         if (!isNaN(dt.getTime())) {
           return {
             display: dt.toLocaleDateString('es-AR', {
@@ -225,7 +225,7 @@ function parsePaymentDateFromPayload(payload: Record<string, unknown>, createdAt
     const parts = fecha.trim().split(' ')[0].split('/');
     if (parts.length === 3) {
       const [d, m, y] = parts;
-      const dt = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T12:00:00-03:00`);
+      const dt = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T00:00:00-03:00`);
       if (!isNaN(dt.getTime())) {
         return {
           display: dt.toLocaleDateString('es-AR', {
@@ -245,7 +245,7 @@ function parsePaymentDateFromPayload(payload: Record<string, unknown>, createdAt
     const m = fuenteDatos.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
     if (m) {
       const [, d, mo, y] = m;
-      const dt = new Date(`${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}T12:00:00-03:00`);
+      const dt = new Date(`${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}T00:00:00-03:00`);
       if (!isNaN(dt.getTime())) {
         return {
           display: dt.toLocaleDateString('es-AR', {
