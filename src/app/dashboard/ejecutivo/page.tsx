@@ -185,7 +185,7 @@ export default async function EjecutivoPage({
           <div>
             <h1 className={styles.title}>Registros para Revisión</h1>
             <p className={styles.period}>
-              Incidencias detectadas durante la ingesta de pacientes y cobros (rango ambiguo, omisiones de profesional o duplicados).
+              Los cobros ya ingresaron a la facturación del consultorio. En esta pantalla se señalan datos pendientes de completar (asignar profesional, vincular paciente en el padrón o auditar saldos).
             </p>
           </div>
         </header>
@@ -374,7 +374,7 @@ export default async function EjecutivoPage({
           }}
         >
           <div>
-            ⚠️ <strong>Atención:</strong> Hay <strong>{pendingReviewCount}</strong> registro(s) pendiente(s) de revisión (rango ambiguo, omisiones de profesional o duplicados).
+            ⚠️ <strong>Atención:</strong> Hay <strong>{pendingReviewCount}</strong> cobro(s) con datos pendientes de completar (asignar profesional o vincular paciente en el padrón).
           </div>
           <Link
             href="/dashboard/ejecutivo?tab=revision"
@@ -515,10 +515,26 @@ export default async function EjecutivoPage({
                     <tr key={payment.id} className={styles.tr}>
                       <td className={styles.td}>{formatDate(payment.payment_date)}</td>
                       <td className={styles.td}>
-                        {payment.patients?.full_name ?? '—'}
+                        {payment.patients?.full_name ?? (
+                          payment.notes?.match(/\[SIN-PACIENTE DNI:([^\]]+)\]/) ? (
+                            <span title="Paciente pendiente de vincular en el padrón" style={{ color: 'var(--color-gris)', fontStyle: 'italic', fontSize: '0.85rem' }}>
+                              DNI {payment.notes.match(/\[SIN-PACIENTE DNI:([^\]]+)\]/)![1].trim()}
+                            </span>
+                          ) : '—'
+                        )}
                       </td>
                       <td className={styles.td} style={{ fontWeight: 500 }}>
-                        {payment.profiles?.full_name ?? '—'}
+                        {payment.profiles?.full_name ? (
+                          payment.profiles.full_name
+                        ) : isProductSale(payment.notes) ? (
+                          <span style={{ color: 'var(--color-gris)', fontWeight: 400, fontSize: '0.85rem' }}>
+                            Mostrador
+                          </span>
+                        ) : (
+                          <span style={{ color: '#b45309', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '0.15rem 0.4rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 500 }}>
+                            Sin asignar
+                          </span>
+                        )}
                       </td>
                       <td className={styles.td}>{payment.payment_method}</td>
                       <td className={styles.td}>{payment.currency}</td>

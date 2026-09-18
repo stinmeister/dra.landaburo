@@ -134,6 +134,7 @@ interface PaymentRecord {
 
   patient_id?: string;
   professional_profile_id?: string;
+  payment_id?: string;
 }
 
 interface NeedsReviewItem {
@@ -591,6 +592,8 @@ export async function POST(req: NextRequest) {
     // ¿Es venta de productos? (Punto D: la regla de $30.000 no aplica a productos)
     const isProductSale = (rec.servicio ?? "").toLowerCase().trim().startsWith("venta de producto");
 
+    let montoAmbiguoReason: string | null = null;
+
     if (isProductSale && !isLabeledUSD) {
       // Venta de productos en pesos: no aplica umbral mínimo de $30.000 ni clasificación como USD
       detectedCurrency = "ARS";
@@ -602,21 +605,14 @@ export async function POST(req: NextRequest) {
         ? (normalizePaymentMethod(rec.medio_pago) || "efectivo_usd")
         : "efectivo_usd";
     } else if (montoRaw >= usdMax && montoRaw < arsMin) {
-      // Entre $2.000 y $30.000:
-      // Si el medio de pago dice explícitamente USD -> es USD directo.
-      // Si NO dice USD -> Rango ambiguo: va a revisión (Punto C).
+      // Entre $2.000 y $30.000 (Punto B: señas y saldos parciales NO retienen, entran en pesos):
       if (isLabeledUSD) {
         detectedCurrency = "USD";
         effectiveMedioPago = normalizePaymentMethod(rec.medio_pago) || "efectivo_usd";
       } else {
         detectedCurrency = "ARS";
-        needs_review_uninserted++;
-        needs_review.push({
-          index: i,
-          reason: `monto_rango_ambiguo: Monto ${montoRaw} está fuera del rango habitual ($${usdMax.toLocaleString("es-AR")} a $${arsMin.toLocaleString("es-AR")}). Verificar si es saldo en pesos o cobro en USD.`,
-          record: rec,
-        });
-        continue;
+        effectiveMedioPago = normalizePaymentMethod(rec.medio_pago) || "efectivo";
+        montoAmbiguoReason = `monto_parcial_seña: Monto $${montoRaw.toLocaleString("es-AR")} registrado como saldo parcial o seña`;
       }
     } else {
       // $30.000 o más -> Pesos (ARS), incluso si dice Efectivo USD (error de tipeo en planilla)
@@ -642,13 +638,21 @@ export async function POST(req: NextRequest) {
       }
       if (mapped) resolvedProfId = mapped;
     }
+
+    // Regla C: Venta de mostrador no es de Paula (no se atribuye profesional ni comisión)
+    if (isProductSale) {
+      resolvedProfId = undefined;
+    }
+
     const profInfo = resolvedProfId ? idToInfoMap.get(resolvedProfId) : undefined;
-    const appliedRate = resolveCommissionRate(
-      rawProf,
-      profInfo?.fullName,
-      profInfo?.role,
-      commissionRatesMap
-    );
+    const appliedRate = isProductSale
+      ? 0
+      : resolveCommissionRate(
+          rawProf,
+          profInfo?.fullName,
+          profInfo?.role,
+          commissionRatesMap
+        );
 
     // ── 5.6.1 Si ya existía por external_id, comparar y actualizar (Regla A) ──
     if (existingByExtId) {
@@ -659,7 +663,7 @@ export async function POST(req: NextRequest) {
       const oldPaymentMethod = existingByExtId.payment_method;
       const newPaymentMethod = effectiveMedioPago;
       const calculatedCommission =
-        detectedCurrency === "USD" ? 0 : Math.round(newAmountArs * (appliedRate / 100));
+        detectedCurrency === "USD" || !resolvedProfId ? 0 : Math.round(newAmountArs * (appliedRate / 100));
 
       const amountChanged = oldAmountArs !== newAmountArs || oldAmountUsd !== newAmountUsd;
       const methodChanged = oldPaymentMethod !== newPaymentMethod;
@@ -677,7 +681,7 @@ export async function POST(req: NextRequest) {
         ? ` [Actualizado: antes $${oldAmountArs.toLocaleString("es-AR")}]`
         : ` [Medio pago: ${oldPaymentMethod} -> ${newPaymentMethod}]`;
 
-      const commTag = appliedRate > 0 ? ` [Comisión ${appliedRate}%: $${calculatedCommission.toLocaleString("es-AR")}]` : "";
+      const commTag = appliedRate > 0 && resolvedProfId ? ` [Comisión ${appliedRate}%: $${calculatedCommission.toLocaleString("es-AR")}]` : "";
       const updatedNotes = currentNotes.includes("[Actualizado")
         ? `${currentNotes};${changeAudit}${commTag}`
         : `${currentNotes || rec.servicio || ""}${changeAudit}${commTag}`;
@@ -731,57 +735,35 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
-    // ── 5.7 Resolución de Paciente (Regla C6) ─────────────────────────────────
+    // ── 5.7 Resolución de Paciente (Punto A: no bloquea, entra en null) ───────
     let patientId: string | undefined = rec.patient_id;
+    let patientMissingReason: string | null = null;
 
     if (!patientId) {
       const lookupResult = await resolvePatient(rec.dni, rec.telefono);
       if (lookupResult === "ambiguous") {
-        needs_review_uninserted++;
-        needs_review.push({
-          index: i,
-          reason: `ambiguous_ref: Múltiples pacientes coinciden con el identificador "${rec.dni}"`,
-          record: rec,
-        });
-        continue;
+        patientMissingReason = `ambiguous_ref: Múltiples pacientes coinciden con el identificador "${rec.dni}"`;
+      } else if (!lookupResult) {
+        patientMissingReason = `sin_paciente: Paciente no encontrada en el padrón (DNI/identificador: "${rec.dni}")`;
+      } else {
+        patientId = lookupResult.id;
       }
-      if (!lookupResult) {
-        needs_review_uninserted++;
-        needs_review.push({
-          index: i,
-          reason: `sin_paciente: No se encontró paciente registrada con DNI/identificador "${rec.dni}"`,
-          record: rec,
-        });
-        continue;
-      }
-      patientId = lookupResult.id;
     }
 
-    // ── 5.8 Validación de Profesional Resuelto ────────────────────────────────
+    // ── 5.8 Validación de Profesional Resuelto (Punto A: no bloquea, entra en null)
     let professionalId: string | undefined = resolvedProfId;
+    let professionalMissingReason: string | null = null;
 
-    if (!professionalId) {
+    if (!isProductSale && !professionalId) {
       if (!rawProf) {
-        needs_review_uninserted++;
-        needs_review.push({
-          index: i,
-          reason: `sin_professional: Falta asignar la profesional en la planilla de origen`,
-          record: rec,
-        });
-        continue;
+        professionalMissingReason = `sin_professional: Falta asignar la profesional en la planilla de origen`;
+      } else {
+        professionalMissingReason = `sin_professional: Profesional "${rawProf}" no encontrada en perfiles (asignar manualmente)`;
       }
-
-      needs_review_uninserted++;
-      needs_review.push({
-        index: i,
-        reason: `sin_professional: Profesional "${rawProf}" no encontrada en perfiles (asignar manualmente)`,
-        record: rec,
-      });
-      continue;
     }
 
     // ── 5.9 Deduplicación Nivel 2 (ventana solapada) ──────────────────────────
-    {
+    if (patientId) {
       const winStart = hasSpecificTime
         ? new Date(parsedDate.getTime() - 15 * 60 * 1000)
         : new Date(parsedDate.getTime());
@@ -816,27 +798,38 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── 5.10 Multi-servicio, Productos y Guardado en DB (Regla C4 & Puntos D, E) ─
+    // ── 5.10 Multi-servicio, Productos y Guardado en DB (Reglas A, B, C) ──────
     const isMulti = isRealMultiService(rec.servicio ?? "");
-    const isProduct = (rec.servicio ?? "").toLowerCase().trim().startsWith("venta de producto");
     let paymentNotes = rec.servicio ?? null;
-    if (isProduct) {
+    if (isProductSale) {
       paymentNotes = `[VENTA-PRODUCTO] ${rec.servicio ?? ""}`;
     } else if (isMulti) {
       paymentNotes = `[MULTI-SERVICIO] ${rec.servicio ?? ""}`;
     }
 
-    const calculatedCommission =
-      detectedCurrency === "USD" ? 0 : Math.round(montoRaw * (appliedRate / 100));
+    if (!patientId && rec.dni) {
+      paymentNotes = paymentNotes
+        ? `${paymentNotes} [SIN-PACIENTE DNI:${rec.dni}]`
+        : `[SIN-PACIENTE DNI:${rec.dni}]`;
+    }
 
-    if (appliedRate > 0) {
+    if (!isProductSale && !professionalId) {
+      paymentNotes = paymentNotes
+        ? `${paymentNotes} [SIN-PROFESIONAL]`
+        : `[SIN-PROFESIONAL]`;
+    }
+
+    const calculatedCommission =
+      detectedCurrency === "USD" || !professionalId ? 0 : Math.round(montoRaw * (appliedRate / 100));
+
+    if (appliedRate > 0 && professionalId) {
       const commTag = `[Comisión ${appliedRate}%: $${calculatedCommission.toLocaleString("es-AR")}]`;
       paymentNotes = paymentNotes ? `${paymentNotes} ${commTag}` : commTag;
     }
 
     const insertPayload: Record<string, unknown> = {
-      patient_id: patientId,
-      professional_profile_id: professionalId,
+      patient_id: patientId ?? null,
+      professional_profile_id: professionalId ?? null,
       amount_ars: detectedCurrency === "USD" ? 0 : montoRaw,
       amount_usd: detectedCurrency === "USD" ? montoRaw : null,
       currency: detectedCurrency,
@@ -849,16 +842,45 @@ export async function POST(req: NextRequest) {
       notes: paymentNotes,
     };
 
-    const { error: insertError } = await supabaseAdmin
+    const { data: insertedPayment, error: insertError } = await supabaseAdmin
       .from("payments")
-      .insert(insertPayload);
+      .insert(insertPayload)
+      .select("id")
+      .single();
 
     if (insertError) {
       rejected.push({ index: i, reason: insertError.message, record: rec });
       continue;
     }
 
+    const insertedPaymentId = insertedPayment.id;
     inserted++;
+
+    // Registrar incidencias si faltan datos o monto ambiguo (Punto A)
+    // El cobro YA INGRESÓ a payments, la incidencia señala completar el dato faltante
+    if (patientMissingReason) {
+      needs_review.push({
+        index: i,
+        reason: `${patientMissingReason}. Cobro registrado en base con ID ${insertedPaymentId}.`,
+        record: { ...rec, payment_id: insertedPaymentId },
+      });
+    }
+
+    if (professionalMissingReason) {
+      needs_review.push({
+        index: i,
+        reason: `${professionalMissingReason}. Cobro registrado en base con ID ${insertedPaymentId}.`,
+        record: { ...rec, payment_id: insertedPaymentId },
+      });
+    }
+
+    if (montoAmbiguoReason) {
+      needs_review.push({
+        index: i,
+        reason: `${montoAmbiguoReason}. Cobro registrado en base con ID ${insertedPaymentId}.`,
+        record: { ...rec, payment_id: insertedPaymentId },
+      });
+    }
   }
 
   // ── 6. Persistir items en ingest_review (idempotente) ─────────────────────

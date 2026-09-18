@@ -26,6 +26,7 @@ interface ParsedReason {
   title: string;
   actionGuidance: string;
   technicalCode: string;
+  paymentId?: string;
   amountDisplay?: string;
   paymentMethodDisplay?: string;
   serviceDisplay?: string;
@@ -40,6 +41,7 @@ function parseReason(reason: string, payload: Record<string, unknown>): ParsedRe
   const servicio = payload.servicio as string | undefined;
   const profesional = payload.profesional as string | undefined;
   const dni = payload.dni as string | undefined;
+  const paymentId = (payload.payment_id as string | undefined) || (payload.paymentId as string | undefined);
 
   // 1. Moneda USD
   if (rLower.includes('moneda_usd')) {
@@ -49,20 +51,22 @@ function parseReason(reason: string, payload: Record<string, unknown>): ParsedRe
       title: 'Revisar el monto — parece estar en dólares',
       actionGuidance: 'Verificar la cotización del día o confirmar si corresponde registrar en USD.',
       technicalCode: 'moneda_usd',
+      paymentId,
       amountDisplay: monto != null ? `$${monto} USD` : undefined,
       paymentMethodDisplay: medioPago || 'Efectivo USD',
       serviceDisplay: servicio,
     };
   }
 
-  // 2. Monto ambiguo
-  if (rLower.includes('monto_rango_ambiguo') || rLower.includes('monto_sospechoso')) {
+  // 2. Monto ambiguo / seña / saldo parcial
+  if (rLower.includes('monto_rango_ambiguo') || rLower.includes('monto_sospechoso') || rLower.includes('monto_parcial_seña')) {
     return {
       category: 'moneda',
-      categoryLabel: 'Monto fuera de rango',
-      title: 'Revisar el monto — está fuera del rango habitual ($2.000 a $30.000)',
-      actionGuidance: 'Verificar si es un saldo menor en pesos o un cobro en dólares.',
+      categoryLabel: 'Saldo o seña',
+      title: 'Cobro registrado — posible saldo parcial o seña',
+      actionGuidance: 'El monto en pesos ya ingresó a la facturación. Si la paciente abona el resto más adelante, el cobro se actualizará automáticamente.',
       technicalCode: 'monto_rango_ambiguo',
+      paymentId,
       amountDisplay: monto != null ? `$${monto.toLocaleString('es-AR')}` : undefined,
       paymentMethodDisplay: medioPago,
       serviceDisplay: servicio,
@@ -77,6 +81,7 @@ function parseReason(reason: string, payload: Record<string, unknown>): ParsedRe
       title: 'Varios tratamientos en un mismo cobro',
       actionGuidance: 'El cobro ya ingresó al total de facturación. No requiere división manual.',
       technicalCode: 'is_multi_service',
+      paymentId,
       serviceDisplay: servicio,
       amountDisplay: monto != null ? `$${monto.toLocaleString('es-AR')} ARS` : undefined,
     };
@@ -90,6 +95,7 @@ function parseReason(reason: string, payload: Record<string, unknown>): ParsedRe
       title: 'Estado de la cita no reconocido',
       actionGuidance: 'Verificar si la cita fue atendida y facturada o si corresponde descartarla.',
       technicalCode: 'estado_desconocido',
+      paymentId,
       serviceDisplay: `Estado: "${payload.estado || 'Desconocido'}"`,
     };
   }
@@ -98,10 +104,11 @@ function parseReason(reason: string, payload: Record<string, unknown>): ParsedRe
   if (rLower.includes('sin_paciente') || rLower.includes('ambiguous_ref')) {
     return {
       category: 'paciente',
-      categoryLabel: 'Paciente no encontrada',
-      title: 'No se encontró la paciente en el sistema',
-      actionGuidance: 'Buscar a la paciente en la ficha médica o verificar si el DNI/teléfono fue ingresado con error.',
+      categoryLabel: 'Paciente por vincular',
+      title: 'Cobro registrado — falta vincular paciente en el padrón',
+      actionGuidance: 'El cobro ya ingresó a la facturación del consultorio. Falta asociar la paciente cuando se actualice el padrón o buscar por DNI.',
       technicalCode: rLower.includes('ambiguous_ref') ? 'ambiguous_ref' : 'sin_paciente',
+      paymentId,
       patientDisplay: dni ? `DNI/Identificador: ${dni}` : 'Sin identificador',
     };
   }
@@ -111,9 +118,10 @@ function parseReason(reason: string, payload: Record<string, unknown>): ParsedRe
     return {
       category: 'profesional',
       categoryLabel: 'Falta profesional',
-      title: 'Falta asignar la profesional',
-      actionGuidance: 'Asignar la médica o cosmiatra que realizó la atención para el cálculo de comisiones.',
+      title: 'Cobro registrado — falta asignar profesional',
+      actionGuidance: 'El cobro ya ingresó a la facturación del consultorio. Falta asignar la médica o cosmiatra para el cálculo de comisiones.',
       technicalCode: 'sin_professional',
+      paymentId,
       professionalDisplay: profesional ? `"${profesional}"` : 'Campo vacío',
     };
   }
@@ -657,6 +665,14 @@ export default function ReviewTable({ initialItems }: Props) {
                         <div style={{ fontSize: '0.78rem', color: '#718096', marginTop: '2px' }}>
                           👉 {parsed.actionGuidance}
                         </div>
+
+                        {parsed.paymentId && (
+                          <div style={{ marginTop: '4px' }}>
+                            <span style={{ fontSize: '0.72rem', backgroundColor: 'rgba(34, 197, 94, 0.12)', color: '#15803d', padding: '0.12rem 0.45rem', borderRadius: '4px', fontWeight: 600 }}>
+                              ✓ Cobro ingresado en base de datos (ID: {parsed.paymentId.slice(0, 8)})
+                            </span>
+                          </div>
+                        )}
 
                         <div>
                           <button
