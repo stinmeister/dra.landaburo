@@ -26,6 +26,7 @@ export default function TeamSection() {
                   alt={member.name}
                   fill
                   className={styles.photo}
+                  style={member.objectPosition ? { objectPosition: member.objectPosition } : undefined}
                   sizes="(max-width: 768px) 100vw, 50vw"
                 />
                 <span className={styles.badge}>{member.badge}</span>

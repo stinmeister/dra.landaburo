@@ -7,6 +7,7 @@ export interface TeamMember {
   bio: string;
   specialties: string[];
   image: string;
+  objectPosition?: string;
   socialLinks?: {
     instagram?: string;
     linkedin?: string;
@@ -93,6 +94,7 @@ export const teamMembers: TeamMember[] = [
       'Medicina Ortomolecular & Regenerativa',
       'Evaluación Clínica de Bienestar'
     ],
-    image: '/images/Dra.Landaburo.png',
+    image: '/images/dra-noelia-luque.jpg',
+    objectPosition: 'center 15%',
   }
 ];
