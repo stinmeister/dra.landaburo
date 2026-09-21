@@ -66,7 +66,8 @@ export const teamMembers: TeamMember[] = [
       'Recepción y Admisión Personalizada',
       'Acompañamiento del Paciente'
     ],
-    image: '/images/Dra.Landaburo.png',
+    image: '/images/cecilia-morel.jpg',
+    objectPosition: 'center 45%',
   },
   {
     id: 'laura-dzuryk',
