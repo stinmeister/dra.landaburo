@@ -48,7 +48,8 @@ export const teamMembers: TeamMember[] = [
       'Radiofrecuencia & Total Glow',
       'Protocolos de Hidratación y Masajes'
     ],
-    image: '/images/Dra.Landaburo.png',
+    image: '/images/mercedes-pasquet.jpg',
+    objectPosition: 'center 15%',
     socialLinks: {
       instagram: 'https://www.instagram.com/mechiesteticapasquet/'
     }
