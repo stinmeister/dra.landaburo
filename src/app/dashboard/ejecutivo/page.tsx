@@ -67,12 +67,16 @@ function formatDate(isoString: string): string {
   }).format(new Date(isoString));
 }
 
-function isProductSale(notes: string | null): boolean {
+function isProductSale(notes: string | null, patientName?: string | null): boolean {
   const n = (notes || '').toLowerCase();
+  const p = (patientName || '').toLowerCase();
   return (
     n.includes('venta de producto') ||
     n.includes('venta de productos') ||
-    n.includes('[venta-producto]')
+    n.includes('[venta-producto]') ||
+    n.includes('[venta-mostrador]') ||
+    p.includes('urdi') ||
+    p.includes('productos')
   );
 }
 
@@ -281,7 +285,7 @@ export default async function EjecutivoPage({
   // 1. Consulta agregada completa del mes (sin límite) para métricas exactas (Punto B)
   const { data: monthTotalsRaw } = await adminClient
     .from('payments')
-    .select('id, amount_ars, amount_usd, currency, commission_amount_ars, notes')
+    .select('id, amount_ars, amount_usd, currency, commission_amount_ars, notes, professional_profile_id, patients ( full_name )')
     .gte('payment_date', monthStart)
     .lte('payment_date', monthEnd);
 
@@ -292,8 +296,9 @@ export default async function EjecutivoPage({
   const zeroRows = monthRows.filter((p) => Number(p.amount_ars) === 0 && Number(p.amount_usd ?? 0) === 0);
 
   // Separación de Tratamientos vs Venta de Productos (Punto E)
-  const productRows = paidRows.filter((p) => isProductSale(p.notes));
-  const treatmentRows = paidRows.filter((p) => !isProductSale(p.notes));
+  // Excluye también URDI PRODUCTOS de tratamientos y comisiones
+  const productRows = paidRows.filter((p: any) => isProductSale(p.notes, p.patients?.full_name));
+  const treatmentRows = paidRows.filter((p: any) => !isProductSale(p.notes, p.patients?.full_name));
 
   const totalTreatmentsARS = treatmentRows.reduce((sum, p) => sum + Number(p.amount_ars || 0), 0);
   const totalProductsARS = productRows.reduce((sum, p) => sum + Number(p.amount_ars || 0), 0);
@@ -305,14 +310,23 @@ export default async function EjecutivoPage({
   );
   const totalUSD = usdRows.reduce((sum, p) => sum + Number(p.amount_usd ?? 0), 0);
 
-  // Comisiones
-  const totalMercedesCommission = monthRows.reduce(
-    (sum, p) => sum + Number(p.commission_amount_ars || 0),
+  // Comisiones de Mercedes Pasquet (Parte 3)
+  // El 70% le corresponde a Mechi y el 30% al consultorio. Se liquida sobre lo cobrado.
+  const MECHI_PROFILE_ID = '11123745-1a5a-428c-9bed-29de4355d59c';
+  const mechiTreatmentRows = treatmentRows.filter(
+    (p: any) => p.professional_profile_id === MECHI_PROFILE_ID || p.notes?.toLowerCase().includes('pasquet')
+  );
+
+  const totalCobradoMechi = mechiTreatmentRows.reduce(
+    (sum, p) => sum + Number(p.amount_ars || 0),
     0
   );
 
-  // Facturación menos comisiones (Punto F)
-  const facturacionMenosComisiones = totalARS - totalMercedesCommission;
+  const honorariosMercedes = Math.round(totalCobradoMechi * 0.70);
+  const retencionConsultorio = Math.round(totalCobradoMechi * 0.30);
+
+  // Facturación neta del consultorio (facturación total menos honorarios pagados a Mechi)
+  const facturacionNetaConsultorio = totalARS - honorariosMercedes;
 
   // 2. Consulta de cobros del mes para la tabla paginada (Punto B)
   const { data: paymentsRaw, error: paymentsError } = await adminClient
@@ -443,24 +457,37 @@ export default async function EjecutivoPage({
           </p>
         </div>
 
-        {/* Facturación menos comisiones (Punto F) */}
+        {/* Facturación neta consultorio (Punto F) */}
         <div className={styles.metricCard}>
-          <p className={styles.metricLabel}>Facturación menos comisiones</p>
+          <p className={styles.metricLabel}>Facturación neta consultorio</p>
           <p className={paidRows.length > 0 ? `${styles.metricValue} ${styles.metricHighlight}` : `${styles.metricValue} ${styles.metricEmpty}`}>
-            {paidRows.length > 0 ? formatARS(facturacionMenosComisiones) : totalInDb > 0 ? '$ 0' : 'Sin datos'}
+            {paidRows.length > 0 ? formatARS(facturacionNetaConsultorio) : totalInDb > 0 ? '$ 0' : 'Sin datos'}
           </p>
           <p className={styles.metricSub} style={{ fontSize: '0.72rem', color: 'var(--color-gris)' }}>
-            (no incluye costos operativos ni insumos)
+            (facturación total menos honorarios Mechi)
           </p>
         </div>
 
-        {/* Comisión Mercedes (30%) */}
+        {/* Honorarios Mercedes Pasquet (70%) */}
         <div className={styles.metricCard}>
-          <p className={styles.metricLabel}>Comisión Mercedes (30%)</p>
-          <p className={totalMercedesCommission > 0 ? styles.metricValue : `${styles.metricValue} ${styles.metricEmpty}`}>
-            {totalMercedesCommission > 0 ? formatARS(totalMercedesCommission) : totalInDb > 0 ? '$ 0' : 'Sin datos'}
+          <p className={styles.metricLabel}>Honorarios Mechi (70%)</p>
+          <p className={honorariosMercedes > 0 ? styles.metricValue : `${styles.metricValue} ${styles.metricEmpty}`}>
+            {honorariosMercedes > 0 ? formatARS(honorariosMercedes) : totalInDb > 0 ? '$ 0' : 'Sin datos'}
           </p>
-          <p className={styles.metricSub}>cosmetología</p>
+          <p className={styles.metricSub} style={{ fontSize: '0.72rem', color: 'var(--color-gris)' }}>
+            Liquidado sobre lo cobrado ({formatARS(totalCobradoMechi)})
+          </p>
+        </div>
+
+        {/* Retención Consultorio (30%) */}
+        <div className={styles.metricCard}>
+          <p className={styles.metricLabel}>Retención Consultorio (30%)</p>
+          <p className={retencionConsultorio > 0 ? styles.metricValue : `${styles.metricValue} ${styles.metricEmpty}`}>
+            {retencionConsultorio > 0 ? formatARS(retencionConsultorio) : totalInDb > 0 ? '$ 0' : 'Sin datos'}
+          </p>
+          <p className={styles.metricSub} style={{ fontSize: '0.72rem', color: 'var(--color-gris)' }}>
+            Margen clínica cosmetología
+          </p>
         </div>
 
         {/* Datos Pendientes */}
@@ -505,7 +532,7 @@ export default async function EjecutivoPage({
                   <th className={styles.th}>Moneda</th>
                   <th className={`${styles.th} ${styles.thRight}`}>Monto ARS</th>
                   <th className={`${styles.th} ${styles.thRight}`}>Monto USD</th>
-                  <th className={`${styles.th} ${styles.thRight}`}>Comisión</th>
+                  <th className={`${styles.th} ${styles.thRight}`}>Honorarios Mechi (70%)</th>
                 </tr>
               </thead>
               <tbody>
@@ -566,8 +593,9 @@ export default async function EjecutivoPage({
                           : '—'}
                       </td>
                       <td className={`${styles.td} ${styles.tdRight}`}>
-                        {Number(payment.commission_amount_ars) > 0
-                          ? formatARS(Number(payment.commission_amount_ars))
+                        {payment.profiles?.full_name?.toLowerCase().includes('pasquet') ||
+                        payment.notes?.toLowerCase().includes('pasquet')
+                          ? formatARS(Math.round(Number(payment.amount_ars || 0) * 0.70))
                           : '—'}
                       </td>
                     </tr>
