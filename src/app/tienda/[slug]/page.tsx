@@ -18,12 +18,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const supabase = await createClient();
   const { data } = await supabase
     .from('products')
-    .select('name, description')
+    .select('name, description, is_public')
     .eq('slug', slug)
     .eq('is_active', true)
     .single();
 
-  if (!data) return { title: 'Producto no encontrado' };
+  if (!data || data.is_public === false) return { title: 'Producto no encontrado' };
 
   return {
     title: `${data.name} | Tienda`,
@@ -43,12 +43,12 @@ export default async function ProductoPage({ params }: Props) {
 
   const { data: productRaw } = await supabase
     .from('products')
-    .select('id, name, slug, description, brand_type, price_ars, compare_price_ars, image_url, images, category, stock_quantity, is_active, created_at')
+    .select('id, name, slug, description, brand_type, price_ars, compare_price_ars, image_url, images, category, stock_quantity, is_active, is_public, created_at')
     .eq('slug', slug)
     .eq('is_active', true)
     .single();
 
-  if (!productRaw || (productRaw as any).is_public === false) notFound();
+  if (!productRaw || productRaw.is_public === false) notFound();
 
   const product = productRaw as unknown as Product;
   const hasDiscount =
@@ -116,6 +116,24 @@ export default async function ProductoPage({ params }: Props) {
               <h1 className={styles.name}>{product.name}</h1>
               {product.category && (
                 <p className={styles.category}>{product.category}</p>
+              )}
+
+              {product.category === 'Medicamentos' && (
+                <div style={{
+                  padding: '0.65rem 0.9rem',
+                  backgroundColor: '#fffbeb',
+                  border: '1px solid #fde68a',
+                  color: '#92400e',
+                  borderRadius: '6px',
+                  fontSize: '0.825rem',
+                  fontWeight: 500,
+                  marginBottom: '1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                }}>
+                  <span>⚠️ Venta bajo receta médica. Consultá en consultorio con la Dra. Paula Landaburo.</span>
+                </div>
               )}
 
               <div className={styles.priceBlock}>

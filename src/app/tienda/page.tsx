@@ -46,12 +46,13 @@ export default async function TiendaPage({
     ).sort() as string[];
   }
 
-  // Traemos todos los productos activos ordenados por nombre.
+  // Traemos todos los productos activos y públicos ordenados por nombre.
   // El filtro de categoría se aplica en el servidor para evitar enviar datos innecesarios.
   let query = supabase
     .from('products')
-    .select('id, name, slug, description, brand_type, price_ars, compare_price_ars, image_url, images, category, stock_quantity, is_active, created_at')
+    .select('id, name, slug, description, brand_type, price_ars, compare_price_ars, image_url, images, category, stock_quantity, is_active, is_public, created_at')
     .eq('is_active', true)
+    .eq('is_public', true)
     .order('name', { ascending: true });
 
   if (category) {
@@ -59,10 +60,7 @@ export default async function TiendaPage({
   }
 
   const { data: productsRaw, error } = await query;
-  // Excluir productos marcados como no públicos (ej. medicamentos bajo receta como Latisse o uso interno)
-  const products: Product[] = (productsRaw ? (productsRaw as unknown as Product[]) : []).filter(
-    (p) => (p as any).is_public !== false
-  );
+  const products: Product[] = (productsRaw ? (productsRaw as unknown as Product[]) : []);
 
   return (
     <>

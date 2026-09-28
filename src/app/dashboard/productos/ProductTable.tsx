@@ -2,6 +2,7 @@
 
 import { useState, useRef, useTransition, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Image from 'next/image';
 import {
   Edit2,
@@ -30,8 +31,8 @@ import {
   updateCategory,
   toggleCategory,
   deleteCategory,
-  type StockMovementType,
 } from './actions';
+import { type StockMovementType } from '@/lib/stock/registerMovement';
 import styles from './page.module.css';
 
 interface Product {
@@ -53,12 +54,17 @@ interface Props {
   isAdmin?: boolean;
 }
 
-const MOVEMENT_TYPE_LABELS: Record<StockMovementType, string> = {
-  recuento_fisico: 'Relevamiento / Recuento físico',
-  reposicion: 'Reposición / Compra',
-  venta: 'Venta',
+const MOVEMENT_TYPE_LABELS: Record<string, string> = {
+  compra: 'Compra / Reposición (+)',
+  venta_mostrador: 'Venta mostrador (-)',
+  venta_online: 'Venta online (-)',
+  baja: 'Baja por rotura / vencimiento (-)',
+  ajuste: 'Ajuste de inventario (±)',
+  recuento: 'Recuento físico / Inventario',
+  reposicion: 'Compra / Reposición (+)',
+  venta: 'Venta (-)',
+  recuento_fisico: 'Recuento físico',
   ajuste_diferencia: 'Ajuste por diferencia',
-  baja: 'Baja por vencimiento o rotura',
 };
 
 export default function ProductTable({ products, categories, isAdmin = false }: Props) {
@@ -84,7 +90,7 @@ export default function ProductTable({ products, categories, isAdmin = false }: 
   // ── Ajuste explícito de stock con motivo ──
   const [adjustingProduct, setAdjustingProduct] = useState<Product | null>(null);
   const [adjustNewStock, setAdjustNewStock] = useState<number>(0);
-  const [adjustMovementType, setAdjustMovementType] = useState<StockMovementType>('recuento_fisico');
+  const [adjustMovementType, setAdjustMovementType] = useState<StockMovementType>('compra');
   const [adjustNotes, setAdjustNotes] = useState<string>('');
   const [isAdjusting, setIsAdjusting] = useState(false);
   const [adjustError, setAdjustError] = useState<string | null>(null);
@@ -121,7 +127,7 @@ export default function ProductTable({ products, categories, isAdmin = false }: 
       const res = await getProductCategories();
       if (res.success) {
         setCategoryItems(res.categories);
-        setCatDdlPending(res.ddlPending);
+        setCatDdlPending((res as any).ddlPending ?? false);
       } else {
         setCategoryActionError(res.error || 'Error al cargar categorías.');
       }
@@ -214,7 +220,7 @@ export default function ProductTable({ products, categories, isAdmin = false }: 
       const res = await getStockMovements(p.id);
       if (res.success) {
         setHistoryMovements(res.movements || []);
-        setHistoryDdlPending(res.ddlPending);
+        setHistoryDdlPending((res as any).ddlPending ?? false);
       } else {
         setHistoryError(res.error || 'Error al cargar el historial.');
       }
@@ -236,7 +242,7 @@ export default function ProductTable({ products, categories, isAdmin = false }: 
     const current = localStock[p.id] ?? (p.stock_quantity ?? 0);
     setAdjustingProduct(p);
     setAdjustNewStock(current);
-    setAdjustMovementType('recuento_fisico');
+    setAdjustMovementType('compra');
     setAdjustNotes('');
     setAdjustError(null);
   };
@@ -252,11 +258,16 @@ export default function ProductTable({ products, categories, isAdmin = false }: 
     setAdjustError(null);
     setIsAdjusting(true);
 
+    const current = localStock[adjustingProduct.id] ?? (adjustingProduct.stock_quantity ?? 0);
+    const deltaOrCounted = adjustMovementType === 'recuento'
+      ? adjustNewStock
+      : (adjustNewStock - current);
+
     try {
       const res = await adjustStockWithMovement(
         adjustingProduct.id,
-        adjustNewStock,
         adjustMovementType,
+        deltaOrCounted,
         adjustNotes
       );
       if (res.success) {
@@ -286,10 +297,14 @@ export default function ProductTable({ products, categories, isAdmin = false }: 
   const handleDelta = (productId: string, delta: number) => {
     setActionError(null);
     setStockPendingId(productId);
-    const defaultReason: StockMovementType = delta > 0 ? 'reposicion' : 'venta';
+    const defaultReason: StockMovementType = delta > 0 ? 'compra' : 'venta_mostrador';
     startTransition(async () => {
       try {
-        const res = await updateStock(productId, delta, defaultReason, `Ajuste rápido ${delta > 0 ? '+' : ''}${delta}`);
+        const res = await updateStock(
+          productId,
+          delta,
+          delta > 0 ? 'Reposición rápida (+1)' : 'Venta rápida en mostrador (-1)'
+        );
         if (!res.success) {
           setActionError(res.error || 'Error al actualizar el stock.');
         } else {
@@ -401,7 +416,28 @@ export default function ProductTable({ products, categories, isAdmin = false }: 
 
   return (
     <>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <Link
+            href="/dashboard/productos/recuento"
+            className={styles.manageCatBtn}
+            style={{ textDecoration: 'none' }}
+            title="Realizar recuento físico mensual de inventario"
+          >
+            <SlidersHorizontal size={16} />
+            <span>Recuento Mensual</span>
+          </Link>
+          <Link
+            href="/dashboard/productos/movimientos"
+            className={styles.manageCatBtn}
+            style={{ textDecoration: 'none' }}
+            title="Ver reporte de auditoría y movimientos de fecha a fecha"
+          >
+            <History size={16} />
+            <span>Movimientos e Historial</span>
+          </Link>
+        </div>
+
         <button
           type="button"
           onClick={handleOpenCategoriesModal}
@@ -622,22 +658,31 @@ export default function ProductTable({ products, categories, isAdmin = false }: 
                   className={styles.input}
                   required
                 >
-                  <option value="recuento_fisico">Relevamiento / Recuento físico</option>
-                  <option value="reposicion">Reposición / Compra a droguería</option>
-                  <option value="venta">Venta en mostrador</option>
-                  <option value="ajuste_diferencia">Ajuste por diferencia de inventario</option>
-                  <option value="baja">Baja por vencimiento o rotura</option>
+                  <option value="compra">Reposición / Compra (+)</option>
+                  <option value="venta_mostrador">Venta en mostrador (-)</option>
+                  <option value="baja">Baja por vencimiento o rotura (-)</option>
+                  <option value="ajuste">Ajuste de inventario (±)</option>
+                  <option value="recuento">Recuento físico</option>
                 </select>
               </div>
 
               <div className={styles.field} style={{ marginBottom: '1.5rem' }}>
-                <label className={styles.label}>Nota / Comentario explicativo (opcional)</label>
+                <label className={styles.label}>
+                  Nota / Motivo {adjustMovementType === 'baja' || adjustMovementType === 'ajuste' ? <strong style={{ color: '#b91c1c' }}>(obligatorio)</strong> : '(opcional)'}
+                </label>
                 <input
                   type="text"
                   value={adjustNotes}
                   onChange={(e) => setAdjustNotes(e.target.value)}
                   className={styles.input}
-                  placeholder="Ej. Relevamiento viernes Ceci / Rotura de frasco en cabina"
+                  required={adjustMovementType === 'baja' || adjustMovementType === 'ajuste'}
+                  placeholder={
+                    adjustMovementType === 'baja'
+                      ? 'Ej. Producto vencido / Frasco roto en cabina'
+                      : adjustMovementType === 'ajuste'
+                      ? 'Ej. Diferencia encontrada en auditoría interna'
+                      : 'Ej. Compra a droguería factura #1234'
+                  }
                 />
               </div>
 
@@ -735,24 +780,29 @@ export default function ProductTable({ products, categories, isAdmin = false }: 
 
                       const typeLabel = MOVEMENT_TYPE_LABELS[m.movement_type as StockMovementType] || m.movement_type;
                       let badgeClass = styles.badgeTypeRecuento;
-                      if (m.movement_type === 'reposicion') badgeClass = styles.badgeTypeReposicion;
-                      else if (m.movement_type === 'venta') badgeClass = styles.badgeTypeVenta;
-                      else if (m.movement_type === 'ajuste_diferencia') badgeClass = styles.badgeTypeAjuste;
+                      if (m.movement_type === 'compra' || m.movement_type === 'reposicion') badgeClass = styles.badgeTypeReposicion;
+                      else if (m.movement_type === 'venta_mostrador' || m.movement_type === 'venta_online' || m.movement_type === 'venta') badgeClass = styles.badgeTypeVenta;
+                      else if (m.movement_type === 'ajuste' || m.movement_type === 'ajuste_diferencia') badgeClass = styles.badgeTypeAjuste;
                       else if (m.movement_type === 'baja') badgeClass = styles.badgeTypeBaja;
+
+                      const beforeVal = m.stock_before ?? m.previous_stock ?? '—';
+                      const afterVal = m.stock_after ?? m.new_stock ?? '—';
+                      const deltaVal = m.quantity_delta ?? 0;
+                      const author = m.author_name || m.profiles?.full_name || 'Personal';
 
                       return (
                         <tr key={m.id}>
                           <td style={{ whiteSpace: 'nowrap' }}>{formattedDate}</td>
-                          <td>{m.profiles?.full_name || 'Staff'}</td>
+                          <td>{author}</td>
                           <td>
                             <span className={`${styles.badgeType} ${badgeClass}`}>
                               {typeLabel}
                             </span>
                           </td>
                           <td style={{ whiteSpace: 'nowrap' }}>
-                            {m.previous_stock} → <strong>{m.new_stock}</strong>{' '}
-                            <span className={m.quantity_delta > 0 ? styles.deltaPositive : m.quantity_delta < 0 ? styles.deltaNegative : styles.deltaZero}>
-                              ({m.quantity_delta > 0 ? `+${m.quantity_delta}` : m.quantity_delta})
+                            {beforeVal} → <strong>{afterVal}</strong>{' '}
+                            <span className={deltaVal > 0 ? styles.deltaPositive : deltaVal < 0 ? styles.deltaNegative : styles.deltaZero}>
+                              ({deltaVal > 0 ? `+${deltaVal}` : deltaVal})
                             </span>
                           </td>
                           <td style={{ color: 'var(--color-gris)' }}>{m.notes || '—'}</td>

@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { createHmac } from 'crypto';
+import { registerStockMovement } from '@/lib/stock/registerMovement';
 
 const MP_STATUS_MAP: Record<string, string> = {
   approved: 'paid',
@@ -221,6 +222,39 @@ export async function POST(req: NextRequest) {
 
   if (updateError) {
     console.error('[Webhook/MP] Error actualizando orden:', externalRef, updateError);
+  }
+
+  // Si la orden pasa a 'paid', descontar stock de los productos con tipo 'venta_online'
+  if (newStatus === 'paid') {
+    try {
+      const { data: orderItems, error: itemsErr } = await supabase
+        .from('order_items')
+        .select('product_id, quantity')
+        .eq('order_id', externalRef);
+
+      if (itemsErr) {
+        console.error('[Webhook/MP] Error obteniendo items de la orden para descontar stock:', externalRef, itemsErr);
+      } else if (orderItems && orderItems.length > 0) {
+        for (const item of orderItems) {
+          if (item.product_id && item.quantity > 0) {
+            const movementRes = await registerStockMovement({
+              productId: item.product_id,
+              type: 'venta_online',
+              delta: item.quantity,
+              referenceType: 'order',
+              referenceId: externalRef,
+              notes: `Venta online orden #${externalRef.slice(0, 8)}`,
+            });
+
+            if (!movementRes.ok) {
+              console.error(`[Webhook/MP] Error registrando venta_online para producto ${item.product_id}:`, movementRes.error);
+            }
+          }
+        }
+      }
+    } catch (stockErr) {
+      console.error('[Webhook/MP] Error inesperado descontando stock:', stockErr);
+    }
   }
 
   return NextResponse.json({ ok: true });

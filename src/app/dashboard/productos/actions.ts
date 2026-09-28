@@ -1,68 +1,206 @@
 'use server';
+
 import { revalidatePath } from 'next/cache';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import {
+  registerStockMovement,
+  type StockMovementType,
+  type MonthlyCountInput,
+  type StockReportSummaryItem,
+  type StockReportData,
+} from '@/lib/stock/registerMovement';
 
-
-
-async function assertAdmin() {
+async function assertStaffCanManageProducts() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('Sesión no iniciada. Por favor iniciá sesión nuevamente.');
+  }
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id, role')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile || profile.role === 'paciente') {
+    throw new Error('Sin permisos para gestionar inventario.');
+  }
+  const staffAllowed = ['admin', 'operativo', 'cosmetologa', 'medico'];
+  if (!staffAllowed.includes(profile.role)) {
+    throw new Error('Rol no autorizado para gestionar inventario.');
+  }
+  return { user, profile };
+}
+
+async function assertAdminOrOperativo() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect('/login');
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-  if (profile?.role !== 'admin') redirect('/dashboard/operativo');
-  return user;
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id, role')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile || (profile.role !== 'admin' && profile.role !== 'operativo')) {
+    throw new Error('Acción reservada para roles de administración u operativo.');
+  }
+  return { user, profile };
 }
 
 function slugify(name: string): string {
   return name
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9\s-]/g, '')
     .trim()
     .replace(/\s+/g, '-');
 }
 
-export async function createProduct(formData: FormData) {
-  await assertAdmin();
+/**
+ * Alta de un nuevo producto en el catálogo.
+ * Resuelve A2: Valida campos obligatorios, respeta brand_type NOT NULL,
+ * permite price_ars nullable, asigna category_id y registra movimiento de línea de base inicial.
+ */
+export async function createProduct(
+  formData: FormData
+): Promise<{ success: boolean; error?: string; product?: any }> {
+  try {
+    const { user } = await assertAdminOrOperativo();
 
-  const name            = (formData.get('name') as string)?.trim();
-  const category        = (formData.get('category') as string)?.trim();
-  const price_ars       = parseFloat(formData.get('price_ars') as string);
-  const stock_quantity  = parseInt(formData.get('stock_quantity') as string, 10);
-  const min_stock_alert = parseInt(formData.get('min_stock_alert') as string, 10);
-  const description     = (formData.get('description') as string)?.trim() ?? '';
-  const image_url       = (formData.get('image_url') as string)?.trim() ?? null;
+    const name = (formData.get('name') as string)?.trim();
+    const rawCategoryId = (formData.get('category_id') as string)?.trim();
+    const rawCategory = (formData.get('category') as string)?.trim();
+    const rawPrice = formData.get('price_ars');
+    const rawStock = formData.get('stock_quantity');
+    const rawMinStock = formData.get('min_stock_alert');
+    const description = (formData.get('description') as string)?.trim() ?? '';
+    const image_url = (formData.get('image_url') as string)?.trim() ?? null;
+    const rawBrand = (formData.get('brand_type') as string)?.trim();
+    const isPublic = formData.get('is_public') !== 'false';
 
-  if (!name || !category || isNaN(price_ars)) return;
+    if (!name) {
+      return { success: false, error: 'El nombre del producto es obligatorio.' };
+    }
 
-  const slug = slugify(name);
-  const admin = createAdminClient();
+    const price_ars =
+      rawPrice !== null && rawPrice !== '' && !isNaN(parseFloat(rawPrice as string))
+        ? parseFloat(rawPrice as string)
+        : null;
 
-  const insertData: any = {
-    name, slug, category, price_ars,
-    stock_quantity: isNaN(stock_quantity) ? 0 : stock_quantity,
-    min_stock_alert: isNaN(min_stock_alert) ? 5 : min_stock_alert,
-    description, image_url, is_active: true,
-  };
+    const initialStock =
+      rawStock !== null && rawStock !== '' && !isNaN(parseInt(rawStock as string, 10))
+        ? Math.max(0, parseInt(rawStock as string, 10))
+        : 0;
 
-  const { error: insErr } = await admin.from('products').insert(insertData);
-  if (insErr && insErr.code === '42703') {
-    const { min_stock_alert: _, ...fallbackData } = insertData;
-    await admin.from('products').insert(fallbackData);
+    const min_stock_alert =
+      rawMinStock !== null && rawMinStock !== '' && !isNaN(parseInt(rawMinStock as string, 10))
+        ? parseInt(rawMinStock as string, 10)
+        : 5;
+
+    const brand_type = rawBrand || 'Dra. Landaburo';
+    const slug = slugify(name);
+
+    const admin = createAdminClient();
+
+    // Resolver category_id y category (texto de respaldo)
+    let categoryId: string | null = null;
+    let categoryName: string = 'Suplementos';
+
+    if (rawCategoryId) {
+      const { data: catRow } = await admin
+        .from('product_categories')
+        .select('id, name')
+        .eq('id', rawCategoryId)
+        .maybeSingle();
+
+      if (catRow) {
+        categoryId = catRow.id;
+        categoryName = catRow.name;
+      }
+    } else if (rawCategory) {
+      const { data: catRow } = await admin
+        .from('product_categories')
+        .select('id, name')
+        .ilike('name', rawCategory)
+        .maybeSingle();
+
+      if (catRow) {
+        categoryId = catRow.id;
+        categoryName = catRow.name;
+      } else {
+        categoryName = rawCategory;
+      }
+    }
+
+    const insertData: any = {
+      name,
+      slug,
+      description: description || null,
+      brand_type,
+      category: categoryName,
+      category_id: categoryId,
+      price_ars,
+      stock_quantity: 0, // Se inicializa en 0 y luego el movimiento recuento establece el valor
+      min_stock_alert,
+      image_url,
+      is_active: true,
+      is_public: isPublic,
+    };
+
+    const { data: newProduct, error: insErr } = await admin
+      .from('products')
+      .insert(insertData)
+      .select('id, name, slug, stock_quantity, price_ars, category, is_public')
+      .single();
+
+    if (insErr || !newProduct) {
+      console.error('[createProduct] Error de base de datos:', insErr);
+      return {
+        success: false,
+        error: `Error al crear el producto: ${insErr?.message || 'Error desconocido'}`,
+      };
+    }
+
+    // Registrar movimiento de recuento inicial (línea de base) si el stock inicial es > 0
+    if (initialStock > 0) {
+      const movementRes = await registerStockMovement({
+        productId: newProduct.id,
+        type: 'recuento',
+        countedQty: initialStock,
+        notes: 'Recuento inicial — línea de base al dar de alta el producto',
+        userId: user.id,
+      });
+
+      if (!movementRes.ok) {
+        console.warn('[createProduct] Producto creado pero falló el movimiento inicial:', movementRes.error);
+      }
+    }
+
+    revalidatePath('/dashboard/productos');
+    revalidatePath('/dashboard/operativo');
+    revalidatePath('/tienda');
+
+    return { success: true, product: newProduct };
+  } catch (err: any) {
+    console.error('[createProduct] Excepción:', err);
+    return { success: false, error: err?.message || 'Ocurrió un error inesperado al crear el producto.' };
   }
-
-  revalidatePath('/dashboard/productos');
-  revalidatePath('/tienda');
 }
 
 export async function toggleProduct(formData: FormData) {
-  await assertAdmin();
+  await assertAdminOrOperativo();
 
-  const id        = formData.get('id') as string;
-  const isActive  = formData.get('is_active') === 'true';
+  const id = formData.get('id') as string;
+  const isActive = formData.get('is_active') === 'true';
 
   if (!id) return;
 
@@ -73,76 +211,19 @@ export async function toggleProduct(formData: FormData) {
   revalidatePath('/tienda');
 }
 
-async function assertStaffCanManageProducts() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    throw new Error('Sesión no iniciada. Por favor iniciá sesión nuevamente.');
-  }
-  const { data: profile } = await supabase.from('profiles').select('id, role').eq('id', user.id).single();
-  if (!profile || profile.role === 'paciente') {
-    throw new Error('Sin permisos de staff para gestionar inventario.');
-  }
-  const staffAllowed = ['admin', 'operativo', 'cosmetologa', 'medico'];
-  if (!staffAllowed.includes(profile.role)) {
-    throw new Error('Rol no autorizado para modificar stock.');
-  }
-  return user;
-}
-
-export type StockMovementType =
-  | 'recuento_fisico'
-  | 'reposicion'
-  | 'venta'
-  | 'ajuste_diferencia'
-  | 'baja';
-
-interface RecordMovementParams {
-  productId: string;
-  previousStock: number;
-  newStock: number;
-  movementType?: StockMovementType | string;
-  notes?: string;
-  userId: string;
-}
-
-async function recordStockMovementSafely(admin: any, params: RecordMovementParams) {
-  try {
-    const delta = params.newStock - params.previousStock;
-    const movementType =
-      params.movementType ||
-      (delta > 0 ? 'reposicion' : delta < 0 ? 'venta' : 'recuento_fisico');
-
-    const { error } = await admin.from('stock_movements').insert({
-      product_id: params.productId,
-      previous_stock: params.previousStock,
-      new_stock: params.newStock,
-      quantity_delta: delta,
-      movement_type: movementType,
-      notes: params.notes || null,
-      created_by: params.userId,
-    });
-
-    if (error) {
-      if (error.code === '42P01' || error.message?.includes('does not exist')) {
-        console.warn('[stock_movements] Tabla aún no provisionada en DB. Migración DDL pendiente.');
-      } else {
-        console.error('[stock_movements] Error al registrar movimiento:', error);
-      }
-    }
-  } catch (err) {
-    console.warn('[stock_movements] Excepción al registrar movimiento:', err);
-  }
-}
-
+/**
+ * Modificación rápida de stock (+1 / -1) desde la tabla de productos.
+ * Utiliza exclusivamente registerStockMovement:
+ * - Delta +1: tipo 'compra'
+ * - Delta -1: tipo 'venta_mostrador'
+ */
 export async function updateStock(
   targetOrFormData: string | FormData,
   maybeDelta?: number,
-  movementType?: StockMovementType,
   notes?: string
 ): Promise<{ success: boolean; newStock?: number; error?: string }> {
   try {
-    const user = await assertStaffCanManageProducts();
+    const { user } = await assertStaffCanManageProducts();
 
     let id: string = '';
     let delta: number = 0;
@@ -150,7 +231,10 @@ export async function updateStock(
     if (typeof targetOrFormData === 'string') {
       id = targetOrFormData.trim();
       delta = typeof maybeDelta === 'number' ? maybeDelta : 0;
-    } else if (targetOrFormData instanceof FormData || (targetOrFormData && typeof (targetOrFormData as any).get === 'function')) {
+    } else if (
+      targetOrFormData instanceof FormData ||
+      (targetOrFormData && typeof (targetOrFormData as any).get === 'function')
+    ) {
       id = ((targetOrFormData.get('id') as string) || '').trim();
       delta = parseInt((targetOrFormData.get('delta') as string) || '0', 10);
     } else if (typeof targetOrFormData === 'object' && targetOrFormData !== null) {
@@ -162,206 +246,209 @@ export async function updateStock(
       return { success: false, error: 'Parámetros inválidos para actualizar stock.' };
     }
 
-    const admin = createAdminClient();
-    const { data, error: fetchErr } = await admin
-      .from('products')
-      .select('stock_quantity')
-      .eq('id', id)
-      .single();
+    const movementType: StockMovementType = delta > 0 ? 'compra' : 'venta_mostrador';
 
-    if (fetchErr || !data) {
-      return { success: false, error: `No se encontró el producto: ${fetchErr?.message || 'ID no existe'}` };
-    }
-
-    const oldStock = data.stock_quantity ?? 0;
-    const newStock = Math.max(0, oldStock + delta);
-    const { error: updErr } = await admin
-      .from('products')
-      .update({ stock_quantity: newStock })
-      .eq('id', id);
-
-    if (updErr) {
-      return { success: false, error: `Error al modificar stock en base de datos: ${updErr.message}` };
-    }
-
-    // Registrar movimiento en historial con auditoría
-    await recordStockMovementSafely(admin, {
+    const result = await registerStockMovement({
       productId: id,
-      previousStock: oldStock,
-      newStock,
-      movementType,
-      notes,
+      type: movementType,
+      delta: Math.abs(delta),
+      notes: notes || (delta > 0 ? 'Reposición rápida (+1)' : 'Venta mostrador rápida (-1)'),
       userId: user.id,
     });
+
+    if (!result.ok) {
+      return { success: false, error: result.error };
+    }
 
     revalidatePath('/dashboard/productos');
     revalidatePath('/dashboard/operativo');
     revalidatePath('/tienda');
 
-    return { success: true, newStock };
+    return { success: true, newStock: result.stockAfter };
   } catch (err: any) {
     return { success: false, error: err?.message || 'Error al actualizar el stock.' };
   }
 }
 
+/**
+ * Ajuste explícito de stock con tipo y motivo desde el modal.
+ */
 export async function adjustStockWithMovement(
   productId: string,
-  newStock: number,
-  movementType: StockMovementType,
+  type: StockMovementType,
+  deltaOrCounted: number,
   notes?: string
 ): Promise<{ success: boolean; newStock?: number; error?: string }> {
   try {
-    const user = await assertStaffCanManageProducts();
+    const { user } = await assertStaffCanManageProducts();
     const id = (productId || '').trim();
-    if (!id || isNaN(newStock) || newStock < 0) {
-      return { success: false, error: 'Valor de stock o ID de producto inválido.' };
+
+    if (!id) {
+      return { success: false, error: 'ID de producto inválido.' };
     }
 
-    const admin = createAdminClient();
-    const { data, error: fetchErr } = await admin
-      .from('products')
-      .select('stock_quantity')
-      .eq('id', id)
-      .single();
-
-    if (fetchErr || !data) {
-      return { success: false, error: `No se encontró el producto: ${fetchErr?.message || 'ID no existe'}` };
+    let result;
+    if (type === 'recuento') {
+      result = await registerStockMovement({
+        productId: id,
+        type: 'recuento',
+        countedQty: deltaOrCounted,
+        notes: notes || 'Recuento físico puntual',
+        userId: user.id,
+      });
+    } else {
+      result = await registerStockMovement({
+        productId: id,
+        type,
+        delta: deltaOrCounted,
+        notes,
+        userId: user.id,
+      });
     }
 
-    const oldStock = data.stock_quantity ?? 0;
-    if (oldStock === newStock) {
-      return { success: true, newStock: oldStock };
+    if (!result.ok) {
+      return { success: false, error: result.error };
     }
-
-    const { error: updErr } = await admin
-      .from('products')
-      .update({ stock_quantity: newStock })
-      .eq('id', id);
-
-    if (updErr) {
-      return { success: false, error: `Error al actualizar stock: ${updErr.message}` };
-    }
-
-    await recordStockMovementSafely(admin, {
-      productId: id,
-      previousStock: oldStock,
-      newStock,
-      movementType,
-      notes,
-      userId: user.id,
-    });
 
     revalidatePath('/dashboard/productos');
     revalidatePath('/dashboard/operativo');
     revalidatePath('/tienda');
 
-    return { success: true, newStock };
+    return { success: true, newStock: result.stockAfter };
   } catch (err: any) {
-    return { success: false, error: err?.message || 'Error al ajustar stock.' };
+    return { success: false, error: err?.message || 'Error al registrar el movimiento.' };
   }
 }
 
+/**
+ * Obtener historial de movimientos de un producto desde stock_movements.
+ */
 export async function getStockMovements(productId: string): Promise<{
   success: boolean;
   movements: any[];
-  ddlPending: boolean;
   error?: string;
 }> {
   try {
     await assertStaffCanManageProducts();
     const admin = createAdminClient();
+
     const { data, error } = await admin
       .from('stock_movements')
       .select(`
         id,
-        previous_stock,
-        new_stock,
-        quantity_delta,
+        product_id,
         movement_type,
+        quantity_delta,
+        stock_before,
+        stock_after,
+        counted_qty,
+        expected_qty,
         notes,
         created_at,
         created_by,
-        profiles ( full_name, role )
+        reference_type,
+        reference_id
       `)
       .eq('product_id', productId)
       .order('created_at', { ascending: false })
       .limit(100);
 
     if (error) {
-      if (error.code === '42P01' || error.message?.includes('does not exist')) {
-        return { success: true, movements: [], ddlPending: true };
-      }
-      return { success: false, movements: [], ddlPending: false, error: error.message };
+      return { success: false, movements: [], error: error.message };
     }
 
-    return { success: true, movements: data || [], ddlPending: false };
+    // Traer nombres de los autores desde profiles
+    const userIds = Array.from(new Set((data || []).map((m: any) => m.created_by).filter(Boolean)));
+    let profilesMap: Record<string, string> = {};
+
+    if (userIds.length > 0) {
+      const { data: profs } = await admin
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', userIds);
+
+      (profs || []).forEach((p: any) => {
+        profilesMap[p.id] = p.full_name || 'Personal';
+      });
+    }
+
+    const enriched = (data || []).map((m: any) => ({
+      ...m,
+      author_name: profilesMap[m.created_by] || 'Sistema / Personal',
+    }));
+
+    return { success: true, movements: enriched };
   } catch (err: any) {
-    return { success: false, movements: [], ddlPending: false, error: err?.message };
+    return { success: false, movements: [], error: err?.message };
   }
 }
 
-export async function updateProduct(formData: FormData): Promise<{ success: boolean; error?: string }> {
+/**
+ * Edición de datos generales de un producto.
+ */
+export async function updateProduct(
+  formData: FormData
+): Promise<{ success: boolean; error?: string }> {
   try {
-    const user = await assertStaffCanManageProducts();
+    const { user } = await assertAdminOrOperativo();
 
-    const id              = (formData.get('id') as string)?.trim();
-    const name            = (formData.get('name') as string)?.trim();
-    const category        = (formData.get('category') as string)?.trim();
-    const price_ars       = parseFloat(formData.get('price_ars') as string);
-    const stock_quantity  = parseInt(formData.get('stock_quantity') as string, 10);
-    const min_stock_alert = parseInt(formData.get('min_stock_alert') as string, 10);
-    const description     = (formData.get('description') as string)?.trim() ?? '';
-    const image_url       = (formData.get('image_url') as string)?.trim() ?? null;
-    const movement_type   = (formData.get('movement_type') as string)?.trim() as StockMovementType || 'recuento_fisico';
-    const stock_notes     = (formData.get('stock_notes') as string)?.trim() || 'Ajuste directo en edición de producto';
+    const id = (formData.get('id') as string)?.trim();
+    const name = (formData.get('name') as string)?.trim();
+    const rawCategoryId = (formData.get('category_id') as string)?.trim();
+    const rawCategory = (formData.get('category') as string)?.trim();
+    const rawPrice = formData.get('price_ars');
+    const rawMinStock = formData.get('min_stock_alert');
+    const description = (formData.get('description') as string)?.trim() ?? '';
+    const image_url = (formData.get('image_url') as string)?.trim() ?? null;
+    const isPublic = formData.get('is_public') !== 'false';
 
-    if (!id || !name || !category || isNaN(price_ars)) {
-      return { success: false, error: 'Completá los campos obligatorios del producto (nombre, categoría, precio).' };
+    if (!id || !name) {
+      return { success: false, error: 'El ID y el nombre del producto son obligatorios.' };
     }
+
+    const price_ars =
+      rawPrice !== null && rawPrice !== '' && !isNaN(parseFloat(rawPrice as string))
+        ? parseFloat(rawPrice as string)
+        : null;
+
+    const min_stock_alert =
+      rawMinStock !== null && rawMinStock !== '' && !isNaN(parseInt(rawMinStock as string, 10))
+        ? parseInt(rawMinStock as string, 10)
+        : 5;
 
     const admin = createAdminClient();
 
-    // Obtener stock anterior para auditar si varió
-    const { data: currentProduct } = await admin
-      .from('products')
-      .select('stock_quantity')
-      .eq('id', id)
-      .single();
+    // Resolver category_id y category (texto de respaldo)
+    let categoryId: string | null = null;
+    let categoryName: string = rawCategory || 'Suplementos';
 
-    const oldStock = currentProduct?.stock_quantity ?? 0;
-    const finalStock = isNaN(stock_quantity) ? oldStock : stock_quantity;
+    if (rawCategoryId) {
+      const { data: catRow } = await admin
+        .from('product_categories')
+        .select('id, name')
+        .eq('id', rawCategoryId)
+        .maybeSingle();
+
+      if (catRow) {
+        categoryId = catRow.id;
+        categoryName = catRow.name;
+      }
+    }
 
     const updateData: any = {
       name,
-      category,
+      category: categoryName,
+      category_id: categoryId,
       price_ars,
-      stock_quantity: finalStock,
-      min_stock_alert: isNaN(min_stock_alert) ? 5 : min_stock_alert,
-      description,
+      min_stock_alert,
+      description: description || null,
       image_url: image_url || null,
+      is_public: isPublic,
     };
 
     const { error: updErr } = await admin.from('products').update(updateData).eq('id', id);
     if (updErr) {
-      if (updErr.code === '42703') {
-        const { min_stock_alert: _, ...fallbackUpdate } = updateData;
-        const { error: fbErr } = await admin.from('products').update(fallbackUpdate).eq('id', id);
-        if (fbErr) return { success: false, error: `Error al actualizar producto: ${fbErr.message}` };
-      } else {
-        return { success: false, error: `Error al actualizar producto: ${updErr.message}` };
-      }
-    }
-
-    // Si varió el stock, registrar en historial
-    if (!isNaN(stock_quantity) && stock_quantity !== oldStock) {
-      await recordStockMovementSafely(admin, {
-        productId: id,
-        previousStock: oldStock,
-        newStock: stock_quantity,
-        movementType: movement_type,
-        notes: stock_notes,
-        userId: user.id,
-      });
+      return { success: false, error: `Error al actualizar producto: ${updErr.message}` };
     }
 
     revalidatePath('/dashboard/productos');
@@ -378,8 +465,7 @@ export async function updateProduct(formData: FormData): Promise<{ success: bool
 
 export async function getProductCategories(): Promise<{
   success: boolean;
-  categories: Array<{ id: string; name: string; slug: string; is_active: boolean; product_count: number }>;
-  ddlPending: boolean;
+  categories: Array<{ id: string; name: string; slug: string; is_active: boolean; display_order: number; product_count: number }>;
   error?: string;
 }> {
   try {
@@ -389,51 +475,44 @@ export async function getProductCategories(): Promise<{
       .select('*')
       .order('display_order', { ascending: true });
 
+    if (error) {
+      return { success: false, categories: [], error: error.message };
+    }
+
     // Contar productos por categoría
-    const { data: prods } = await admin
-      .from('products')
-      .select('category');
+    const { data: prods } = await admin.from('products').select('category_id, category');
 
     const counts: Record<string, number> = {};
     (prods || []).forEach((p: any) => {
-      if (p.category) counts[p.category] = (counts[p.category] || 0) + 1;
+      if (p.category_id) {
+        counts[p.category_id] = (counts[p.category_id] || 0) + 1;
+      } else if (p.category) {
+        counts[p.category] = (counts[p.category] || 0) + 1;
+      }
     });
 
-    if (!error && dbCategories) {
-      return {
-        success: true,
-        categories: dbCategories.map((c: any) => ({
-          id: c.id,
-          name: c.name,
-          slug: c.slug,
-          is_active: c.is_active,
-          product_count: counts[c.name] || 0,
-        })),
-        ddlPending: false,
-      };
-    }
-
-    // Fallback si la tabla product_categories aún no existe
-    const distinct = Array.from(new Set((prods || []).map((p: any) => p.category).filter(Boolean))).sort() as string[];
     return {
       success: true,
-      categories: distinct.map((name, i) => ({
-        id: `fallback-${i}`,
-        name,
-        slug: slugify(name),
-        is_active: true,
-        product_count: counts[name] || 0,
+      categories: (dbCategories || []).map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        slug: c.slug,
+        is_active: c.is_active,
+        display_order: c.display_order ?? 100,
+        product_count: counts[c.id] || counts[c.name] || 0,
       })),
-      ddlPending: true,
     };
   } catch (err: any) {
-    return { success: false, categories: [], ddlPending: false, error: err?.message };
+    return { success: false, categories: [], error: err?.message };
   }
 }
 
-export async function createCategory(name: string): Promise<{ success: boolean; error?: string }> {
+export async function createCategory(
+  name: string,
+  display_order?: number
+): Promise<{ success: boolean; error?: string }> {
   try {
-    await assertAdmin();
+    await assertAdminOrOperativo();
     const trimmed = name.trim();
     if (!trimmed) return { success: false, error: 'El nombre de la categoría es obligatorio.' };
 
@@ -442,13 +521,11 @@ export async function createCategory(name: string): Promise<{ success: boolean; 
     const { error } = await admin.from('product_categories').insert({
       name: trimmed,
       slug,
+      display_order: typeof display_order === 'number' ? display_order : 50,
       is_active: true,
     });
 
     if (error) {
-      if (error.code === '42P01') {
-        return { success: false, error: 'La tabla product_categories aún no existe en la base de datos (migración DDL pendiente).' };
-      }
       return { success: false, error: error.message };
     }
 
@@ -460,36 +537,35 @@ export async function createCategory(name: string): Promise<{ success: boolean; 
   }
 }
 
-export async function updateCategory(id: string, newName: string): Promise<{ success: boolean; error?: string }> {
+export async function updateCategory(
+  id: string,
+  newName: string,
+  display_order?: number
+): Promise<{ success: boolean; error?: string }> {
   try {
-    await assertAdmin();
+    await assertAdminOrOperativo();
     const trimmed = newName.trim();
     if (!id || !trimmed) return { success: false, error: 'Parámetros inválidos para renombrar categoría.' };
 
     const admin = createAdminClient();
-    const { data: oldCat } = await admin
-      .from('product_categories')
-      .select('name')
-      .eq('id', id)
-      .single();
-
     const slug = slugify(trimmed);
+
+    const updatePayload: any = { name: trimmed, slug };
+    if (typeof display_order === 'number') {
+      updatePayload.display_order = display_order;
+    }
+
     const { error: updErr } = await admin
       .from('product_categories')
-      .update({ name: trimmed, slug })
+      .update(updatePayload)
       .eq('id', id);
 
     if (updErr) {
       return { success: false, error: updErr.message };
     }
 
-    // Renombrar en cascada los productos asociados
-    if (oldCat?.name && oldCat.name !== trimmed) {
-      await admin
-        .from('products')
-        .update({ category: trimmed })
-        .eq('category', oldCat.name);
-    }
+    // Actualizar nombre de respaldo en products
+    await admin.from('products').update({ category: trimmed }).eq('category_id', id);
 
     revalidatePath('/dashboard/productos');
     revalidatePath('/tienda');
@@ -499,9 +575,12 @@ export async function updateCategory(id: string, newName: string): Promise<{ suc
   }
 }
 
-export async function toggleCategory(id: string, currentActive: boolean): Promise<{ success: boolean; error?: string }> {
+export async function toggleCategory(
+  id: string,
+  currentActive: boolean
+): Promise<{ success: boolean; error?: string }> {
   try {
-    await assertAdmin();
+    await assertAdminOrOperativo();
     if (!id) return { success: false, error: 'ID de categoría no válido.' };
 
     const admin = createAdminClient();
@@ -520,29 +599,37 @@ export async function toggleCategory(id: string, currentActive: boolean): Promis
   }
 }
 
-export async function deleteCategory(id: string, categoryName: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteCategory(
+  id: string,
+  categoryName: string
+): Promise<{ success: boolean; error?: string }> {
   try {
-    await assertAdmin();
-    if (!id || !categoryName) return { success: false, error: 'ID de categoría no válido.' };
+    await assertAdminOrOperativo();
+    if (!id) return { success: false, error: 'ID de categoría no válido.' };
 
     const admin = createAdminClient();
-    // Requerimiento B3: No permitir borrar una categoría que tenga productos
-    const { count } = await admin
+
+    // Bloque E: No permitir borrar una categoría que tenga productos asociados
+    const { count: countById } = await admin
+      .from('products')
+      .select('id', { count: 'exact', head: true })
+      .eq('category_id', id);
+
+    const { count: countByName } = await admin
       .from('products')
       .select('id', { count: 'exact', head: true })
       .eq('category', categoryName);
 
-    if (count && count > 0) {
+    const totalCount = Math.max(countById || 0, countByName || 0);
+
+    if (totalCount > 0) {
       return {
         success: false,
-        error: `No se puede eliminar "${categoryName}" porque tiene ${count} producto(s) asignado(s). Podés desactivarla para que no se ofrezca en nuevos productos.`,
+        error: `No se puede eliminar "${categoryName}" porque tiene ${totalCount} producto(s) asignado(s). Podés desactivarla para que no se ofrezca en nuevos productos.`,
       };
     }
 
-    const { error } = await admin
-      .from('product_categories')
-      .delete()
-      .eq('id', id);
+    const { error } = await admin.from('product_categories').delete().eq('id', id);
 
     if (error) return { success: false, error: error.message };
 
@@ -554,9 +641,11 @@ export async function deleteCategory(id: string, categoryName: string): Promise<
   }
 }
 
-export async function uploadProductImage(formData: FormData): Promise<{ success: boolean; url?: string; error?: string }> {
+export async function uploadProductImage(
+  formData: FormData
+): Promise<{ success: boolean; url?: string; error?: string }> {
   try {
-    await assertAdmin();
+    await assertAdminOrOperativo();
 
     const file = formData.get('file') as File | null;
     if (!file || !(file instanceof File)) {
@@ -573,7 +662,6 @@ export async function uploadProductImage(formData: FormData): Promise<{ success:
 
     const admin = createAdminClient();
 
-    // Subir imagen al bucket 'products' (bucket aprovisionado)
     const fileExt = file.name.split('.').pop() || 'jpg';
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
     const arrayBuffer = await file.arrayBuffer();
@@ -598,3 +686,272 @@ export async function uploadProductImage(formData: FormData): Promise<{ success:
     return { success: false, error: err.message || 'Error al procesar la imagen' };
   }
 }
+
+// ─── Recuento Mensual de Stock ───────────────────────────────────────────────
+
+export async function submitMonthlyCount(
+  counts: MonthlyCountInput[]
+): Promise<{ success: boolean; results?: any[]; error?: string }> {
+  try {
+    const { user } = await assertStaffCanManageProducts();
+
+    if (!Array.isArray(counts) || counts.length === 0) {
+      return { success: false, error: 'No se recibieron datos de recuento.' };
+    }
+
+    const results: any[] = [];
+    for (const item of counts) {
+      if (!item.productId || typeof item.countedQty !== 'number' || isNaN(item.countedQty) || item.countedQty < 0) {
+        continue;
+      }
+
+      const res = await registerStockMovement({
+        productId: item.productId,
+        type: 'recuento',
+        countedQty: Math.floor(item.countedQty),
+        notes: item.notes?.trim() || 'Recuento físico mensual de inventario',
+        userId: user.id,
+      });
+
+      results.push({
+        productId: item.productId,
+        success: res.ok,
+        stockBefore: res.stockBefore,
+        stockAfter: res.stockAfter,
+        delta: res.quantityDelta,
+        error: res.error,
+      });
+    }
+
+    revalidatePath('/dashboard/productos');
+    revalidatePath('/dashboard/productos/recuento');
+    revalidatePath('/dashboard/productos/movimientos');
+    revalidatePath('/dashboard/operativo');
+    revalidatePath('/tienda');
+
+    return { success: true, results };
+  } catch (err: any) {
+    console.error('[submitMonthlyCount Error]:', err);
+    return { success: false, error: err?.message || 'Error al registrar el recuento mensual.' };
+  }
+}
+
+// ─── Reporte de Movimientos de Fecha a Fecha ─────────────────────────────────
+
+export async function getStockReportData(
+  startDateStr: string,
+  endDateStr: string
+): Promise<StockReportData> {
+  try {
+    await assertStaffCanManageProducts();
+    const admin = createAdminClient();
+
+    // Normalizar fechas: inicio a las 00:00:00 y fin a las 23:59:59.999
+    const startObj = new Date(startDateStr);
+    startObj.setHours(0, 0, 0, 0);
+    const startIso = startObj.toISOString();
+
+    const endObj = new Date(endDateStr);
+    endObj.setHours(23, 59, 59, 999);
+    const endIso = endObj.toISOString();
+
+    // 1. Obtener todos los productos
+    const { data: products, error: prodErr } = await admin
+      .from('products')
+      .select('id, name, category, stock_quantity')
+      .order('name', { ascending: true });
+
+    if (prodErr || !products) {
+      return {
+        success: false,
+        startDate: startDateStr,
+        endDate: endDateStr,
+        summary: [],
+        movements: [],
+        allBalanced: false,
+        totalInitialStock: 0,
+        totalFinalStock: 0,
+        totalNetChange: 0,
+        error: prodErr?.message || 'Error al obtener productos',
+      };
+    }
+
+    // 2. Obtener movimientos hasta endIso
+    const { data: movementsData, error: movErr } = await admin
+      .from('stock_movements')
+      .select(`
+        id,
+        product_id,
+        movement_type,
+        quantity_delta,
+        stock_before,
+        stock_after,
+        counted_qty,
+        expected_qty,
+        notes,
+        created_at,
+        created_by,
+        reference_type,
+        reference_id
+      `)
+      .lte('created_at', endIso)
+      .order('created_at', { ascending: true });
+
+    if (movErr) {
+      return {
+        success: false,
+        startDate: startDateStr,
+        endDate: endDateStr,
+        summary: [],
+        movements: [],
+        allBalanced: false,
+        totalInitialStock: 0,
+        totalFinalStock: 0,
+        totalNetChange: 0,
+        error: movErr.message,
+      };
+    }
+
+    const allMovements = movementsData || [];
+
+    // Mapear autores desde profiles
+    const userIds = Array.from(new Set(allMovements.map((m: any) => m.created_by).filter(Boolean)));
+    const profilesMap: Record<string, string> = {};
+    if (userIds.length > 0) {
+      const { data: profs } = await admin.from('profiles').select('id, full_name').in('id', userIds);
+      (profs || []).forEach((p: any) => {
+        profilesMap[p.id] = p.full_name || 'Personal';
+      });
+    }
+
+    // Movimientos del período (para tabla cronológica detallada)
+    const periodMovements = allMovements
+      .filter((m: any) => m.created_at >= startIso && m.created_at <= endIso)
+      .map((m: any) => {
+        const prod = products.find((p) => p.id === m.product_id);
+        return {
+          ...m,
+          product_name: prod?.name || 'Producto eliminado',
+          category: prod?.category || '—',
+          author_name: profilesMap[m.created_by] || 'Sistema / Personal',
+        };
+      })
+      .reverse(); // Más recientes primero para la tabla de auditoría
+
+    // 3. Calcular balance consolidado por producto
+    const summary: StockReportSummaryItem[] = [];
+    let allBalanced = true;
+    let totalInitialStock = 0;
+    let totalFinalStock = 0;
+    let totalNetChange = 0;
+
+    for (const prod of products) {
+      const prodMovs = allMovements.filter((m: any) => m.product_id === prod.id);
+      const beforeMovs = prodMovs.filter((m: any) => m.created_at < startIso);
+      const duringMovs = prodMovs.filter((m: any) => m.created_at >= startIso && m.created_at <= endIso);
+
+      // Determinar stock inicial
+      let stockInitial = 0;
+      if (beforeMovs.length > 0) {
+        stockInitial = beforeMovs[beforeMovs.length - 1].stock_after;
+      } else if (duringMovs.length > 0) {
+        stockInitial = duringMovs[0].stock_before;
+      } else {
+        // Sin movimientos previos ni en período
+        stockInitial = prod.stock_quantity ?? 0;
+      }
+
+      // Sumatorias por tipo dentro del período
+      let purchases = 0;
+      let salesOnline = 0;
+      let salesCounter = 0;
+      let losses = 0;
+      let adjustments = 0;
+      let recountsDelta = 0;
+
+      for (const m of duringMovs) {
+        const delta = m.quantity_delta ?? 0;
+        switch (m.movement_type) {
+          case 'compra':
+            purchases += delta;
+            break;
+          case 'venta_online':
+            salesOnline += delta;
+            break;
+          case 'venta_mostrador':
+            salesCounter += delta;
+            break;
+          case 'baja':
+            losses += delta;
+            break;
+          case 'ajuste':
+            adjustments += delta;
+            break;
+          case 'recuento':
+            recountsDelta += delta;
+            break;
+          default:
+            adjustments += delta;
+            break;
+        }
+      }
+
+      const netChange = purchases + salesOnline + salesCounter + losses + adjustments + recountsDelta;
+      
+      let stockFinal = stockInitial;
+      if (duringMovs.length > 0) {
+        stockFinal = duringMovs[duringMovs.length - 1].stock_after;
+      }
+
+      const isBalanced = (stockInitial + netChange) === stockFinal;
+      if (!isBalanced) allBalanced = false;
+
+      totalInitialStock += stockInitial;
+      totalFinalStock += stockFinal;
+      totalNetChange += netChange;
+
+      summary.push({
+        productId: prod.id,
+        productName: prod.name,
+        category: prod.category || 'General',
+        stockInitial,
+        purchases,
+        salesOnline,
+        salesCounter,
+        losses,
+        adjustments,
+        recountsDelta,
+        netChange,
+        stockFinal,
+        isBalanced,
+      });
+    }
+
+    return {
+      success: true,
+      startDate: startDateStr,
+      endDate: endDateStr,
+      summary,
+      movements: periodMovements,
+      allBalanced,
+      totalInitialStock,
+      totalFinalStock,
+      totalNetChange,
+    };
+  } catch (err: any) {
+    console.error('[getStockReportData Error]:', err);
+    return {
+      success: false,
+      startDate: startDateStr,
+      endDate: endDateStr,
+      summary: [],
+      movements: [],
+      allBalanced: false,
+      totalInitialStock: 0,
+      totalFinalStock: 0,
+      totalNetChange: 0,
+      error: err?.message || 'Error al generar el reporte de stock.',
+    };
+  }
+}
+
