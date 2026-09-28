@@ -41,7 +41,9 @@ async function assertAdminOrOperativo() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  if (!user) {
+    throw new Error('Sesión no iniciada. Por favor iniciá sesión nuevamente.');
+  }
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -50,7 +52,7 @@ async function assertAdminOrOperativo() {
     .single();
 
   if (!profile || (profile.role !== 'admin' && profile.role !== 'operativo')) {
-    throw new Error('Acción reservada para roles de administración u operativo.');
+    throw new Error('Acción no autorizada: Solo los roles Administrador u Operativo pueden realizar esta acción.');
   }
   return { user, profile };
 }
@@ -170,13 +172,13 @@ export async function createProduct(
       };
     }
 
-    // Registrar movimiento de recuento inicial (línea de base) si el stock inicial es > 0
+    // Registrar movimiento de stock inicial (ajuste/incorporación) si el stock inicial es > 0 (C3.2)
     if (initialStock > 0) {
       const movementRes = await registerStockMovement({
         productId: newProduct.id,
-        type: 'recuento',
-        countedQty: initialStock,
-        notes: 'Recuento inicial — línea de base al dar de alta el producto',
+        type: 'ajuste',
+        delta: initialStock,
+        notes: 'Stock inicial al dar de alta el producto (incorporación preexistente)',
         userId: user.id,
       });
 
@@ -223,7 +225,7 @@ export async function updateStock(
   notes?: string
 ): Promise<{ success: boolean; newStock?: number; error?: string }> {
   try {
-    const { user } = await assertStaffCanManageProducts();
+    const { user } = await assertAdminOrOperativo();
 
     let id: string = '';
     let delta: number = 0;
@@ -280,7 +282,7 @@ export async function adjustStockWithMovement(
   notes?: string
 ): Promise<{ success: boolean; newStock?: number; error?: string }> {
   try {
-    const { user } = await assertStaffCanManageProducts();
+    const { user } = await assertAdminOrOperativo();
     const id = (productId || '').trim();
 
     if (!id) {
@@ -648,22 +650,43 @@ export async function uploadProductImage(
     await assertAdminOrOperativo();
 
     const file = formData.get('file') as File | null;
+    const previousUrl = (formData.get('previous_url') as string)?.trim();
+    const productSlug = (formData.get('slug') as string)?.trim() || 'producto';
+
     if (!file || !(file instanceof File)) {
       return { success: false, error: 'No se recibió ningún archivo válido.' };
     }
 
-    if (!file.type.startsWith('image/')) {
-      return { success: false, error: 'El archivo debe ser una imagen (JPG, PNG, WEBP).' };
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      return { success: false, error: 'Formato no permitido. Solo se aceptan imágenes JPG, PNG o WEBP.' };
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      return { success: false, error: 'La imagen no debe superar los 5MB.' };
+      return { success: false, error: 'La imagen excede el límite permitido de 5 MB.' };
     }
 
     const admin = createAdminClient();
 
-    const fileExt = file.name.split('.').pop() || 'jpg';
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
+    // Bloque E3: Si se reemplaza una imagen anterior, borrarla del bucket para evitar huérfanas
+    if (previousUrl && previousUrl.includes('/products/')) {
+      try {
+        const parts = previousUrl.split('/products/');
+        if (parts.length > 1) {
+          const oldFileName = decodeURIComponent(parts[1].split('?')[0]);
+          if (oldFileName) {
+            await admin.storage.from('products').remove([oldFileName]);
+          }
+        }
+      } catch (delErr) {
+        console.warn('[uploadProductImage] No se pudo borrar la imagen anterior:', delErr);
+      }
+    }
+
+    // Nombrar archivo con el slug del producto + timestamp (sin caracteres extraños ni espacios)
+    const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+    const safeSlug = slugify(productSlug).replace(/[^a-z0-9_-]/gi, '-');
+    const fileName = `${safeSlug}-${Date.now()}.${fileExt}`;
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
@@ -676,7 +699,7 @@ export async function uploadProductImage(
 
     if (uploadErr) {
       console.error('[Storage Upload Error]:', uploadErr);
-      return { success: false, error: `Error de almacenamiento: ${uploadErr.message}` };
+      return { success: false, error: `Error al subir la imagen al almacenamiento: ${uploadErr.message}` };
     }
 
     const { data: publicUrlData } = admin.storage.from('products').getPublicUrl(fileName);
@@ -693,7 +716,7 @@ export async function submitMonthlyCount(
   counts: MonthlyCountInput[]
 ): Promise<{ success: boolean; results?: any[]; error?: string }> {
   try {
-    const { user } = await assertStaffCanManageProducts();
+    const { user } = await assertAdminOrOperativo();
 
     if (!Array.isArray(counts) || counts.length === 0) {
       return { success: false, error: 'No se recibieron datos de recuento.' };
@@ -829,11 +852,17 @@ export async function getStockReportData(
       .filter((m: any) => m.created_at >= startIso && m.created_at <= endIso)
       .map((m: any) => {
         const prod = products.find((p) => p.id === m.product_id);
+        const notesStr = m.notes || '';
+        const isTest = notesStr.toUpperCase().startsWith('PRUEBA');
+        const isAnnulled =
+          notesStr.toUpperCase().startsWith('ANULACIÓN') || notesStr.toUpperCase().startsWith('ANULACION');
         return {
           ...m,
           product_name: prod?.name || 'Producto eliminado',
           category: prod?.category || '—',
           author_name: profilesMap[m.created_by] || 'Sistema / Personal',
+          is_test: isTest,
+          is_annulled: isAnnulled,
         };
       })
       .reverse(); // Más recientes primero para la tabla de auditoría
@@ -868,42 +897,56 @@ export async function getStockReportData(
       let losses = 0;
       let adjustments = 0;
       let recountsDelta = 0;
+      let baselineDelta = 0;
 
       for (const m of duringMovs) {
         const delta = m.quantity_delta ?? 0;
-        switch (m.movement_type) {
-          case 'compra':
-            purchases += delta;
-            break;
-          case 'venta_online':
-            salesOnline += delta;
-            break;
-          case 'venta_mostrador':
-            salesCounter += delta;
-            break;
-          case 'baja':
-            losses += delta;
-            break;
-          case 'ajuste':
-            adjustments += delta;
-            break;
-          case 'recuento':
-            recountsDelta += delta;
-            break;
-          default:
-            adjustments += delta;
-            break;
+        const notesLower = (m.notes || '').toLowerCase();
+        // Separar altas / líneas de base iniciales para que no se computen como varianza de inventario (C3)
+        const isInitialBaseline =
+          m.movement_type === 'recuento' &&
+          (notesLower.includes('línea de base') ||
+            notesLower.includes('linea de base') ||
+            notesLower.includes('recuento inicial'));
+
+        if (isInitialBaseline) {
+          baselineDelta += delta;
+        } else {
+          switch (m.movement_type) {
+            case 'compra':
+              purchases += delta;
+              break;
+            case 'venta_online':
+              salesOnline += delta;
+              break;
+            case 'venta_mostrador':
+              salesCounter += delta;
+              break;
+            case 'baja':
+              losses += delta;
+              break;
+            case 'ajuste':
+              adjustments += delta;
+              break;
+            case 'recuento':
+              recountsDelta += delta;
+              break;
+            default:
+              adjustments += delta;
+              break;
+          }
         }
       }
 
-      const netChange = purchases + salesOnline + salesCounter + losses + adjustments + recountsDelta;
-      
+      const netChange =
+        baselineDelta + purchases + salesOnline + salesCounter + losses + adjustments + recountsDelta;
+
       let stockFinal = stockInitial;
       if (duringMovs.length > 0) {
         stockFinal = duringMovs[duringMovs.length - 1].stock_after;
       }
 
-      const isBalanced = (stockInitial + netChange) === stockFinal;
+      const isBalanced = stockInitial + netChange === stockFinal;
       if (!isBalanced) allBalanced = false;
 
       totalInitialStock += stockInitial;
@@ -915,6 +958,7 @@ export async function getStockReportData(
         productName: prod.name,
         category: prod.category || 'General',
         stockInitial,
+        baselineDelta,
         purchases,
         salesOnline,
         salesCounter,
@@ -954,4 +998,32 @@ export async function getStockReportData(
     };
   }
 }
+
+/**
+ * Identifica productos activos con stock 0 que no tienen ningún movimiento en el libro (C4)
+ */
+export async function getPendingBaselineProductIds(): Promise<string[]> {
+  try {
+    const admin = createAdminClient();
+    const { data: prods } = await admin
+      .from('products')
+      .select('id, stock_quantity')
+      .eq('is_active', true)
+      .eq('stock_quantity', 0);
+
+    if (!prods || prods.length === 0) return [];
+
+    const prodIds = prods.map((p) => p.id);
+    const { data: movs } = await admin
+      .from('stock_movements')
+      .select('product_id')
+      .in('product_id', prodIds);
+
+    const productsWithMovements = new Set((movs || []).map((m: any) => m.product_id));
+    return prodIds.filter((id) => !productsWithMovements.has(id));
+  } catch {
+    return [];
+  }
+}
+
 

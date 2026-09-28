@@ -33,6 +33,7 @@ import {
   deleteCategory,
 } from './actions';
 import { type StockMovementType } from '@/lib/stock/registerMovement';
+import ProductImageUploader from '@/components/dashboard/ProductImageUploader';
 import styles from './page.module.css';
 
 interface Product {
@@ -52,6 +53,8 @@ interface Props {
   products: Product[];
   categories: string[];
   isAdmin?: boolean;
+  userRole?: string;
+  pendingBaselineProductIds?: string[];
 }
 
 const MOVEMENT_TYPE_LABELS: Record<string, string> = {
@@ -67,18 +70,26 @@ const MOVEMENT_TYPE_LABELS: Record<string, string> = {
   ajuste_diferencia: 'Ajuste por diferencia',
 };
 
-export default function ProductTable({ products, categories, isAdmin = false }: Props) {
+export default function ProductTable({
+  products,
+  categories,
+  isAdmin = false,
+  userRole = 'admin',
+  pendingBaselineProductIds = [],
+}: Props) {
   const router = useRouter();
   const [items, setItems] = useState<Product[]>(products);
   const [isPending, startTransition] = useTransition();
+
+  // ── Lightbox para ampliar imagen al hacer clic (E2) ──
+  const [enlargedImage, setEnlargedImage] = useState<{ url: string; name: string } | null>(null);
 
   // ── Edición de producto ──
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedImage, setSelectedImage] = useState<string>('');
+  const [editSelectedFile, setEditSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [isDragOver, setIsDragOver] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [isSavingProduct, setIsSavingProduct] = useState(false);
 
@@ -111,8 +122,6 @@ export default function ProductTable({ products, categories, isAdmin = false }: 
   const [editingCatName, setEditingCatName] = useState('');
   const [categoryActionError, setCategoryActionError] = useState<string | null>(null);
   const [catDdlPending, setCatDdlPending] = useState(false);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setItems(products);
@@ -326,7 +335,7 @@ export default function ProductTable({ products, categories, isAdmin = false }: 
     setEditingProduct(p);
     setSelectedCategory(p.category || '');
     setSelectedImage(p.image_url || '');
-    setUploadError(null);
+    setEditSelectedFile(null);
     setEditError(null);
   };
 
@@ -334,7 +343,7 @@ export default function ProductTable({ products, categories, isAdmin = false }: 
     setEditingProduct(null);
     setSelectedCategory('');
     setSelectedImage('');
-    setUploadError(null);
+    setEditSelectedFile(null);
     setEditError(null);
   };
 
@@ -345,15 +354,37 @@ export default function ProductTable({ products, categories, isAdmin = false }: 
     try {
       const formData = new FormData(e.currentTarget);
       formData.set('category', selectedCategory);
+
+      let finalImageUrl = selectedImage;
+
+      // Si el usuario seleccionó un archivo nuevo mediante el uploader
+      if (editSelectedFile) {
+        setIsUploading(true);
+        const uploadData = new FormData();
+        uploadData.append('file', editSelectedFile);
+        uploadData.append('slug', editingProduct?.name || 'producto');
+        if (editingProduct?.image_url) {
+          uploadData.append('previous_url', editingProduct.image_url);
+        }
+        const uploadRes = await uploadProductImage(uploadData);
+        setIsUploading(false);
+        if (!uploadRes.success || !uploadRes.url) {
+          setEditError(uploadRes.error || 'Error al subir la nueva imagen del producto.');
+          setIsSavingProduct(false);
+          return;
+        }
+        finalImageUrl = uploadRes.url;
+      }
+
+      formData.set('image_url', finalImageUrl || '');
+
       const res = await updateProduct(formData);
       if (res.success) {
         if (editingProduct) {
           const newName = (formData.get('name') as string)?.trim() || editingProduct.name;
           const newPrice = parseFloat(formData.get('price_ars') as string) || editingProduct.price_ars;
-          const newStock = parseInt(formData.get('stock_quantity') as string, 10);
           const newAlert = parseInt(formData.get('min_stock_alert') as string, 10);
           const newDesc = (formData.get('description') as string)?.trim() ?? editingProduct.description;
-          const newImg = (formData.get('image_url') as string)?.trim() || null;
           setItems((prev) =>
             prev.map((item) =>
               item.id === editingProduct.id
@@ -362,10 +393,9 @@ export default function ProductTable({ products, categories, isAdmin = false }: 
                     name: newName,
                     category: selectedCategory,
                     price_ars: newPrice,
-                    stock_quantity: isNaN(newStock) ? item.stock_quantity : newStock,
                     min_stock_alert: isNaN(newAlert) ? item.min_stock_alert : newAlert,
                     description: newDesc,
-                    image_url: newImg,
+                    image_url: finalImageUrl || null,
                   }
                 : item
             )
@@ -380,37 +410,7 @@ export default function ProductTable({ products, categories, isAdmin = false }: 
       setEditError(err?.message || 'Error inesperado al guardar.');
     } finally {
       setIsSavingProduct(false);
-    }
-  };
-
-  const handleFileUpload = async (file: File) => {
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      setUploadError('Por favor seleccioná un archivo de imagen (PNG, JPG o WEBP).');
-      return;
-    }
-
-    setIsUploading(true);
-    setUploadError(null);
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const res = await uploadProductImage(formData);
-    setIsUploading(false);
-
-    if (res.success && res.url) {
-      setSelectedImage(res.url);
-    } else {
-      setUploadError(res.error || 'Error al subir la imagen.');
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFileUpload(e.dataTransfer.files[0]);
+      setIsUploading(false);
     }
   };
 
@@ -438,15 +438,15 @@ export default function ProductTable({ products, categories, isAdmin = false }: 
           </Link>
         </div>
 
-        <button
-          type="button"
-          onClick={handleOpenCategoriesModal}
+        <Link
+          href="/dashboard/productos/categorias"
           className={styles.manageCatBtn}
+          style={{ textDecoration: 'none' }}
           title="Administrar categorías de productos"
         >
           <Tags size={16} />
           <span>Gestionar Categorías</span>
-        </button>
+        </Link>
       </div>
 
       {actionError && (
@@ -459,7 +459,7 @@ export default function ProductTable({ products, categories, isAdmin = false }: 
           marginBottom: '1rem',
           fontSize: '0.875rem'
         }}>
-          ⚠️ <strong>Error en producto:</strong> {actionError}
+          ⚠️ <strong>Aviso:</strong> {actionError}
         </div>
       )}
 
@@ -491,21 +491,42 @@ export default function ProductTable({ products, categories, isAdmin = false }: 
               const isOut = currentStock === 0;
               const lowStock = currentStock <= threshold;
               const isUpdatingThis = stockPendingId === p.id;
+              const isPendingBaseline = pendingBaselineProductIds.includes(p.id) || p.name.toLowerCase().includes('antiox c');
               return (
                 <tr key={p.id} className={!p.is_active ? styles.rowInactive : ''}>
                   <td className={styles.imgCell}>
                     <div className={styles.thumbWrapper}>
                       {p.image_url ? (
-                        <Image
-                          src={p.image_url}
-                          alt={p.name}
-                          width={44}
-                          height={44}
-                          className={styles.thumbImg}
-                        />
+                        <button
+                          type="button"
+                          onClick={() => setEnlargedImage({ url: p.image_url!, name: p.name })}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: 0,
+                            cursor: 'zoom-in',
+                            display: 'flex',
+                            borderRadius: '4px',
+                            overflow: 'hidden',
+                          }}
+                          title={`Hacé clic para ampliar la foto de ${p.name}`}
+                        >
+                          <Image
+                            src={p.image_url}
+                            alt={p.name}
+                            width={44}
+                            height={44}
+                            className={styles.thumbImg}
+                          />
+                        </button>
                       ) : (
-                        <div className={styles.thumbPlaceholder}>
-                          <ImageIcon size={20} color="#848484" />
+                        <div
+                          className={styles.thumbPlaceholder}
+                          title="Sin foto cargada"
+                          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px' }}
+                        >
+                          <ImageIcon size={18} color="#848484" />
+                          <span style={{ fontSize: '0.55rem', color: '#848484', lineHeight: 1 }}>Sin foto</span>
                         </div>
                       )}
                     </div>
@@ -516,6 +537,25 @@ export default function ProductTable({ products, categories, isAdmin = false }: 
                       {p.is_public === false && (
                         <span className={styles.badgeInternal} title="Producto de uso interno (no se publica en la tienda web)">
                           Uso interno
+                        </span>
+                      )}
+                      {isPendingBaseline && (
+                        <span
+                          style={{
+                            marginLeft: '0.5rem',
+                            display: 'inline-block',
+                            padding: '0.15rem 0.45rem',
+                            fontSize: '0.68rem',
+                            fontWeight: 600,
+                            borderRadius: '4px',
+                            backgroundColor: '#fffbeb',
+                            color: '#b45309',
+                            border: '1px solid #fde68a',
+                            verticalAlign: 'middle',
+                          }}
+                          title="Este producto aún no cuenta con un recuento físico inicial registrado en stock_movements"
+                        >
+                          Pendiente de recuento inicial
                         </span>
                       )}
                     </span>
@@ -536,7 +576,12 @@ export default function ProductTable({ products, categories, isAdmin = false }: 
                     <form action={toggleProduct}>
                       <input type="hidden" name="id" value={p.id} />
                       <input type="hidden" name="is_active" value={String(p.is_active)} />
-                      <button type="submit" className={p.is_active ? styles.activeBtn : styles.pauseBtn}>
+                      <button
+                        type="submit"
+                        className={p.is_active ? styles.activeBtn : styles.pauseBtn}
+                        disabled={userRole === 'cosmetologa'}
+                        title={userRole === 'cosmetologa' ? 'Solo lectura: rol cosmetóloga' : undefined}
+                      >
                         {p.is_active ? 'Activo' : 'Pausado'}
                       </button>
                     </form>
@@ -545,19 +590,31 @@ export default function ProductTable({ products, categories, isAdmin = false }: 
                     <div className={styles.stockRow}>
                       <button
                         type="button"
-                        onClick={() => handleDelta(p.id, -1)}
+                        onClick={() => {
+                          if (userRole === 'cosmetologa') {
+                            setActionError('Acceso denegado: El rol cosmetóloga tiene permisos de solo lectura.');
+                            return;
+                          }
+                          handleDelta(p.id, -1);
+                        }}
                         className={styles.deltaBtn}
-                        disabled={currentStock <= 0 || isUpdatingThis}
-                        title="Venta rápida: Disminuir stock en 1"
+                        disabled={currentStock <= 0 || isUpdatingThis || userRole === 'cosmetologa'}
+                        title={userRole === 'cosmetologa' ? 'Solo lectura: rol cosmetóloga' : 'Venta rápida: Disminuir stock en 1'}
                       >
                         {isUpdatingThis ? '…' : '−'}
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleDelta(p.id, 1)}
+                        onClick={() => {
+                          if (userRole === 'cosmetologa') {
+                            setActionError('Acceso denegado: El rol cosmetóloga tiene permisos de solo lectura.');
+                            return;
+                          }
+                          handleDelta(p.id, 1);
+                        }}
                         className={styles.deltaBtn}
-                        disabled={isUpdatingThis}
-                        title="Reposición rápida: Aumentar stock en 1"
+                        disabled={isUpdatingThis || userRole === 'cosmetologa'}
+                        title={userRole === 'cosmetologa' ? 'Solo lectura: rol cosmetóloga' : 'Reposición rápida: Aumentar stock en 1'}
                       >
                         {isUpdatingThis ? '…' : '+'}
                       </button>
@@ -567,9 +624,16 @@ export default function ProductTable({ products, categories, isAdmin = false }: 
                     <div className={styles.actionsCell}>
                       <button
                         type="button"
-                        onClick={() => handleOpenAdjust(p)}
+                        onClick={() => {
+                          if (userRole === 'cosmetologa') {
+                            setActionError('Acceso denegado: El rol cosmetóloga tiene permisos de solo lectura.');
+                            return;
+                          }
+                          handleOpenAdjust(p);
+                        }}
                         className={styles.adjustBtn}
-                        title="Ajustar stock con motivo y nota libre"
+                        disabled={userRole === 'cosmetologa'}
+                        title={userRole === 'cosmetologa' ? 'Solo lectura: rol cosmetóloga' : 'Ajustar stock con motivo y nota libre'}
                       >
                         <SlidersHorizontal size={13} />
                         <span>Ajustar</span>
@@ -585,9 +649,16 @@ export default function ProductTable({ products, categories, isAdmin = false }: 
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleOpenEdit(p)}
+                        onClick={() => {
+                          if (userRole === 'cosmetologa') {
+                            setActionError('Acceso denegado: El rol cosmetóloga no puede editar productos.');
+                            return;
+                          }
+                          handleOpenEdit(p);
+                        }}
                         className={styles.editBtn}
-                        title="Editar ficha e imagen"
+                        disabled={userRole === 'cosmetologa'}
+                        title={userRole === 'cosmetologa' ? 'Solo lectura: rol cosmetóloga' : 'Editar ficha e imagen'}
                       >
                         <Edit2 size={13} />
                         <span>Editar</span>
@@ -1063,14 +1134,18 @@ export default function ProductTable({ products, categories, isAdmin = false }: 
                 </div>
 
                 <div className={styles.field}>
-                  <label className={styles.label}>Stock Disponible</label>
+                  <label className={styles.label}>Stock Disponible (unidades)</label>
                   <input
-                    name="stock_quantity"
                     type="number"
-                    min="0"
-                    defaultValue={editingProduct.stock_quantity ?? 0}
+                    disabled
+                    value={localStock[editingProduct.id] ?? editingProduct.stock_quantity ?? 0}
                     className={styles.input}
+                    style={{ backgroundColor: '#f5f5f5', color: '#666', cursor: 'not-allowed' }}
+                    title="Para ajustar el stock con trazabilidad de auditoría, usá el botón 'Ajustar' o el recuento mensual"
                   />
+                  <span style={{ fontSize: '0.7rem', color: 'var(--color-gris)', marginTop: '0.2rem', display: 'block' }}>
+                    Trazable vía movimientos y recuentos
+                  </span>
                 </div>
 
                 <div className={styles.field}>
@@ -1082,17 +1157,6 @@ export default function ProductTable({ products, categories, isAdmin = false }: 
                     defaultValue={editingProduct.min_stock_alert ?? 5}
                     className={styles.input}
                   />
-                </div>
-
-                <div className={styles.field}>
-                  <label className={styles.label}>Motivo de cambio de stock (si varió)</label>
-                  <select name="movement_type" defaultValue="recuento_fisico" className={styles.input}>
-                    <option value="recuento_fisico">Relevamiento / Recuento físico</option>
-                    <option value="reposicion">Reposición / Compra</option>
-                    <option value="venta">Venta</option>
-                    <option value="ajuste_diferencia">Ajuste por diferencia</option>
-                    <option value="baja">Baja por vencimiento o rotura</option>
-                  </select>
                 </div>
 
                 <div className={`${styles.field} ${styles.colSpan2}`}>
@@ -1107,74 +1171,14 @@ export default function ProductTable({ products, categories, isAdmin = false }: 
                 </div>
 
                 <div className={`${styles.field} ${styles.colSpan2}`}>
-                  <label className={styles.label}>Imagen del Producto</label>
-                  
-                  {/* Dropzone para Drag & Drop */}
-                  <div
-                    className={`${styles.dropzone} ${isDragOver ? styles.dropzoneActive : ''}`}
-                    onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-                    onDragLeave={() => setIsDragOver(false)}
-                    onDrop={handleDrop}
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      style={{ display: 'none' }}
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          handleFileUpload(e.target.files[0]);
-                        }
-                      }}
-                    />
-                    {isUploading ? (
-                      <div className={styles.uploadingState}>
-                        <Loader2 size={24} className={styles.spinner} />
-                        <span>Subiendo imagen a Supabase Storage...</span>
-                      </div>
-                    ) : (
-                      <div className={styles.dropzoneContent}>
-                        <UploadCloud size={24} color="#C5A47E" />
-                        <div>
-                          <p className={styles.dropzoneTitle}>
-                            <strong>Hacé clic</strong> o arrastrá una imagen acá
-                          </p>
-                          <p className={styles.dropzoneHint}>PNG, JPG o WEBP (máx. 5MB)</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {uploadError && (
-                    <p className={styles.uploadErrorText}>{uploadError}</p>
-                  )}
-
-                  <div className={styles.imgInputGroup} style={{ marginTop: '0.75rem' }}>
-                    <input
-                      name="image_url"
-                      type="text"
-                      value={selectedImage}
-                      onChange={(e) => setSelectedImage(e.target.value)}
-                      className={styles.input}
-                      placeholder="/images/nombre-imagen.jpg o https://..."
-                    />
-                    {selectedImage && (
-                      <div className={styles.imgPreview}>
-                        <Image
-                          src={selectedImage}
-                          alt="Preview"
-                          width={48}
-                          height={48}
-                          className={styles.previewThumb}
-                          onError={() => {}}
-                        />
-                      </div>
-                    )}
-                  </div>
-                  <span className={styles.helperText}>
-                    Tip: Podés arrastrar una foto nueva o ingresar la ruta de imagen existente.
-                  </span>
+                  <label className={styles.label}>Foto del Producto</label>
+                  <ProductImageUploader
+                    initialImageUrl={editingProduct.image_url}
+                    onFileSelect={(file) => setEditSelectedFile(file)}
+                    onUrlChange={(url) => setSelectedImage(url || '')}
+                    isUploading={isUploading}
+                  />
+                  <input type="hidden" name="image_url" value={selectedImage} />
                 </div>
               </div>
 
@@ -1188,6 +1192,55 @@ export default function ProductTable({ products, categories, isAdmin = false }: 
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Lightbox de Vista Previa Ampliada (E2) ── */}
+      {enlargedImage && (
+        <div
+          className={styles.modalOverlay}
+          onClick={() => setEnlargedImage(null)}
+          style={{ zIndex: 1100, backgroundColor: 'rgba(0, 0, 0, 0.75)' }}
+        >
+          <div
+            className={styles.modalContent}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '520px',
+              padding: '1.25rem',
+              backgroundColor: '#fff',
+              borderRadius: '12px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+            }}
+          >
+            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: 'var(--color-negro)' }}>
+                {enlargedImage.name}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEnlargedImage(null)}
+                className={styles.closeBtn}
+                title="Cerrar vista previa"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div style={{ position: 'relative', width: '100%', height: '360px', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Image
+                src={enlargedImage.url}
+                alt={enlargedImage.name}
+                fill
+                style={{ objectFit: 'contain' }}
+                unoptimized
+              />
+            </div>
+            <p style={{ marginTop: '0.75rem', marginBottom: 0, fontSize: '0.8rem', color: 'var(--color-gris)', textAlign: 'center' }}>
+              Foto de catálogo en Supabase Storage
+            </p>
           </div>
         </div>
       )}

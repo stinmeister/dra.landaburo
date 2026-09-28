@@ -40,12 +40,13 @@ export interface StockReportSummaryItem {
   productName: string;
   category: string;
   stockInitial: number;
+  baselineDelta: number; // Altas iniciales / Línea de base (no computable como varianza de inventario)
   purchases: number;
   salesOnline: number;
   salesCounter: number;
   losses: number;
   adjustments: number;
-  recountsDelta: number;
+  recountsDelta: number; // Varianza neta por recuentos físicos periódicos
   netChange: number;
   stockFinal: number;
   isBalanced: boolean;
@@ -82,18 +83,21 @@ export async function registerStockMovement(
     return { ok: false, error: 'ID de producto no proporcionado.' };
   }
 
-  // 1. Determinar usuario autor
+  // 1. Determinar usuario autor y cliente con contexto de sesión
   let authorUserId = params.userId;
-  if (!authorUserId) {
-    try {
-      const supabase = await createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        authorUserId = user.id;
-      }
-    } catch {
-      // Entorno sin cookies (ej. webhook background)
+  let userSupabaseClient: any = null;
+
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      authorUserId = user.id;
+      userSupabaseClient = supabase;
     }
+  } catch {
+    // Entorno sin cookies (ej. webhook background)
   }
 
   const admin = createAdminClient();
@@ -207,7 +211,12 @@ export async function registerStockMovement(
     notes: notes?.trim() || null,
   };
 
-  const { data: movement, error: insertErr } = await admin
+  // Si hay sesión de usuario, insertar usando el cliente del usuario para ejercitar
+  // estrictamente la política RLS: auth.uid() = created_by AND role IN ('admin', 'operativo').
+  // Si es un proceso sin sesión (webhook servidor), se utiliza adminClient.
+  const clientToInsert = userSupabaseClient || admin;
+
+  const { data: movement, error: insertErr } = await clientToInsert
     .from('stock_movements')
     .insert(insertPayload)
     .select('id')
@@ -215,6 +224,12 @@ export async function registerStockMovement(
 
   if (insertErr || !movement) {
     console.error('[registerStockMovement] Error insertando en stock_movements:', insertErr);
+    if (insertErr?.code === '42501') {
+      return {
+        ok: false,
+        error: 'Permiso denegado por política de seguridad (RLS): tu rol no tiene autorización para registrar movimientos de stock.',
+      };
+    }
     return {
       ok: false,
       error: `Error al registrar el movimiento en el libro de stock: ${insertErr?.message || 'Fallo desconocido'}`,

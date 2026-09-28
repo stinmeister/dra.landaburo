@@ -5,6 +5,7 @@ import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { assertSectionAccess } from '@/lib/permissions';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { getPendingBaselineProductIds } from './actions';
 import ProductTable from './ProductTable';
 import NewProductForm from './NewProductForm';
 import styles from './page.module.css';
@@ -59,6 +60,8 @@ export default async function ProductosPage() {
     ? dbCategories.map((c) => c.name)
     : (Array.from(new Set(rows.map((p: any) => p.category).filter(Boolean))).sort() as string[]);
 
+  const pendingBaselineProductIds = await getPendingBaselineProductIds();
+
   return (
     <div className={styles.page}>
       <div className={styles.header}>
@@ -69,10 +72,18 @@ export default async function ProductosPage() {
       </div>
 
       {/* ── Tabla interactiva con edición, stock con motivo e historial ── */}
-      <ProductTable products={rows} categories={categoryNames} isAdmin={role === 'admin'} />
+      <ProductTable
+        products={rows}
+        categories={categoryNames}
+        isAdmin={role === 'admin'}
+        userRole={role}
+        pendingBaselineProductIds={pendingBaselineProductIds}
+      />
 
-      {/* ── Formulario interactivo nuevo producto ── */}
-      <NewProductForm categories={dbCategories} categoryNames={categoryNames} />
+      {/* ── Formulario interactivo nuevo producto (solo admin y operativo) ── */}
+      {(role === 'admin' || role === 'operativo') && (
+        <NewProductForm categories={dbCategories} categoryNames={categoryNames} />
+      )}
     </div>
   );
 }

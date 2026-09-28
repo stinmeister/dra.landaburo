@@ -3,7 +3,8 @@
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, AlertTriangle, CheckCircle2, Plus } from 'lucide-react';
-import { createProduct } from './actions';
+import { createProduct, uploadProductImage } from './actions';
+import ProductImageUploader from '@/components/dashboard/ProductImageUploader';
 import styles from './page.module.css';
 
 interface CategoryOption {
@@ -24,6 +25,7 @@ export default function NewProductForm({ categories, categoryNames }: Props) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const selectedCategoryObj = categories.find((c) => c.id === selectedCategoryId);
   const isMedicamento = selectedCategoryObj?.name.toLowerCase() === 'medicamentos';
@@ -36,12 +38,32 @@ export default function NewProductForm({ categories, categoryNames }: Props) {
 
     try {
       const formData = new FormData(e.currentTarget);
+      const name = (formData.get('name') as string)?.trim();
+
+      // Bloque E: Si se seleccionó archivo con vista previa, subir al Storage antes de crear producto
+      if (selectedFile) {
+        const uploadData = new FormData();
+        uploadData.append('file', selectedFile);
+        uploadData.append('slug', name || 'producto');
+
+        const uploadRes = await uploadProductImage(uploadData);
+        if (!uploadRes.success || !uploadRes.url) {
+          setErrorMessage(
+            `Fallo al subir la foto del producto: ${uploadRes.error || 'Error desconocido'}. El producto no fue creado para evitar inconsistencias de URL.`
+          );
+          setIsSubmitting(false);
+          return;
+        }
+        formData.set('image_url', uploadRes.url);
+      }
+
       const res = await createProduct(formData);
 
       if (res.success) {
         setSuccessMessage(`¡Producto "${res.product?.name || 'Nuevo producto'}" creado correctamente!`);
         formRef.current?.reset();
         setSelectedCategoryId('');
+        setSelectedFile(null);
         router.refresh();
       } else {
         setErrorMessage(res.error || 'Ocurrió un error al crear el producto.');
@@ -188,12 +210,10 @@ export default function NewProductForm({ categories, categoryNames }: Props) {
           </div>
 
           <div className={`${styles.field} ${styles.colSpan2}`}>
-            <label className={styles.label}>URL de imagen (opcional)</label>
-            <input
-              name="image_url"
-              type="text"
-              className={styles.input}
-              placeholder="/images/... o https://..."
+            <label className={styles.label}>Foto del producto (con vista previa inmediata)</label>
+            <ProductImageUploader
+              onFileSelect={(file) => setSelectedFile(file)}
+              isUploading={isSubmitting}
             />
           </div>
         </div>

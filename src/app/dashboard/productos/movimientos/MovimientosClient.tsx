@@ -229,12 +229,13 @@ export default function MovimientosClient({ initialData }: Props) {
                 <th>Producto</th>
                 <th>Categoría</th>
                 <th className={styles.numCell}>Inicial</th>
+                <th className={styles.numCell} title="Altas de producto y líneas de base iniciales (sin impacto en varianza)">Altas / Base</th>
                 <th className={styles.numCell}>Compras</th>
                 <th className={styles.numCell}>V. Online</th>
                 <th className={styles.numCell}>V. Mostrador</th>
                 <th className={styles.numCell}>Bajas</th>
                 <th className={styles.numCell}>Ajustes</th>
-                <th className={styles.numCell}>Recuentos</th>
+                <th className={styles.numCell} title="Diferencias netas detectadas en recuentos físicos periódicos">Varianza Recuentos</th>
                 <th className={styles.numCell}>Var. Neta</th>
                 <th className={styles.numCell}>Final</th>
                 <th style={{ textAlign: 'center' }}>Balance</th>
@@ -246,6 +247,9 @@ export default function MovimientosClient({ initialData }: Props) {
                   <td style={{ fontWeight: 500 }}>{row.productName}</td>
                   <td style={{ color: 'var(--color-gris)', fontSize: '0.8rem' }}>{row.category}</td>
                   <td className={styles.numCell}>{row.stockInitial}</td>
+                  <td className={`${styles.numCell} ${row.baselineDelta > 0 ? styles.positiveDelta : styles.zeroDelta}`}>
+                    {row.baselineDelta > 0 ? `+${row.baselineDelta}` : 0}
+                  </td>
                   <td className={`${styles.numCell} ${row.purchases > 0 ? styles.positiveDelta : styles.zeroDelta}`}>
                     {row.purchases > 0 ? `+${row.purchases}` : 0}
                   </td>
@@ -345,7 +349,43 @@ export default function MovimientosClient({ initialData }: Props) {
                       </td>
                       <td style={{ fontSize: '0.8rem' }}>{m.author_name}</td>
                       <td style={{ color: 'var(--color-gris)', fontSize: '0.8rem' }}>
-                        {m.notes || (m.reference_id ? `Ref: ${m.reference_type} #${m.reference_id}` : '—')}
+                        {m.is_annulled && (
+                          <span
+                            style={{
+                              display: 'inline-block',
+                              marginRight: '0.5rem',
+                              backgroundColor: '#fef3c7',
+                              color: '#92400e',
+                              padding: '0.15rem 0.45rem',
+                              borderRadius: '4px',
+                              fontWeight: 700,
+                              fontSize: '0.7rem',
+                              border: '1px solid #fde68a',
+                              letterSpacing: '0.04em',
+                            }}
+                          >
+                            ANULACIÓN
+                          </span>
+                        )}
+                        {m.is_test && (
+                          <span
+                            style={{
+                              display: 'inline-block',
+                              marginRight: '0.5rem',
+                              backgroundColor: '#fee2e2',
+                              color: '#991b1b',
+                              padding: '0.15rem 0.45rem',
+                              borderRadius: '4px',
+                              fontWeight: 700,
+                              fontSize: '0.7rem',
+                              border: '1px solid #fecaca',
+                              letterSpacing: '0.04em',
+                            }}
+                          >
+                            PRUEBA TÉCNICA
+                          </span>
+                        )}
+                        <span>{m.notes || (m.reference_id ? `Ref: ${m.reference_type} #${m.reference_id}` : '—')}</span>
                       </td>
                     </tr>
                   );
