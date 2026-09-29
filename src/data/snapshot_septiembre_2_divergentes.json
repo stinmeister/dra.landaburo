@@ -1,0 +1,34 @@
+{
+  "metadata": {
+    "generatedAt": "2026-09-29T13:59:45.000Z",
+    "month": "2026-09",
+    "totalGroups": 2,
+    "totalArs": 0,
+    "totalUsd": 700,
+    "rule": "keep row with tag [MIGRACION-USD], mark row without tag"
+  },
+  "pairs": [
+    {
+      "dniLast4": "****6013",
+      "keepId": "a344729c-1a15-4d54-b30c-1eafc942cd69",
+      "keepExternalId": "33246013|2026-09-15|Sculptra Bioestimulador",
+      "markId": "ca747f52-277c-4948-b8ef-1cd807f708fc",
+      "markExternalId": "33246013|2026-09-15T13:30|Sculptra Bioestimulador",
+      "amountArs": 0,
+      "amountUsd": 500,
+      "paymentDate": "2026-09-15T16:30:00+00:00",
+      "motivo": "Conserva tag [MIGRACION-USD] en fila de fecha pura, marca registro con hora sin tag"
+    },
+    {
+      "dniLast4": "****2438",
+      "keepId": "e7ab4f71-2bb1-42c9-8b05-f7c490a02247",
+      "keepExternalId": "39132438|2026-09-10|Frax Capilar + Exosomas",
+      "markId": "8331ca50-9caa-4a33-955f-eba2d46ceabb",
+      "markExternalId": "39132438|2026-09-10T12:30|Frax Capilar + Exosomas",
+      "amountArs": 0,
+      "amountUsd": 200,
+      "paymentDate": "2026-09-10T15:30:00+00:00",
+      "motivo": "Conserva tag [MIGRACION-USD] en fila de fecha pura, marca registro con hora sin tag"
+    }
+  ]
+}
