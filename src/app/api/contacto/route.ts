@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { isRateLimited, getClientIp } from '@/lib/rateLimit';
 
@@ -22,21 +23,31 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 1. Guardar en Supabase si la tabla leads existe (usando Service Role para evitar bloqueos RLS)
+    // 1. Guardar en Supabase (desacoplado: cliente anónimo con RLS, fallback a admin si la política anon está pendiente)
     try {
-      const admin = createAdminClient();
-      await admin.from('leads').insert([
-        {
-          full_name: name,
-          email,
-          phone: phone || null,
-          notes: `[Contacto Web] Tratamiento: ${treatment || 'General'}\nMensaje: ${message}`,
-          status: 'nuevo',
-          created_at: new Date().toISOString(),
-        },
-      ]);
+      const supabase = await createClient();
+      const leadPayload = {
+        full_name: name,
+        email,
+        phone: phone || null,
+        notes: `[Contacto Web] Tratamiento: ${treatment || 'General'}\nMensaje: ${message}`,
+        status: 'nuevo',
+        created_at: new Date().toISOString(),
+      };
+
+      const { error: insertErr } = await supabase.from('leads').insert([leadPayload]);
+      if (insertErr) {
+        if (insertErr.code === '42501') {
+          // Si la política RLS para anon no ha sido ejecutada en SQL Editor, fallback transitorio a admin
+          console.warn('[Contacto] RLS 42501 para anon en leads. Usando fallback temporal service_role...');
+          const admin = createAdminClient();
+          await admin.from('leads').insert([leadPayload]);
+        } else {
+          console.warn('[Contacto] Error al insertar lead:', insertErr.message);
+        }
+      }
     } catch (dbErr) {
-      console.warn('[Contacto] Aviso: No se pudo guardar lead en Supabase (la tabla leads puede requerir migración):', dbErr);
+      console.warn('[Contacto] Aviso: No se pudo guardar lead en Supabase:', dbErr);
     }
 
     // 2. Despacho a n8n Webhook de Alertas Operativas (si está configurado)

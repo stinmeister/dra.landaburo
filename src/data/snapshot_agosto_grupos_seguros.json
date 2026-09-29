@@ -1,0 +1,1729 @@
+{
+  "timestamp": "2026-09-29T01:38:43.081Z",
+  "totalAugustRows": 397,
+  "segurosCount": 172,
+  "totalArsMarked": 27786100,
+  "totalUsdMarked": 0,
+  "items": [
+    {
+      "markId": "42e367df-31e4-4305-b273-b32d76d70986",
+      "keepId": "07a1bfe1-cc4c-49ed-968d-fea9d0865737",
+      "markExtId": "27905341|2026-08-03|Peeling Facial",
+      "keepExtId": "27905341|2026-08-03T13:30|Peeling Facial",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "4f15207b-2d26-4746-8ba3-edb841e3c849",
+      "paymentDate": "2026-08-03T03:00:00+00:00"
+    },
+    {
+      "markId": "ea6e7602-00bd-446e-8eb4-10583b5eee00",
+      "keepId": "2e44aa33-e6b5-4a19-934f-ab7265f84e36",
+      "markExtId": "25018770|2026-08-03|Frax Capilar + Exosomas",
+      "keepExtId": "25018770|2026-08-03T13:00|Frax Capilar + Exosomas",
+      "amountArs": 280000,
+      "amountUsd": null,
+      "patientId": "d0643986-ab0d-4abc-8f73-f7f33f0b1cb1",
+      "paymentDate": "2026-08-03T03:00:00+00:00"
+    },
+    {
+      "markId": "de742e4a-fc99-4c25-b8cc-e17ee7fae95d",
+      "keepId": "08657c61-5de1-4c74-a24c-f71914d53738",
+      "markExtId": "40790258|2026-08-03|Lp Light & Bright",
+      "keepExtId": "40790258|2026-08-03T11:00|Lp Light & Bright",
+      "amountArs": 280000,
+      "amountUsd": null,
+      "patientId": "3d209955-5499-4c45-9dbf-a394f9c08606",
+      "paymentDate": "2026-08-03T03:00:00+00:00"
+    },
+    {
+      "markId": "4500b93f-140d-463a-b8ea-563689faad70",
+      "keepId": "720bab48-24a7-40e3-9b2d-64a4b318e703",
+      "markExtId": "39261935|2026-08-03|Frax Capilar",
+      "keepExtId": "39261935|2026-08-03T15:00|Frax Capilar",
+      "amountArs": 0,
+      "amountUsd": null,
+      "patientId": "4a6e621e-bd59-4451-8f69-5fc558591dd4",
+      "paymentDate": "2026-08-03T03:00:00+00:00"
+    },
+    {
+      "markId": "c88e9408-541c-4d6a-8970-9cf037b8380a",
+      "keepId": "88349198-442a-404e-a838-74e0a4e1741a",
+      "markExtId": "49820131|2026-08-03|Control Dermatológico",
+      "keepExtId": "49820131|2026-08-03T14:30|Control Dermatológico",
+      "amountArs": 0,
+      "amountUsd": null,
+      "patientId": "5a890e43-1c8c-456f-99d1-f813d9e854e3",
+      "paymentDate": "2026-08-03T03:00:00+00:00"
+    },
+    {
+      "markId": "23fce0bb-279c-4170-83e9-f2d908a41e15",
+      "keepId": "6df7b697-4eff-4e50-a9a1-2bf695a811a0",
+      "markExtId": "39262320|2026-08-03|Control Dermatológico",
+      "keepExtId": "39262320|2026-08-03T14:45|Control Dermatológico",
+      "amountArs": 35000,
+      "amountUsd": null,
+      "patientId": "80586aae-81dc-4d08-81b7-6d093340362f",
+      "paymentDate": "2026-08-03T03:00:00+00:00"
+    },
+    {
+      "markId": "51a88dfb-fbd1-4557-b379-39ae3ff16cb4",
+      "keepId": "e79b7b86-a28a-465f-bc8e-f1ac76895f84",
+      "markExtId": "28948759|2026-08-03|Frax Capilar + Exosomas",
+      "keepExtId": "28948759|2026-08-03T11:30|Frax Capilar + Exosomas",
+      "amountArs": 280000,
+      "amountUsd": null,
+      "patientId": "683503bc-3133-4352-8b22-3d6220c2e0b6",
+      "paymentDate": "2026-08-03T03:00:00+00:00"
+    },
+    {
+      "markId": "fce76700-d342-46de-bbd2-af7f3b4a6e8d",
+      "keepId": "d28e4351-c66b-468b-a604-d04eedf9176c",
+      "markExtId": "32942425|2026-08-03|Frax Capilar,Lp Light & Bright",
+      "keepExtId": "32942425|2026-08-03T10:00|Frax Capilar,Lp Light & Bright",
+      "amountArs": 480000,
+      "amountUsd": null,
+      "patientId": "a144fb7a-5319-4026-a3cf-5c399fbe6e26",
+      "paymentDate": "2026-08-03T03:00:00+00:00"
+    },
+    {
+      "markId": "9ba6da54-939e-4e2e-bb84-5006af3a0bd0",
+      "keepId": "cc6d986a-06f1-4292-8d13-6eaefe017dd0",
+      "markExtId": "49819029|2026-08-03|Consulta",
+      "keepExtId": "49819029|2026-08-03T12:00|Consulta",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": null,
+      "paymentDate": "2026-08-03T15:00:00+00:00"
+    },
+    {
+      "markId": "1b00c77d-e3e4-4ae7-9ec0-5fc6b0f09c46",
+      "keepId": "ce067d49-8329-4e09-bb12-c063a98223f0",
+      "markExtId": "53359528|2026-08-03|Consulta",
+      "keepExtId": "53359528|2026-08-03T15:30|Consulta",
+      "amountArs": 0,
+      "amountUsd": null,
+      "patientId": null,
+      "paymentDate": "2026-08-03T15:00:00+00:00"
+    },
+    {
+      "markId": "06c53213-706b-432d-8a00-e28df33d5ca3",
+      "keepId": "0fd55c8e-59fd-4534-9b44-5278fa59e016",
+      "markExtId": "14215524|2026-08-04|Control Dermatológico",
+      "keepExtId": "14215524|2026-08-04T17:00|Control Dermatológico",
+      "amountArs": 35000,
+      "amountUsd": null,
+      "patientId": "df9a09f9-cb5f-4ea6-939c-f10d9aa8387d",
+      "paymentDate": "2026-08-04T03:00:00+00:00"
+    },
+    {
+      "markId": "d7cd141d-2b4e-4a97-9da7-428564f8bdcb",
+      "keepId": "931e71eb-49d4-4570-9a28-4e75fd8c60b8",
+      "markExtId": "27812900|2026-08-04|Limpieza Facial",
+      "keepExtId": "27812900|2026-08-04T16:00|Limpieza Facial",
+      "amountArs": 47000,
+      "amountUsd": null,
+      "patientId": "832042a0-ec91-4f77-817f-fa4b42a99ac6",
+      "paymentDate": "2026-08-04T03:00:00+00:00"
+    },
+    {
+      "markId": "87006241-3fd7-4fc5-a5da-95a93d8cdb3a",
+      "keepId": "f660c46c-daad-41d1-b80a-e6b97b4b5418",
+      "markExtId": "26369590|2026-08-04|Consulta",
+      "keepExtId": "26369590|2026-08-04T15:00|Consulta",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "09437766-bfde-4876-af2d-c3a5c4e0b69f",
+      "paymentDate": "2026-08-04T03:00:00+00:00"
+    },
+    {
+      "markId": "553e167c-52ed-478e-93ab-e7fb57e0d0d4",
+      "keepId": "d085c66f-caeb-4da6-92b9-1066bc8191b3",
+      "markExtId": "27467169|2026-08-04|Limpieza Facial",
+      "keepExtId": "27467169|2026-08-04T13:30|Limpieza Facial",
+      "amountArs": 47000,
+      "amountUsd": null,
+      "patientId": "ff6faf86-ab30-434b-86d1-4fdfb3861068",
+      "paymentDate": "2026-08-04T03:00:00+00:00"
+    },
+    {
+      "markId": "1497d38e-1eb2-4fce-bda8-61c101a22264",
+      "keepId": "5799a022-76be-46db-a88c-192f64c43e4b",
+      "markExtId": "31987931|2026-08-04|Consulta",
+      "keepExtId": "31987931|2026-08-04T12:30|Consulta",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "0799794d-baf7-48d1-ba0c-bec5a208bba0",
+      "paymentDate": "2026-08-04T03:00:00+00:00"
+    },
+    {
+      "markId": "1b71fc21-8f64-4399-859b-833ccdc8cc8e",
+      "keepId": "291c1045-6f51-43bf-957d-2fc9f93583b8",
+      "markExtId": "48550819|2026-08-04|Consulta",
+      "keepExtId": "48550819|2026-08-04T11:00|Consulta",
+      "amountArs": 187000,
+      "amountUsd": null,
+      "patientId": "868a0e6f-3ea7-47d1-84c8-5ef574ca72c1",
+      "paymentDate": "2026-08-04T03:00:00+00:00"
+    },
+    {
+      "markId": "c42b5fd0-b28e-4c75-bb4f-3d010afd4ae4",
+      "keepId": "080be103-91f5-4400-9400-c49517adec2f",
+      "markExtId": "37941377|2026-08-04|Control Estético",
+      "keepExtId": "37941377|2026-08-04T10:15|Control Estético",
+      "amountArs": 0,
+      "amountUsd": null,
+      "patientId": "1105939f-539b-446f-95c0-321b89202cd5",
+      "paymentDate": "2026-08-04T03:00:00+00:00"
+    },
+    {
+      "markId": "7dc7c493-d15d-44b2-9666-1a1ea0aa5940",
+      "keepId": "678647fd-3026-4cee-ad05-79bacd7240d8",
+      "markExtId": "33854741|2026-08-04|Lp Light & Bright",
+      "keepExtId": "33854741|2026-08-04T17:30|Lp Light & Bright",
+      "amountArs": 280000,
+      "amountUsd": null,
+      "patientId": "01d1e006-4790-4cc7-849e-1b8c271fc8c8",
+      "paymentDate": "2026-08-04T03:00:00+00:00"
+    },
+    {
+      "markId": "19caa5cd-c380-45e6-a656-f6d91329194a",
+      "keepId": "c2205612-28a2-4e82-bfd9-9bc6038deaab",
+      "markExtId": "39463092|2026-08-04|Frax Capilar + Exosomas",
+      "keepExtId": "39463092|2026-08-04T16:30|Frax Capilar + Exosomas",
+      "amountArs": 280000,
+      "amountUsd": null,
+      "patientId": "7c0e0402-78e0-499b-9911-553aae28b1e5",
+      "paymentDate": "2026-08-04T03:00:00+00:00"
+    },
+    {
+      "markId": "99249b48-5303-43fc-bd2a-068da1d5063e",
+      "keepId": "9d13be2d-307a-46b1-9cce-6b5055dd49e1",
+      "markExtId": "38570656|2026-08-04|Lp Light & Bright,Frax Capilar + Exosomas",
+      "keepExtId": "38570656|2026-08-04T14:30|Lp Light & Bright,Frax Capilar + Exosomas",
+      "amountArs": 560000,
+      "amountUsd": null,
+      "patientId": "08fdbab0-2838-4b01-a79e-b712529b41e2",
+      "paymentDate": "2026-08-04T03:00:00+00:00"
+    },
+    {
+      "markId": "363ded92-6afe-452b-8cff-641a58cfb414",
+      "keepId": "72cf061d-63ae-4879-a2d5-a973be6b4d31",
+      "markExtId": "20166997|2026-08-04|Lp Rostro, Cuello Y Escote",
+      "keepExtId": "20166997|2026-08-04T13:30|Lp Rostro, Cuello Y Escote",
+      "amountArs": 320000,
+      "amountUsd": null,
+      "patientId": "e3cbea31-a2ee-4c01-8d2d-680692e0fe8b",
+      "paymentDate": "2026-08-04T03:00:00+00:00"
+    },
+    {
+      "markId": "155b7b20-a195-4201-80b8-0ae0b445b3da",
+      "keepId": "33935d58-2759-424f-bc12-e262d361f415",
+      "markExtId": "12372680|2026-08-04|Peeling Facial",
+      "keepExtId": "12372680|2026-08-04T12:30|Peeling Facial",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "3ab40d08-608c-4f46-8260-28c9a5960390",
+      "paymentDate": "2026-08-04T03:00:00+00:00"
+    },
+    {
+      "markId": "cf82fef8-8758-40fa-a825-d733fd243bc1",
+      "keepId": "9a91e344-5807-4cad-a4b6-81731938cf64",
+      "markExtId": "27783695|2026-08-04|Control Dermatológico",
+      "keepExtId": "27783695|2026-08-04T10:00|Control Dermatológico",
+      "amountArs": 85000,
+      "amountUsd": null,
+      "patientId": "d5fa1afc-2158-45a2-9985-2e06913bee1c",
+      "paymentDate": "2026-08-04T03:00:00+00:00"
+    },
+    {
+      "markId": "4b3bc860-fb34-48ee-91e7-86176e3bbf25",
+      "keepId": "29c4cdff-45ae-4594-bff3-ebda02a029a1",
+      "markExtId": "37467097|2026-08-04|Control Dermatológico",
+      "keepExtId": "37467097|2026-08-04T18:00|Control Dermatológico",
+      "amountArs": 35000,
+      "amountUsd": null,
+      "patientId": "6f2d62bb-8c40-4dc5-9806-dc809725078f",
+      "paymentDate": "2026-08-04T03:00:00+00:00"
+    },
+    {
+      "markId": "a89a6ebb-cb66-4437-b542-666a906b3646",
+      "keepId": "a940fb70-f1ee-4e9f-a5b0-2cfb8296df48",
+      "markExtId": "25711335|2026-08-04|Peptonas",
+      "keepExtId": "25711335|2026-08-04T17:00|Peptonas",
+      "amountArs": 74000,
+      "amountUsd": null,
+      "patientId": "c19ed3a4-71da-4bf7-9828-e939ff80cdb0",
+      "paymentDate": "2026-08-04T03:00:00+00:00"
+    },
+    {
+      "markId": "000b6e63-96c3-4803-bef7-0d8d7e2bbe2c",
+      "keepId": "deaea5ab-7fcb-46d0-8009-bb0388d0561d",
+      "markExtId": "40069376|2026-08-04|Peeling Facial",
+      "keepExtId": "40069376|2026-08-04T15:00|Peeling Facial",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "10525c49-1394-4a93-bb77-fc4654381e1f",
+      "paymentDate": "2026-08-04T03:00:00+00:00"
+    },
+    {
+      "markId": "1408ee62-fbee-4ebb-978b-f318e8deb6a9",
+      "keepId": "67e62e14-4185-43b4-83d6-194d7f26a0ad",
+      "markExtId": "30998285|2026-08-04|Lp Light & Bright,Botox Entrecejo",
+      "keepExtId": "30998285|2026-08-04T14:00|Lp Light & Bright,Botox Entrecejo",
+      "amountArs": 525600,
+      "amountUsd": null,
+      "patientId": "0961ac22-65fc-4644-8241-18acfa015070",
+      "paymentDate": "2026-08-04T03:00:00+00:00"
+    },
+    {
+      "markId": "6652eb15-3714-4f5e-a5de-484de05b92cc",
+      "keepId": "3352aac3-5e3b-4e7c-94af-44039d1d1b3c",
+      "markExtId": "40562623|2026-08-04|Frax Capilar + Exosomas",
+      "keepExtId": "40562623|2026-08-04T13:00|Frax Capilar + Exosomas",
+      "amountArs": 280000,
+      "amountUsd": null,
+      "patientId": "b08a7c66-73fb-4124-bdec-f094d1eb6aa5",
+      "paymentDate": "2026-08-04T03:00:00+00:00"
+    },
+    {
+      "markId": "19110af1-dbd5-4b27-809d-ba41953220ef",
+      "keepId": "2dc6fddf-b3e7-461e-8f92-37255545dc81",
+      "markExtId": "26514251|2026-08-04|Lp Light & Bright",
+      "keepExtId": "26514251|2026-08-04T10:30|Lp Light & Bright",
+      "amountArs": 280000,
+      "amountUsd": null,
+      "patientId": "3d26ab80-e8a3-45cd-a6ea-4ccf1c4cb92a",
+      "paymentDate": "2026-08-04T03:00:00+00:00"
+    },
+    {
+      "markId": "78f93251-208d-4d47-8bb3-05efd6674ed1",
+      "keepId": "febbc104-2d30-4d2a-b21e-de25b0fa7469",
+      "markExtId": "54713280|2026-08-05|Consulta",
+      "keepExtId": "54713280|2026-08-05T14:00|Consulta",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "83f7f845-dcdc-4963-bb12-d8efe17f4ace",
+      "paymentDate": "2026-08-05T03:00:00+00:00"
+    },
+    {
+      "markId": "17636eb2-fd40-4766-80b8-3cf59281d717",
+      "keepId": "096956fe-e91b-46d0-825e-56350a42c068",
+      "markExtId": "22524637|2026-08-05|Frax Cuello",
+      "keepExtId": "22524637|2026-08-05T12:30|Frax Cuello",
+      "amountArs": 190000,
+      "amountUsd": null,
+      "patientId": "5a0faadb-ec6e-48fd-8006-7ab55ec19e9f",
+      "paymentDate": "2026-08-05T03:00:00+00:00"
+    },
+    {
+      "markId": "7ebeefe6-46c3-43f3-ae43-4da896b18470",
+      "keepId": "9f7a7a7c-f9ab-4dd3-b0f9-e2721d026a07",
+      "markExtId": "21426918|2026-08-05|Lp Light & Bright,Mesoterapia Española - Fac O Cap",
+      "keepExtId": "21426918|2026-08-05T12:00|Lp Light & Bright,Mesoterapia Española - Fac O Cap",
+      "amountArs": 372000,
+      "amountUsd": null,
+      "patientId": "e6c78770-069f-4f26-8149-abb6d46e9a76",
+      "paymentDate": "2026-08-05T03:00:00+00:00"
+    },
+    {
+      "markId": "90bcac99-ead1-457b-a2b9-dacc23bec85c",
+      "keepId": "225265b7-0138-4a2c-9f90-08582aa2fd15",
+      "markExtId": "28607499|2026-08-05|Control Estético",
+      "keepExtId": "28607499|2026-08-05T11:30|Control Estético",
+      "amountArs": 0,
+      "amountUsd": null,
+      "patientId": "843824fb-c49b-4ed8-8700-cc0c6edd0c1a",
+      "paymentDate": "2026-08-05T03:00:00+00:00"
+    },
+    {
+      "markId": "92547d0c-f62e-40fb-ae5c-f03d21e51ed4",
+      "keepId": "46c705b5-ffe2-4311-a14c-8df70a9268a2",
+      "markExtId": "33487199|2026-08-05|Limpieza Facial",
+      "keepExtId": "33487199|2026-08-05T08:30|Limpieza Facial",
+      "amountArs": 47000,
+      "amountUsd": null,
+      "patientId": "19136c1d-b3ef-4888-8884-ccfb96bee0d4",
+      "paymentDate": "2026-08-05T03:00:00+00:00"
+    },
+    {
+      "markId": "419d6796-2c0d-4275-ae3d-c10593fc8d72",
+      "keepId": "9775c1d7-7a36-4449-9ef9-fcc4cfcade58",
+      "markExtId": "34660735|2026-08-05|Consulta",
+      "keepExtId": "34660735|2026-08-05T14:30|Consulta",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "cee6a840-3e0f-42f8-8d2f-49159e692759",
+      "paymentDate": "2026-08-05T03:00:00+00:00"
+    },
+    {
+      "markId": "b39de4ce-9e10-4434-a49c-18ae5ff67256",
+      "keepId": "d9b23ef3-1451-4e75-9c6b-47f41a7731cb",
+      "markExtId": "36350772|2026-08-05|Consulta",
+      "keepExtId": "36350772|2026-08-05T13:30|Consulta",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "535f1102-af88-4212-b686-a2c36e1c4d59",
+      "paymentDate": "2026-08-05T03:00:00+00:00"
+    },
+    {
+      "markId": "15903d16-9566-4f3a-8733-60133b5568c5",
+      "keepId": "deff716d-a1d1-447b-9260-826d52ce7901",
+      "markExtId": "36104412|2026-08-05|Control Dermatológico",
+      "keepExtId": "36104412|2026-08-05T14:15|Control Dermatológico",
+      "amountArs": 35000,
+      "amountUsd": null,
+      "patientId": "dcfc43b7-e839-4902-bab3-979bcfb586a1",
+      "paymentDate": "2026-08-05T03:00:00+00:00"
+    },
+    {
+      "markId": "7f11fa37-1feb-4c9b-8522-6c6f5cdbd906",
+      "keepId": "2a37b672-a56b-42b6-8563-e98bbee84902",
+      "markExtId": "20945839|2026-08-05|Control Estético,Frax Facial",
+      "keepExtId": "20945839|2026-08-05T13:00|Control Estético,Frax Facial",
+      "amountArs": 230000,
+      "amountUsd": null,
+      "patientId": "309fd9a0-c191-43e9-a7d2-8a8bf4d94096",
+      "paymentDate": "2026-08-05T03:00:00+00:00"
+    },
+    {
+      "markId": "f2a41c18-ae99-44f0-9b9b-750117fbb81c",
+      "keepId": "40b87fdd-7c1e-4e6e-be3b-94c759e1e2c6",
+      "markExtId": "37075885|2026-08-05|Control Dermatológico,Fosfatidilcolina",
+      "keepExtId": "37075885|2026-08-05T11:45|Control Dermatológico,Fosfatidilcolina",
+      "amountArs": 0,
+      "amountUsd": null,
+      "patientId": "38a3a532-65b9-4048-8cab-b37ed52d42be",
+      "paymentDate": "2026-08-05T03:00:00+00:00"
+    },
+    {
+      "markId": "0d2e5df4-6d2f-4ba1-b91b-382a2b720c03",
+      "keepId": "654a146b-c38b-4ed9-89d2-3f43d934c6d9",
+      "markExtId": "29466438|2026-08-05|Control Dermatológico",
+      "keepExtId": "29466438|2026-08-05T11:00|Control Dermatológico",
+      "amountArs": 35000,
+      "amountUsd": null,
+      "patientId": "ece9b04a-6cc2-48ad-ad77-59aee62e0c47",
+      "paymentDate": "2026-08-05T03:00:00+00:00"
+    },
+    {
+      "markId": "f6e3e874-03e7-4292-91c7-a314bce92b8e",
+      "keepId": "40a5e555-6f50-45b3-b8f7-bfc410be0eba",
+      "markExtId": "26377619|2026-08-05|Frax Capilar + Plasma",
+      "keepExtId": "26377619|2026-08-05T10:30|Frax Capilar + Plasma",
+      "amountArs": 280000,
+      "amountUsd": null,
+      "patientId": "0097709a-05bb-43fe-921a-fe4e40e10ab5",
+      "paymentDate": "2026-08-05T03:00:00+00:00"
+    },
+    {
+      "markId": "b7bc6fea-3844-4833-85b0-73e61d299775",
+      "keepId": "0688ec77-fdcf-4a3c-b8da-262fabfe688c",
+      "markExtId": "30811198|2026-08-06|Limpieza Facial",
+      "keepExtId": "30811198|2026-08-06T17:00|Limpieza Facial",
+      "amountArs": 47000,
+      "amountUsd": null,
+      "patientId": "f4bf292e-fc33-42cc-88c8-35c3643068b5",
+      "paymentDate": "2026-08-06T03:00:00+00:00"
+    },
+    {
+      "markId": "de3bb9da-2bf2-4ffe-a31e-c9ef21d8c5d9",
+      "keepId": "b915c5b9-c6bd-4af6-b561-5b546d2e6b7b",
+      "markExtId": "39653512|2026-08-06|Peeling Facial",
+      "keepExtId": "39653512|2026-08-06T16:00|Peeling Facial",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "ad921641-3048-4556-a0df-a5af121cd265",
+      "paymentDate": "2026-08-06T03:00:00+00:00"
+    },
+    {
+      "markId": "0622b30f-f8a7-473b-b0f3-cd7537369f81",
+      "keepId": "3f188e00-c47e-4ca2-b9cb-7b225325252c",
+      "markExtId": "36910269|2026-08-06|Limpieza Facial",
+      "keepExtId": "36910269|2026-08-06T14:00|Limpieza Facial",
+      "amountArs": 47000,
+      "amountUsd": null,
+      "patientId": "b6e08e0b-8528-4e11-87a7-cd3905f5c8b3",
+      "paymentDate": "2026-08-06T03:00:00+00:00"
+    },
+    {
+      "markId": "67e76ec4-994a-4738-95aa-ffff46ff3ac5",
+      "keepId": "957d1e24-0864-446f-b63f-5410f88e659e",
+      "markExtId": "51150834|2026-08-07|Limpieza Facial",
+      "keepExtId": "51150834|2026-08-07T14:00|Limpieza Facial",
+      "amountArs": 47000,
+      "amountUsd": null,
+      "patientId": "b7c4a3cb-9e94-461c-88c5-d2261db4ee3d",
+      "paymentDate": "2026-08-07T03:00:00+00:00"
+    },
+    {
+      "markId": "f8deaee0-7611-4e54-ba4b-5f10e86b9e44",
+      "keepId": "17a3f25b-f35f-4e14-b6d9-989e5a6cf204",
+      "markExtId": "28627700|2026-08-07|Limpieza Facial",
+      "keepExtId": "28627700|2026-08-07T12:00|Limpieza Facial",
+      "amountArs": 47000,
+      "amountUsd": null,
+      "patientId": "e674b019-8403-4f96-b11c-355fd5099789",
+      "paymentDate": "2026-08-07T03:00:00+00:00"
+    },
+    {
+      "markId": "5e2013a8-2bc3-4e03-be96-0e2b5a35d2be",
+      "keepId": "2f65908f-ff73-49c3-b3fd-e3ce325a78d8",
+      "markExtId": "30156447|2026-08-10|Consulta",
+      "keepExtId": "30156447|2026-08-10T10:00|Consulta",
+      "amountArs": 97000,
+      "amountUsd": null,
+      "patientId": "4d010f7e-ca03-4e62-924d-1d873787a75f",
+      "paymentDate": "2026-08-10T03:00:00+00:00"
+    },
+    {
+      "markId": "49422b34-9cc1-41be-b94b-3a39eed5cd56",
+      "keepId": "260b653e-4ea2-4ee7-8f7d-8e1465064831",
+      "markExtId": "32275887|2026-08-10|Lp Light & Bright,Mesoterapia Española - Fac O Cap",
+      "keepExtId": "32275887|2026-08-10T15:30|Lp Light & Bright,Mesoterapia Española - Fac O Cap",
+      "amountArs": 417000,
+      "amountUsd": null,
+      "patientId": "e06d3bad-f491-4eaa-b222-6eeb8bb26544",
+      "paymentDate": "2026-08-10T03:00:00+00:00"
+    },
+    {
+      "markId": "2542ab8b-676f-4186-8ceb-5f2c98334eec",
+      "keepId": "ef556bc3-4023-4a2c-a45f-666a221f92c7",
+      "markExtId": "49820131|2026-08-10|Control Dermatológico",
+      "keepExtId": "49820131|2026-08-10T15:00|Control Dermatológico",
+      "amountArs": 0,
+      "amountUsd": null,
+      "patientId": "5a890e43-1c8c-456f-99d1-f813d9e854e3",
+      "paymentDate": "2026-08-10T03:00:00+00:00"
+    },
+    {
+      "markId": "e26685fb-89d7-4251-a915-96347268913b",
+      "keepId": "963ebc3a-f293-4b11-be4c-86fc97d6725d",
+      "markExtId": "31700194|2026-08-10|Lp Light & Bright",
+      "keepExtId": "31700194|2026-08-10T14:30|Lp Light & Bright",
+      "amountArs": 280000,
+      "amountUsd": null,
+      "patientId": "be3700a0-859a-473c-a6cf-3f11478e97ab",
+      "paymentDate": "2026-08-10T03:00:00+00:00"
+    },
+    {
+      "markId": "2ebb6720-da84-46e4-b4f6-c493a5a52868",
+      "keepId": "77f2f981-be1d-430f-a1e9-c0b246944a5e",
+      "markExtId": "13673205|2026-08-10|Mesoterapia Nacional",
+      "keepExtId": "13673205|2026-08-10T14:00|Mesoterapia Nacional",
+      "amountArs": 72000,
+      "amountUsd": null,
+      "patientId": "1e88c5d6-2200-4dc6-8de7-129b1c1d15a6",
+      "paymentDate": "2026-08-10T03:00:00+00:00"
+    },
+    {
+      "markId": "a7635cc1-510a-4047-863f-027a152db5f3",
+      "keepId": "c0b001e5-aaea-400b-aa40-42abf3d6d31a",
+      "markExtId": "21835793|2026-08-10|Plasma Facial",
+      "keepExtId": "21835793|2026-08-10T13:30|Plasma Facial",
+      "amountArs": 100000,
+      "amountUsd": null,
+      "patientId": "6ef3ebf0-2df7-49f3-9b45-9d03c288cf98",
+      "paymentDate": "2026-08-10T03:00:00+00:00"
+    },
+    {
+      "markId": "092d9ce1-b1f7-4d89-ac83-9a616a3c2c83",
+      "keepId": "b2ae67a9-0f3f-4116-9995-16a8be409130",
+      "markExtId": "36318774|2026-08-10|Frax Capilar + Exosomas",
+      "keepExtId": "36318774|2026-08-10T13:00|Frax Capilar + Exosomas",
+      "amountArs": 305000,
+      "amountUsd": null,
+      "patientId": "728e7128-867c-4e5f-81ff-d0b7a3b58cea",
+      "paymentDate": "2026-08-10T03:00:00+00:00"
+    },
+    {
+      "markId": "2b060c64-e646-4648-813d-c3128669f0e5",
+      "keepId": "1032f331-f603-4d63-9d7e-af7ad8e72024",
+      "markExtId": "37075832|2026-08-10|Frax Capilar + Exosomas",
+      "keepExtId": "37075832|2026-08-10T12:30|Frax Capilar + Exosomas",
+      "amountArs": 280000,
+      "amountUsd": null,
+      "patientId": "0437679a-7782-4033-b4d6-d5f6d5dc81d7",
+      "paymentDate": "2026-08-10T03:00:00+00:00"
+    },
+    {
+      "markId": "937a2777-bad5-4a67-b9d0-25b0c385a484",
+      "keepId": "f5c43d15-1551-469e-914e-fbfb851e2ed3",
+      "markExtId": "46521202|2026-08-10|Control Dermatológico",
+      "keepExtId": "46521202|2026-08-10T12:00|Control Dermatológico",
+      "amountArs": 35000,
+      "amountUsd": null,
+      "patientId": "ce4a6c2d-e544-4159-a859-0470fa7968f4",
+      "paymentDate": "2026-08-10T03:00:00+00:00"
+    },
+    {
+      "markId": "0d6952e2-6673-4a2d-95c6-dae7fbd21999",
+      "keepId": "7a0da4bb-b9af-4f20-95a3-c6d2166383bf",
+      "markExtId": "17298776|2026-08-10|Electrocoagulación",
+      "keepExtId": "17298776|2026-08-10T12:00|Electrocoagulación",
+      "amountArs": 95000,
+      "amountUsd": null,
+      "patientId": "0938feaa-d510-42a9-8d2f-696bcb29bf29",
+      "paymentDate": "2026-08-10T03:00:00+00:00"
+    },
+    {
+      "markId": "d8503176-f2c5-422b-a7f8-f434840fcaef",
+      "keepId": "85a72c25-8411-4d26-bfd0-26b594220f93",
+      "markExtId": "20990886|2026-08-10|Lp Light & Bright",
+      "keepExtId": "20990886|2026-08-10T11:30|Lp Light & Bright",
+      "amountArs": 280000,
+      "amountUsd": null,
+      "patientId": "0e031315-9a10-4ead-bc91-18ef508af472",
+      "paymentDate": "2026-08-10T03:00:00+00:00"
+    },
+    {
+      "markId": "dc3cdf98-0bc5-451b-96c0-31d265bbca66",
+      "keepId": "35f7b140-2ba4-4812-9191-77b04c37cc26",
+      "markExtId": "26310497|2026-08-10|Control Estético",
+      "keepExtId": "26310497|2026-08-10T11:15|Control Estético",
+      "amountArs": 0,
+      "amountUsd": null,
+      "patientId": "d099822b-d6a6-402c-a4e2-ffb55d30dd53",
+      "paymentDate": "2026-08-10T03:00:00+00:00"
+    },
+    {
+      "markId": "37433215-afef-4d6c-8e89-6440141e0e21",
+      "keepId": "3839f282-93fb-4577-b882-bbeec702a1bd",
+      "markExtId": "2480749|2026-08-10|Lp Light & Bright,Mesoterapia Francesa",
+      "keepExtId": "2480749|2026-08-10T10:30|Lp Light & Bright,Mesoterapia Francesa",
+      "amountArs": 480000,
+      "amountUsd": null,
+      "patientId": "58b60fdc-4e1a-497e-a3db-0226527e2f46",
+      "paymentDate": "2026-08-10T03:00:00+00:00"
+    },
+    {
+      "markId": "41803c70-5662-42c9-b69a-d3894d0429e5",
+      "keepId": "5693ca3e-fe8f-4f67-bcaa-954e25e98717",
+      "markExtId": "46861615|2026-08-12|Control Dermatológico",
+      "keepExtId": "46861615|2026-08-12T15:00|Control Dermatológico",
+      "amountArs": 35000,
+      "amountUsd": null,
+      "patientId": "be1d2140-e0bd-4aa2-bb39-b35ad0133c3b",
+      "paymentDate": "2026-08-12T03:00:00+00:00"
+    },
+    {
+      "markId": "fef8db18-c3dc-4986-bd1e-3f84e464d459",
+      "keepId": "9ec408d4-480f-42f2-80ea-804a50213c3a",
+      "markExtId": "22511857|2026-08-12|Consulta",
+      "keepExtId": "22511857|2026-08-12T14:30|Consulta",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "c25b630d-8852-49e3-a9bd-66981b157fa3",
+      "paymentDate": "2026-08-12T03:00:00+00:00"
+    },
+    {
+      "markId": "7ffeee99-bdb2-4c4f-a78b-b4344f377da1",
+      "keepId": "7851e5e6-1aca-4a02-83ff-69eac2fffe9a",
+      "markExtId": "38570480|2026-08-12|Control Dermatológico",
+      "keepExtId": "38570480|2026-08-12T14:00|Control Dermatológico",
+      "amountArs": 35000,
+      "amountUsd": null,
+      "patientId": "d0aed7a8-adcd-40aa-a882-25ecd07fc633",
+      "paymentDate": "2026-08-12T03:00:00+00:00"
+    },
+    {
+      "markId": "954cc5c7-b6b1-4597-b114-a8b642fbd7f4",
+      "keepId": "89450e9c-aadd-4ec7-8dc7-f3dd2e5219b0",
+      "markExtId": "41746009|2026-08-12|Control Dermatológico",
+      "keepExtId": "41746009|2026-08-12T13:30|Control Dermatológico",
+      "amountArs": 35000,
+      "amountUsd": null,
+      "patientId": "d2ea2cbb-6d3d-4cdd-b7dd-ef9147ed27e6",
+      "paymentDate": "2026-08-12T03:00:00+00:00"
+    },
+    {
+      "markId": "9c7167ea-a644-4d2d-b68b-b7d1db956a7e",
+      "keepId": "ecf59f15-e210-4b38-bce0-377c89573c3f",
+      "markExtId": "48264096|2026-08-12|Consulta",
+      "keepExtId": "48264096|2026-08-12T13:00|Consulta",
+      "amountArs": 104000,
+      "amountUsd": null,
+      "patientId": "484bd1a8-2937-47b1-b563-60b0f6b50485",
+      "paymentDate": "2026-08-12T03:00:00+00:00"
+    },
+    {
+      "markId": "7a6248f0-3f31-418b-ab5b-965ca5b31c40",
+      "keepId": "ce0eba90-a06b-4409-bc5a-ee803a3e30db",
+      "markExtId": "27836402|2026-08-12|Control Estético",
+      "keepExtId": "27836402|2026-08-12T12:50|Control Estético",
+      "amountArs": 0,
+      "amountUsd": null,
+      "patientId": "1a4a4768-e830-4776-bf5f-ac4cea5989da",
+      "paymentDate": "2026-08-12T03:00:00+00:00"
+    },
+    {
+      "markId": "c09e9325-2f27-4871-9c12-8087e30de1d3",
+      "keepId": "e525c573-6e3f-41fb-b83d-3e379bd7b214",
+      "markExtId": "36104412|2026-08-12|Mesoterapia Española - Fac O Cap",
+      "keepExtId": "36104412|2026-08-12T12:30|Mesoterapia Española - Fac O Cap",
+      "amountArs": 178000,
+      "amountUsd": null,
+      "patientId": "dcfc43b7-e839-4902-bab3-979bcfb586a1",
+      "paymentDate": "2026-08-12T03:00:00+00:00"
+    },
+    {
+      "markId": "d6d6c458-5a63-44e1-ad0a-b343c10e1e78",
+      "keepId": "47891ff8-4f1e-4000-9d6d-b1eee24dc2f3",
+      "markExtId": "22975290|2026-08-12|Mesoterapia Francesa",
+      "keepExtId": "22975290|2026-08-12T12:00|Mesoterapia Francesa",
+      "amountArs": 200000,
+      "amountUsd": null,
+      "patientId": "b5e49f81-7517-45e3-be89-fe42fe6f6b86",
+      "paymentDate": "2026-08-12T03:00:00+00:00"
+    },
+    {
+      "markId": "54959b5a-03e3-491f-8c83-d93dde766f4f",
+      "keepId": "7ef05c19-1049-42ed-bd46-d67587d3111a",
+      "markExtId": "16850361|2026-08-12|Enzimas Biologicas,Mesoterapia Francesa",
+      "keepExtId": "16850361|2026-08-12T11:30|Enzimas Biologicas,Mesoterapia Francesa",
+      "amountArs": 705000,
+      "amountUsd": null,
+      "patientId": "79d9fd26-010f-4c7f-95b0-f65c951dfa54",
+      "paymentDate": "2026-08-12T03:00:00+00:00"
+    },
+    {
+      "markId": "e706df1d-24d5-48ae-921a-fd8a5525f132",
+      "keepId": "ab55824d-050b-46e3-ad53-320e7fe9d0d1",
+      "markExtId": "37564875|2026-08-12|Control Dermatológico",
+      "keepExtId": "37564875|2026-08-12T11:00|Control Dermatológico",
+      "amountArs": 35000,
+      "amountUsd": null,
+      "patientId": "42f1e415-b7b4-410f-bb02-c9c0c48ea820",
+      "paymentDate": "2026-08-12T03:00:00+00:00"
+    },
+    {
+      "markId": "57148160-8ecf-4ede-9435-8d47842fff58",
+      "keepId": "520efd73-d229-4b53-9b31-c2fac717a392",
+      "markExtId": "46861120|2026-08-12|Consulta",
+      "keepExtId": "46861120|2026-08-12T10:30|Consulta",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "09099d1e-58bf-4e3b-853c-f2f814eac6f5",
+      "paymentDate": "2026-08-12T03:00:00+00:00"
+    },
+    {
+      "markId": "e3ebf8f3-6812-4495-99f4-6c930ae6b32e",
+      "keepId": "27f012cb-cd33-4429-8b34-54e6190f355e",
+      "markExtId": "46499680|2026-08-12|Control Dermatológico",
+      "keepExtId": "46499680|2026-08-12T10:15|Control Dermatológico",
+      "amountArs": 35000,
+      "amountUsd": null,
+      "patientId": "44aa312b-acbb-44be-943e-8ab59a4ce9b0",
+      "paymentDate": "2026-08-12T03:00:00+00:00"
+    },
+    {
+      "markId": "caf77fb8-f21e-480f-872a-2aa341ba11b3",
+      "keepId": "8659f284-e057-45b6-89ad-ae50588459ec",
+      "markExtId": "24211222|2026-08-12|Mesoterapia Francesa",
+      "keepExtId": "24211222|2026-08-12T10:00|Mesoterapia Francesa",
+      "amountArs": 334000,
+      "amountUsd": null,
+      "patientId": "0186d40e-94ac-494b-a923-e53c6fb38ee4",
+      "paymentDate": "2026-08-12T03:00:00+00:00"
+    },
+    {
+      "markId": "0eb53f67-ad4d-4e5b-b2ae-8f4035ba8657",
+      "keepId": "9eb04284-f676-4c17-857b-dfa9ee928ca6",
+      "markExtId": "33679247|2026-08-13|Control Dermatológico",
+      "keepExtId": "33679247|2026-08-13T13:30|Control Dermatológico",
+      "amountArs": 35000,
+      "amountUsd": null,
+      "patientId": "e21aed06-e055-46ab-8954-fe21b5bf34f2",
+      "paymentDate": "2026-08-13T03:00:00+00:00"
+    },
+    {
+      "markId": "a6abea72-189d-439e-8885-66bf4ea3f497",
+      "keepId": "96ecfceb-67e4-4b55-9143-97977119abf8",
+      "markExtId": "36563832|2026-08-13|Frax Capilar + Exosomas",
+      "keepExtId": "36563832|2026-08-13T13:00|Frax Capilar + Exosomas",
+      "amountArs": 280000,
+      "amountUsd": null,
+      "patientId": "1cd61d92-6201-4a27-a2e4-2b31d2cbe8b3",
+      "paymentDate": "2026-08-13T03:00:00+00:00"
+    },
+    {
+      "markId": "dc2e419e-a3f8-496d-ad9e-f5fbeb5dda74",
+      "keepId": "4e453bc2-aa4d-4df7-a3e8-c5caa6029152",
+      "markExtId": "40165996|2026-08-13|Consulta",
+      "keepExtId": "40165996|2026-08-13T12:30|Consulta",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "d78bd224-e764-4837-a5cf-3466c0594e38",
+      "paymentDate": "2026-08-13T03:00:00+00:00"
+    },
+    {
+      "markId": "d657f481-423e-4ca6-9b62-1a84e397d79c",
+      "keepId": "0a6ae154-3bfe-4c7d-a708-8bf17333c0a4",
+      "markExtId": "29169767|2026-08-13|Lp Light & Bright",
+      "keepExtId": "29169767|2026-08-13T12:00|Lp Light & Bright",
+      "amountArs": 280000,
+      "amountUsd": null,
+      "patientId": "17f14bb5-85fd-428f-bc6c-d3f27fd54f5e",
+      "paymentDate": "2026-08-13T03:00:00+00:00"
+    },
+    {
+      "markId": "82039d77-9d29-4cf4-b301-edbe81a8cb04",
+      "keepId": "6284dcfc-0e0b-4105-95e4-d1dd24cf13fd",
+      "markExtId": "40790143|2026-08-13|Control Dermatológico",
+      "keepExtId": "40790143|2026-08-13T11:30|Control Dermatológico",
+      "amountArs": 80000,
+      "amountUsd": null,
+      "patientId": "828c090c-d35c-44ed-a570-966b26420352",
+      "paymentDate": "2026-08-13T03:00:00+00:00"
+    },
+    {
+      "markId": "7a68cb51-7a0a-4bb9-a1c4-be28fa43d3c2",
+      "keepId": "80c373c0-1eee-49d4-83d8-3b6afc21ffd8",
+      "markExtId": "39718248|2026-08-13|Lp Light & Bright",
+      "keepExtId": "39718248|2026-08-13T11:00|Lp Light & Bright",
+      "amountArs": 280000,
+      "amountUsd": null,
+      "patientId": "83b4600a-5dc8-42a8-95e7-2bf7e478cc2a",
+      "paymentDate": "2026-08-13T03:00:00+00:00"
+    },
+    {
+      "markId": "91f4ec7d-b12a-4403-a03e-56350dec15c0",
+      "keepId": "cdca08ff-dde7-4b54-9ff6-3cd44cb04c0f",
+      "markExtId": "37467375|2026-08-13|Consulta",
+      "keepExtId": "37467375|2026-08-13T10:30|Consulta",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "9991c964-356b-454a-89f7-5476e3255ab0",
+      "paymentDate": "2026-08-13T03:00:00+00:00"
+    },
+    {
+      "markId": "2593d6d1-43a5-4dcd-86d9-2248e725efd0",
+      "keepId": "f3182edb-edc5-4d44-87f3-ac815463bbba",
+      "markExtId": "32220718|2026-08-13|Frax Capilar + Exosomas,Neauvia Stimulate",
+      "keepExtId": "32220718|2026-08-13T10:00|Frax Capilar + Exosomas,Neauvia Stimulate",
+      "amountArs": 780000,
+      "amountUsd": null,
+      "patientId": "87b9436b-14c1-4089-9c22-bd83ebe88df3",
+      "paymentDate": "2026-08-13T03:00:00+00:00"
+    },
+    {
+      "markId": "a66f90ac-5472-4a03-b756-c7c3eb9ec1d3",
+      "keepId": "8423045b-8a90-47f5-b2ab-57cb551f6d70",
+      "markExtId": "16957718|2026-08-18|Peeling Facial",
+      "keepExtId": "16957718|2026-08-18T19:00|Peeling Facial",
+      "amountArs": 0,
+      "amountUsd": null,
+      "patientId": "2c554917-e7db-4cb3-bf15-3bc17fa8307d",
+      "paymentDate": "2026-08-18T03:00:00+00:00"
+    },
+    {
+      "markId": "16e462ec-ddb4-47cc-9b27-6937b3ced2f2",
+      "keepId": "04cc4d96-e937-4cf5-8a6b-8c6d41677d70",
+      "markExtId": "41189400|2026-08-18|Lp Light & Bright",
+      "keepExtId": "41189400|2026-08-18T15:30|Lp Light & Bright",
+      "amountArs": 280000,
+      "amountUsd": null,
+      "patientId": "e7992b90-b3e7-40bc-b81c-f9fe6ee8a253",
+      "paymentDate": "2026-08-18T03:00:00+00:00"
+    },
+    {
+      "markId": "78741819-bdd6-4bdc-9c4c-fc156880edb6",
+      "keepId": "6dab12b1-2ed7-407c-aa49-8a735870331d",
+      "markExtId": "42070006|2026-08-18|Consulta",
+      "keepExtId": "42070006|2026-08-18T15:00|Consulta",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "2fbccb57-bcea-4f06-93c8-1a84de796533",
+      "paymentDate": "2026-08-18T03:00:00+00:00"
+    },
+    {
+      "markId": "7d8f3b7e-ad62-4851-a858-32a885965459",
+      "keepId": "f5c5cba2-37ac-42a3-adbd-3a144e4c3735",
+      "markExtId": "45385691|2026-08-18|Control Dermatológico",
+      "keepExtId": "45385691|2026-08-18T13:30|Control Dermatológico",
+      "amountArs": 80000,
+      "amountUsd": null,
+      "patientId": "9bea0c59-9b39-4095-9351-c37b8105cab9",
+      "paymentDate": "2026-08-18T03:00:00+00:00"
+    },
+    {
+      "markId": "89bca139-117c-4a28-ade4-b0eada5784ae",
+      "keepId": "6735bc7e-5c0e-4ef8-9370-dba821cccb1b",
+      "markExtId": "21789161|2026-08-18|Mesoterapia Francesa",
+      "keepExtId": "21789161|2026-08-18T13:00|Mesoterapia Francesa",
+      "amountArs": 200000,
+      "amountUsd": null,
+      "patientId": "e24f24d1-1b77-4228-a018-f80f1499f8d2",
+      "paymentDate": "2026-08-18T03:00:00+00:00"
+    },
+    {
+      "markId": "ffd13049-e862-4f13-9b4a-de5073a8dfd2",
+      "keepId": "1933a210-78a7-4527-9010-865fc273cd97",
+      "markExtId": "42875758|2026-08-18|Mesoterapia Nacional",
+      "keepExtId": "42875758|2026-08-18T12:00|Mesoterapia Nacional",
+      "amountArs": 72000,
+      "amountUsd": null,
+      "patientId": "aa8bcf28-ae8e-408b-a79f-cc3831c08f91",
+      "paymentDate": "2026-08-18T03:00:00+00:00"
+    },
+    {
+      "markId": "61c3fd0c-f0b0-4241-a934-b2db20993066",
+      "keepId": "dc91f5e6-2c0c-4505-bcf6-184e43cf168e",
+      "markExtId": "33679298|2026-08-18|Control Dermatológico",
+      "keepExtId": "33679298|2026-08-18T11:00|Control Dermatológico",
+      "amountArs": 35000,
+      "amountUsd": null,
+      "patientId": "e4b8eabd-729a-406e-b370-574f6ce0fb37",
+      "paymentDate": "2026-08-18T03:00:00+00:00"
+    },
+    {
+      "markId": "bac4672e-2b4c-4211-bd26-2014e18cc1ee",
+      "keepId": "04bfed5f-3162-4728-92c2-76f475ffa82c",
+      "markExtId": "30902371|2026-08-18|Consulta",
+      "keepExtId": "30902371|2026-08-18T10:30|Consulta",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "d1e767b9-6ad6-43ac-a781-af043f30e0bd",
+      "paymentDate": "2026-08-18T03:00:00+00:00"
+    },
+    {
+      "markId": "0fed0e63-2a25-4cbf-817a-84efefcb7186",
+      "keepId": "99ef84e8-a55c-4a6a-bb69-d4b6ca6e7384",
+      "markExtId": "30998285|2026-08-19|Control Estético",
+      "keepExtId": "30998285|2026-08-19T15:30|Control Estético",
+      "amountArs": 0,
+      "amountUsd": null,
+      "patientId": "0961ac22-65fc-4644-8241-18acfa015070",
+      "paymentDate": "2026-08-19T03:00:00+00:00"
+    },
+    {
+      "markId": "88df6e0d-f1ff-4deb-bcec-90d581fe1981",
+      "keepId": "c37f710b-8cd0-410c-b2fb-17bcb2357bea",
+      "markExtId": "37075626|2026-08-19|Consulta",
+      "keepExtId": "37075626|2026-08-19T14:00|Consulta",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "330b39c5-a1dc-492a-bfe3-d48d3a175d81",
+      "paymentDate": "2026-08-19T03:00:00+00:00"
+    },
+    {
+      "markId": "fa9d2fef-6ebd-49a6-8808-34e78d94bfdf",
+      "keepId": "7d76167b-f8ea-48ab-8690-30b90d1415fd",
+      "markExtId": "49820131|2026-08-19|Control Dermatológico",
+      "keepExtId": "49820131|2026-08-19T13:15|Control Dermatológico",
+      "amountArs": 0,
+      "amountUsd": null,
+      "patientId": "5a890e43-1c8c-456f-99d1-f813d9e854e3",
+      "paymentDate": "2026-08-19T03:00:00+00:00"
+    },
+    {
+      "markId": "92912961-c551-4289-8da7-e0f5a39af27b",
+      "keepId": "4a051f76-3aaf-4167-8c73-6d9f40f5fa54",
+      "markExtId": "33416432|2026-08-19|Consulta",
+      "keepExtId": "33416432|2026-08-19T13:00|Consulta",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "fa468125-b6ac-4367-b979-e9ec2eead9a1",
+      "paymentDate": "2026-08-19T03:00:00+00:00"
+    },
+    {
+      "markId": "815da963-eea1-4ad1-be56-b31131ee367d",
+      "keepId": "6c88e739-c7b0-4b20-b582-b7da6b0b2f12",
+      "markExtId": "45047356|2026-08-19|Frax Capilar + Plasma",
+      "keepExtId": "45047356|2026-08-19T12:00|Frax Capilar + Plasma",
+      "amountArs": 280000,
+      "amountUsd": null,
+      "patientId": "14ab2854-3d96-4cb0-82d2-e0ef1e449b34",
+      "paymentDate": "2026-08-19T03:00:00+00:00"
+    },
+    {
+      "markId": "cecd8fef-68fc-43dc-a29c-78ce1c25d21e",
+      "keepId": "50c19b99-4df3-4b17-a0ac-2bbdbbe4ac69",
+      "markExtId": "34296450|2026-08-19|Control Dermatológico",
+      "keepExtId": "34296450|2026-08-19T11:15|Control Dermatológico",
+      "amountArs": 35000,
+      "amountUsd": null,
+      "patientId": "c411f47f-3554-4264-938f-55eae4326b14",
+      "paymentDate": "2026-08-19T03:00:00+00:00"
+    },
+    {
+      "markId": "b9d972b5-f0ea-47bb-9b5f-06236bc7656a",
+      "keepId": "5def426f-bcc4-446e-a0e7-8aa7b781e298",
+      "markExtId": "17181853|2026-08-19|Limpieza + Electroporación/radio/peeling/dermapen",
+      "keepExtId": "17181853|2026-08-19T09:00|Limpieza + Electroporación/radio/peeling/dermapen",
+      "amountArs": 0,
+      "amountUsd": null,
+      "patientId": "9a8ab213-4e7e-4c68-b250-bc6a6619911e",
+      "paymentDate": "2026-08-19T03:00:00+00:00"
+    },
+    {
+      "markId": "ea59e49c-4408-4064-8097-0f0bbc7791e6",
+      "keepId": "c5486f07-f56f-4444-a842-7c515db348c6",
+      "markExtId": "29315087|2026-08-19|Botox Completo,Botox Patas De Gallo",
+      "keepExtId": "29315087|2026-08-19T15:00|Botox Completo,Botox Patas De Gallo",
+      "amountArs": 806000,
+      "amountUsd": null,
+      "patientId": "d5248052-d66c-4c01-a092-5d6054dbe970",
+      "paymentDate": "2026-08-19T03:00:00+00:00"
+    },
+    {
+      "markId": "480bd7b1-a05f-46a5-beaa-e945ea961e12",
+      "keepId": "2f9ac31c-72fe-4a07-8dbf-72a10c963a51",
+      "markExtId": "29170791|2026-08-19|Peeling Medico,Peptonas",
+      "keepExtId": "29170791|2026-08-19T13:30|Peeling Medico,Peptonas",
+      "amountArs": 154000,
+      "amountUsd": null,
+      "patientId": "85480772-aec2-4406-bd90-6fdc7e017808",
+      "paymentDate": "2026-08-19T03:00:00+00:00"
+    },
+    {
+      "markId": "1aad0d9b-edd8-4907-98e0-45cda9ab48f1",
+      "keepId": "52437cda-a443-43e7-9f8c-7e626f9759cb",
+      "markExtId": "39262320|2026-08-19|Control Dermatológico",
+      "keepExtId": "39262320|2026-08-19T12:30|Control Dermatológico",
+      "amountArs": 35000,
+      "amountUsd": null,
+      "patientId": "80586aae-81dc-4d08-81b7-6d093340362f",
+      "paymentDate": "2026-08-19T03:00:00+00:00"
+    },
+    {
+      "markId": "5db7ca0f-b095-43cb-ba25-8d90f5398cee",
+      "keepId": "f2dc2aa3-0088-4f59-a8d8-1858b533c6f0",
+      "markExtId": "33416432|2026-08-19|Limpieza Facial",
+      "keepExtId": "33416432|2026-08-19T11:00|Limpieza Facial",
+      "amountArs": 47000,
+      "amountUsd": null,
+      "patientId": "fa468125-b6ac-4367-b979-e9ec2eead9a1",
+      "paymentDate": "2026-08-19T03:00:00+00:00"
+    },
+    {
+      "markId": "e1e6c66e-f599-4581-ac0c-9f54d970abe6",
+      "keepId": "cf5090d7-6c20-4159-9fb0-06d3062ab64b",
+      "markExtId": "43910803|2026-08-19|Control Dermatológico",
+      "keepExtId": "43910803|2026-08-19T10:00|Control Dermatológico",
+      "amountArs": 178000,
+      "amountUsd": null,
+      "patientId": "4c36fda8-6ce4-4131-ba75-38cc55963c79",
+      "paymentDate": "2026-08-19T03:00:00+00:00"
+    },
+    {
+      "markId": "70101e63-127e-401d-ae59-e4cc0e99eb5e",
+      "keepId": "3d7975c6-7fa6-46ed-bfdd-7c6d4d4ae57e",
+      "markExtId": "29126790|2026-08-19|Mesoterapia Nacional",
+      "keepExtId": "29126790|2026-08-19T09:30|Mesoterapia Nacional",
+      "amountArs": 72000,
+      "amountUsd": null,
+      "patientId": "fdf8fd29-de78-4ade-b73e-9b408f4a85c7",
+      "paymentDate": "2026-08-19T03:00:00+00:00"
+    },
+    {
+      "markId": "9faa6ead-e09a-4ce7-bdb0-f39f40cb207e",
+      "keepId": "f710900a-6b5f-45ac-8f94-27c961eca48d",
+      "markExtId": "38389531|2026-08-21|Consulta",
+      "keepExtId": "38389531|2026-08-21T17:30|Consulta",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "dfd880c9-ea21-4f9d-b9d5-710454fa79de",
+      "paymentDate": "2026-08-21T03:00:00+00:00"
+    },
+    {
+      "markId": "3411961e-5d82-48ca-9079-8c532c3a1995",
+      "keepId": "e0725757-f62f-4482-9eef-22f11e414229",
+      "markExtId": "23649197|2026-08-21|Mesoterapia Nacional",
+      "keepExtId": "23649197|2026-08-21T16:30|Mesoterapia Nacional",
+      "amountArs": 152000,
+      "amountUsd": null,
+      "patientId": "5b96d7d7-967b-4d4e-9e2c-9c1d6fbfda3a",
+      "paymentDate": "2026-08-21T03:00:00+00:00"
+    },
+    {
+      "markId": "3df3abe0-5423-47b8-9539-c2c4d23537d9",
+      "keepId": "07f58034-a887-4487-87c7-854ec4c00824",
+      "markExtId": "43827969|2026-08-21|Control Dermatológico",
+      "keepExtId": "43827969|2026-08-21T16:00|Control Dermatológico",
+      "amountArs": 65000,
+      "amountUsd": null,
+      "patientId": "50844cbd-ed66-4b47-84aa-e33da1c44c03",
+      "paymentDate": "2026-08-21T03:00:00+00:00"
+    },
+    {
+      "markId": "ff9f7eb0-c3d8-4eb8-b103-4905ee4bc4f1",
+      "keepId": "cf53e7fa-a9b5-4c0f-bb6c-28b0be6822ba",
+      "markExtId": "32942425|2026-08-21|Limpieza Facial",
+      "keepExtId": "32942425|2026-08-21T10:00|Limpieza Facial",
+      "amountArs": 0,
+      "amountUsd": null,
+      "patientId": "a144fb7a-5319-4026-a3cf-5c399fbe6e26",
+      "paymentDate": "2026-08-21T03:00:00+00:00"
+    },
+    {
+      "markId": "77ddc4e1-c23f-4671-ad8d-829f7e2c3e14",
+      "keepId": "a14e4a81-6aa9-47cc-bfbc-7d5f6a751c20",
+      "markExtId": "32618880|2026-08-21|Consulta",
+      "keepExtId": "32618880|2026-08-21T18:00|Consulta",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "1119a312-2fc8-432a-8d95-148dfce18bbf",
+      "paymentDate": "2026-08-21T03:00:00+00:00"
+    },
+    {
+      "markId": "4d558f99-91bb-4146-9586-2fa19356f3fd",
+      "keepId": "1d48db09-3b95-4266-aad2-ed81d61d166b",
+      "markExtId": "5323745|2026-08-21|Lp Light & Bright,Mesoterapia Española - Fac O Cap",
+      "keepExtId": "5323745|2026-08-21T12:30|Lp Light & Bright,Mesoterapia Española - Fac O Cap",
+      "amountArs": 372000,
+      "amountUsd": null,
+      "patientId": "ee325fb2-3712-42d8-8942-9199a8e9fc16",
+      "paymentDate": "2026-08-21T03:00:00+00:00"
+    },
+    {
+      "markId": "95591b4b-864a-4e9f-a498-b5b8798e6e96",
+      "keepId": "f92b50d1-4e9d-4aa6-83d5-d02d29b21226",
+      "markExtId": "28481972|2026-08-21|Frax Capilar + Exosomas",
+      "keepExtId": "28481972|2026-08-21T11:00|Frax Capilar + Exosomas",
+      "amountArs": 280000,
+      "amountUsd": null,
+      "patientId": "14fa77aa-1b36-4765-be7a-885ba6281592",
+      "paymentDate": "2026-08-21T03:00:00+00:00"
+    },
+    {
+      "markId": "e9994d27-c8e1-4488-a1a9-2db54cdb887c",
+      "keepId": "52f97e55-f011-43de-bbb1-b7f5f0699a95",
+      "markExtId": "55050407|2026-08-21|Control Dermatológico",
+      "keepExtId": "55050407|2026-08-21T17:00|Control Dermatológico",
+      "amountArs": 35000,
+      "amountUsd": null,
+      "patientId": "d9ebf0f3-402a-4e65-bdc3-fabcc10b7c8a",
+      "paymentDate": "2026-08-21T03:00:00+00:00"
+    },
+    {
+      "markId": "eafe6781-b9db-4531-9827-664677374f36",
+      "keepId": "e27585bd-3fde-4a82-bd6e-3bce5f81346c",
+      "markExtId": "40562619|2026-08-21|Mesoterapia Francesa",
+      "keepExtId": "40562619|2026-08-21T15:30|Mesoterapia Francesa",
+      "amountArs": 200000,
+      "amountUsd": null,
+      "patientId": "812f2788-df92-4b0b-a467-4c2919ec1c7b",
+      "paymentDate": "2026-08-21T03:00:00+00:00"
+    },
+    {
+      "markId": "ae801ef1-96a7-4561-9d44-66a6d56edf56",
+      "keepId": "14f52635-6337-4d18-9a67-f8b5d2bd3808",
+      "markExtId": "35298173|2026-08-21|Frax Capilar + Exosomas",
+      "keepExtId": "35298173|2026-08-21T12:00|Frax Capilar + Exosomas",
+      "amountArs": 280000,
+      "amountUsd": null,
+      "patientId": "6fc8fb6a-3592-4880-a4f9-c6472479f8bb",
+      "paymentDate": "2026-08-21T03:00:00+00:00"
+    },
+    {
+      "markId": "6aa31006-dd9f-4641-bf3a-6827e4c33c95",
+      "keepId": "52d630d2-b456-4513-aa4a-66eac481e165",
+      "markExtId": "40790143|2026-08-21|Limpieza Facial",
+      "keepExtId": "40790143|2026-08-21T11:30|Limpieza Facial",
+      "amountArs": 90000,
+      "amountUsd": null,
+      "patientId": "828c090c-d35c-44ed-a570-966b26420352",
+      "paymentDate": "2026-08-21T03:00:00+00:00"
+    },
+    {
+      "markId": "616aa265-04d3-48ab-8ad8-15bbc6520888",
+      "keepId": "89af5948-9426-4e82-aeb7-8d9e370c420b",
+      "markExtId": "36842024|2026-08-21|Mesoterapia Española - Corporal,Botox Patas De Gallo",
+      "keepExtId": "36842024|2026-08-21T10:30|Mesoterapia Española - Corporal,Botox Patas De Gallo",
+      "amountArs": 418000,
+      "amountUsd": null,
+      "patientId": "5ceb6e40-2a2b-40d6-9799-4adc4f1f2ab0",
+      "paymentDate": "2026-08-21T03:00:00+00:00"
+    },
+    {
+      "markId": "c69a2a15-3f08-4999-8154-597dcd3d276d",
+      "keepId": "becaff15-14d6-44cf-90de-cc93d38698f2",
+      "markExtId": "76c18cfaf978415|2026-08-22|Endopeel,Mesoterapia Francesa",
+      "keepExtId": "76c18cfaf978415|2026-08-22T13:00|Endopeel,Mesoterapia Francesa",
+      "amountArs": 275000,
+      "amountUsd": null,
+      "patientId": null,
+      "paymentDate": "2026-08-22T15:00:00+00:00"
+    },
+    {
+      "markId": "650ae162-a932-4ee7-9b71-72b0d279cff2",
+      "keepId": "3ab05a80-49e2-4294-847a-b15bc201ab04",
+      "markExtId": "30789257|2026-08-22|Frax Capilar + Exosomas",
+      "keepExtId": "30789257|2026-08-22T13:30|Frax Capilar + Exosomas",
+      "amountArs": 280000,
+      "amountUsd": null,
+      "patientId": "b851cc19-1013-4f87-ab33-9614228e43a3",
+      "paymentDate": "2026-08-22T15:00:00+00:00"
+    },
+    {
+      "markId": "6ad2730a-98e4-44b0-a667-c68f22a1dfee",
+      "keepId": "020cc427-2b56-423c-8fe5-1d1ac8a61982",
+      "markExtId": "49567978|2026-08-24|Frax Cicatrices,Sunekos Periocular",
+      "keepExtId": "49567978|2026-08-24T15:30|Frax Cicatrices,Sunekos Periocular",
+      "amountArs": 390000,
+      "amountUsd": null,
+      "patientId": "db3941d4-6f1d-4d60-a5bc-1bc739c58655",
+      "paymentDate": "2026-08-24T03:00:00+00:00"
+    },
+    {
+      "markId": "cb3decae-25c2-43d8-9a95-6f6029ffa068",
+      "keepId": "9709c062-ee7b-487f-8b76-ea3d2b1dd9f9",
+      "markExtId": "31700208|2026-08-24|Lp Light & Bright",
+      "keepExtId": "31700208|2026-08-24T14:00|Lp Light & Bright",
+      "amountArs": 280000,
+      "amountUsd": null,
+      "patientId": "e56109da-03d5-47f3-9f32-d0411b325ee3",
+      "paymentDate": "2026-08-24T03:00:00+00:00"
+    },
+    {
+      "markId": "1e3f991b-d02f-4aa9-a7fd-9311b1262bda",
+      "keepId": "7c5419fd-f649-45ca-a884-b31b92026623",
+      "markExtId": "30156429|2026-08-24|Lp Light & Bright",
+      "keepExtId": "30156429|2026-08-24T13:00|Lp Light & Bright",
+      "amountArs": 280000,
+      "amountUsd": null,
+      "patientId": "4f90e03a-5dd2-47bd-8d2e-d402dedc31b2",
+      "paymentDate": "2026-08-24T03:00:00+00:00"
+    },
+    {
+      "markId": "862bdbcd-c711-4e50-9792-f36ae8544c69",
+      "keepId": "aea3c6e4-b627-411c-94be-68e2df3279da",
+      "markExtId": "34660423|2026-08-24|Frax Capilar + Exosomas",
+      "keepExtId": "34660423|2026-08-24T11:30|Frax Capilar + Exosomas",
+      "amountArs": 0,
+      "amountUsd": null,
+      "patientId": "84e4474f-3e3c-4a57-ae90-83a089d8a4e8",
+      "paymentDate": "2026-08-24T03:00:00+00:00"
+    },
+    {
+      "markId": "4924e2b3-6d7d-4d98-a607-fd2beaaf892b",
+      "keepId": "07d22e6a-6607-48a5-8c5a-90ba1cd39411",
+      "markExtId": "32618856|2026-08-24|Peeling Medico,Plasma Capilar,consulta",
+      "keepExtId": "32618856|2026-08-24T10:00|Peeling Medico,Plasma Capilar,consulta",
+      "amountArs": 240000,
+      "amountUsd": null,
+      "patientId": "7cc24f80-43d4-42c1-830d-eae68f061111",
+      "paymentDate": "2026-08-24T03:00:00+00:00"
+    },
+    {
+      "markId": "71194e96-588d-48b4-8b6e-503f5dc19d1e",
+      "keepId": "2a8e897b-c91c-4459-9260-3ead5e86adb1",
+      "markExtId": "43369526|2026-08-24|Electrocoagulación",
+      "keepExtId": "43369526|2026-08-24T15:00|Electrocoagulación",
+      "amountArs": 95000,
+      "amountUsd": null,
+      "patientId": "1077f4f2-b0dc-4c96-a7c5-b94ed49cc1c4",
+      "paymentDate": "2026-08-24T03:00:00+00:00"
+    },
+    {
+      "markId": "b5520549-17f8-481a-a9e6-ef380e507d73",
+      "keepId": "40007426-4ae4-4eed-94ef-653b1ba56552",
+      "markExtId": "10997581|2026-08-24|Consulta",
+      "keepExtId": "10997581|2026-08-24T12:30|Consulta",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "6123fbf1-8347-4f76-92d4-146bdfefcfc4",
+      "paymentDate": "2026-08-24T03:00:00+00:00"
+    },
+    {
+      "markId": "8974a728-9e4c-4468-8cba-0bd4e44d6db0",
+      "keepId": "7f94afb5-a477-4dee-97ec-07041c79fa8a",
+      "markExtId": "23874984|2026-08-24|Sculptra Bioestimulador",
+      "keepExtId": "23874984|2026-08-24T10:30|Sculptra Bioestimulador",
+      "amountArs": 775000,
+      "amountUsd": null,
+      "patientId": "7d0993e4-0e46-4e76-8957-92a55e9f71f6",
+      "paymentDate": "2026-08-24T03:00:00+00:00"
+    },
+    {
+      "markId": "78456f7d-e9c4-4a92-b2ee-cb5d97978ca7",
+      "keepId": "e8044df7-5171-4a6a-91a5-d12c831863df",
+      "markExtId": "37467097|2026-08-24|Frax Capilar + Exosomas",
+      "keepExtId": "37467097|2026-08-24T14:30|Frax Capilar + Exosomas",
+      "amountArs": 280000,
+      "amountUsd": null,
+      "patientId": "6f2d62bb-8c40-4dc5-9806-dc809725078f",
+      "paymentDate": "2026-08-24T03:00:00+00:00"
+    },
+    {
+      "markId": "563c9480-91df-4d04-8fe7-e06ae493511e",
+      "keepId": "02ee3edb-27e5-4615-bdac-59d859183610",
+      "markExtId": "52698394|2026-08-24|Consulta",
+      "keepExtId": "52698394|2026-08-24T12:00|Consulta",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "268f74ab-4ef2-4917-87c8-27e145500134",
+      "paymentDate": "2026-08-24T03:00:00+00:00"
+    },
+    {
+      "markId": "3f6a1e41-f217-4fbd-abcb-50cdcd3c1e49",
+      "keepId": "ecbf77fe-6a46-433c-b0a1-dd7b067d8158",
+      "markExtId": "32327346|2026-08-25|Limpieza Facial",
+      "keepExtId": "32327346|2026-08-25T14:00|Limpieza Facial",
+      "amountArs": 47000,
+      "amountUsd": null,
+      "patientId": "c2148847-8185-43da-a929-3f18c7846e4d",
+      "paymentDate": "2026-08-25T03:00:00+00:00"
+    },
+    {
+      "markId": "2fa42a3b-b41a-45e6-97d1-265d5dbbdadb",
+      "keepId": "9a3e04d1-0332-4fe1-ad27-146819e796de",
+      "markExtId": "25937333|2026-08-25|Peeling Facial",
+      "keepExtId": "25937333|2026-08-25T13:00|Peeling Facial",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "df675801-7f15-406f-afe3-8abc024d1585",
+      "paymentDate": "2026-08-25T03:00:00+00:00"
+    },
+    {
+      "markId": "40c5d7a2-6bbb-4c25-a887-6960ff6a0d5e",
+      "keepId": "c56181cc-d594-4f85-baad-fddf8549ac70",
+      "markExtId": "34.938.566|2026-08-25|Limpieza Facial",
+      "keepExtId": "34.938.566|2026-08-25T16:00|Limpieza Facial",
+      "amountArs": 0,
+      "amountUsd": null,
+      "patientId": "36441076-306f-4458-9417-180fa05959fe",
+      "paymentDate": "2026-08-25T03:00:00+00:00"
+    },
+    {
+      "markId": "c14a347f-a885-41de-b8fb-afa897c5c1e2",
+      "keepId": "cd47ef0b-c395-4f8c-b948-f5e829d5af62",
+      "markExtId": "13119594|2026-08-25|Limpieza + Electroporación/radio/peeling/dermapen",
+      "keepExtId": "13119594|2026-08-25T11:00|Limpieza + Electroporación/radio/peeling/dermapen",
+      "amountArs": 85500,
+      "amountUsd": null,
+      "patientId": "ec7ebc96-d9d2-4384-b8a7-b96cfbce3780",
+      "paymentDate": "2026-08-25T03:00:00+00:00"
+    },
+    {
+      "markId": "3a48126c-6a0f-48f6-83ca-159d096c0bdf",
+      "keepId": "a0b38b0e-6f09-4153-b395-081fdc6b3f90",
+      "markExtId": "43936722|2026-08-26|Consulta",
+      "keepExtId": "43936722|2026-08-26T15:30|Consulta",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "b81f1dc5-98bb-4f00-a126-353c12afdd0f",
+      "paymentDate": "2026-08-26T03:00:00+00:00"
+    },
+    {
+      "markId": "9e672697-3923-41f6-9173-56c9b1d87e49",
+      "keepId": "de71ad69-1e3b-4724-80ee-ce02cc9cbf68",
+      "markExtId": "47844840|2026-08-26|Control Dermatológico",
+      "keepExtId": "47844840|2026-08-26T13:20|Control Dermatológico",
+      "amountArs": 226000,
+      "amountUsd": null,
+      "patientId": "096ae595-a95d-48dd-b94f-3ffe92ec0e0c",
+      "paymentDate": "2026-08-26T03:00:00+00:00"
+    },
+    {
+      "markId": "ca22ccbf-736c-4ad4-9919-cbbd1917f605",
+      "keepId": "07a5915e-bb7f-454a-92ce-c6502bdf41b3",
+      "markExtId": "37293984|2026-08-26|Mesoterapia Española - Fac O Cap",
+      "keepExtId": "37293984|2026-08-26T12:00|Mesoterapia Española - Fac O Cap",
+      "amountArs": 92000,
+      "amountUsd": null,
+      "patientId": "2a7324d5-48f6-4cb3-ac78-8e15a0b7622c",
+      "paymentDate": "2026-08-26T03:00:00+00:00"
+    },
+    {
+      "markId": "ea62799a-4914-4935-a9ff-61f84993c67f",
+      "keepId": "9d06a668-fb6d-4c01-aaa1-b1c217155d8c",
+      "markExtId": "49819099|2026-08-26|Control Dermatológico",
+      "keepExtId": "49819099|2026-08-26T15:00|Control Dermatológico",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "8c41e241-adff-4d47-90bf-35c7f0b21414",
+      "paymentDate": "2026-08-26T03:00:00+00:00"
+    },
+    {
+      "markId": "8be84725-cd78-4e2f-9b4b-3d48cff403b7",
+      "keepId": "264987b2-908a-4668-bda3-64871c8abcfa",
+      "markExtId": "3 058 915|2026-08-26|Consulta",
+      "keepExtId": "3 058 915|2026-08-26T13:30|Consulta",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "7f678189-2273-4f36-8ca9-ee45f76a4090",
+      "paymentDate": "2026-08-26T03:00:00+00:00"
+    },
+    {
+      "markId": "49d61e07-4416-4b74-8ec0-22e9ff10c6a9",
+      "keepId": "b4b9fd94-9c4b-462d-b218-c69a9a00fde6",
+      "markExtId": "36.381.294|2026-08-26|Consulta",
+      "keepExtId": "36.381.294|2026-08-26T13:00|Consulta",
+      "amountArs": 104000,
+      "amountUsd": null,
+      "patientId": "9b490847-44a5-458d-9cb5-da5fbda2cfce",
+      "paymentDate": "2026-08-26T03:00:00+00:00"
+    },
+    {
+      "markId": "76e0fc18-40b2-45d8-8e18-3be48f0e1a28",
+      "keepId": "ee120295-48a0-4b7f-ba3b-244443818cc9",
+      "markExtId": "43293409|2026-08-26|Control Dermatológico",
+      "keepExtId": "43293409|2026-08-26T11:45|Control Dermatológico",
+      "amountArs": 78000,
+      "amountUsd": null,
+      "patientId": "75a93419-9eb3-4e2c-bc14-c9940d415d38",
+      "paymentDate": "2026-08-26T03:00:00+00:00"
+    },
+    {
+      "markId": "1fc837af-41ed-4a47-9066-607335fa5a03",
+      "keepId": "e6e38339-fe21-413b-a6f3-96dd6c41a9ac",
+      "markExtId": "76c18cfaf978415|2026-08-26|Endopeel",
+      "keepExtId": "76c18cfaf978415|2026-08-26T14:00|Endopeel",
+      "amountArs": 75000,
+      "amountUsd": null,
+      "patientId": null,
+      "paymentDate": "2026-08-26T15:00:00+00:00"
+    },
+    {
+      "markId": "c62b450e-f520-4ccb-83f2-56f849330b2e",
+      "keepId": "30c81bdf-9d9d-489e-af2a-70df13479854",
+      "markExtId": "27467075|2026-08-27|Consulta",
+      "keepExtId": "27467075|2026-08-27T15:00|Consulta",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "56b2229e-07c0-4289-a77e-412dd74ba2df",
+      "paymentDate": "2026-08-27T03:00:00+00:00"
+    },
+    {
+      "markId": "3b464458-a929-4415-9588-68751fa80686",
+      "keepId": "72e1103e-dc21-4fc5-995d-494e3b4eaf1b",
+      "markExtId": "30811198|2026-08-27|Lp Light & Bright",
+      "keepExtId": "30811198|2026-08-27T13:30|Lp Light & Bright",
+      "amountArs": 280000,
+      "amountUsd": null,
+      "patientId": "f4bf292e-fc33-42cc-88c8-35c3643068b5",
+      "paymentDate": "2026-08-27T03:00:00+00:00"
+    },
+    {
+      "markId": "fd80484d-fd3c-4282-b11e-92cfce39997d",
+      "keepId": "4a2690b5-c413-4cf2-9206-098597b990cb",
+      "markExtId": "40070746|2026-08-27|Plasma Capilar",
+      "keepExtId": "40070746|2026-08-27T11:30|Plasma Capilar",
+      "amountArs": 100000,
+      "amountUsd": null,
+      "patientId": "d7802fad-04c1-42ac-b24d-ef5433ff7231",
+      "paymentDate": "2026-08-27T03:00:00+00:00"
+    },
+    {
+      "markId": "acc231fb-24b8-48f2-8ded-9380504a6dc8",
+      "keepId": "c794c848-85c8-40a8-9a64-a2ef3267dd9c",
+      "markExtId": "4191083|2026-08-27|Consulta",
+      "keepExtId": "4191083|2026-08-27T14:30|Consulta",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "1409c2a7-14e4-4669-9879-b72ef192672b",
+      "paymentDate": "2026-08-27T03:00:00+00:00"
+    },
+    {
+      "markId": "1d2a2185-b346-403a-b17b-4841b9569bf4",
+      "keepId": "39145a6a-25cd-413b-aeab-db40fa658338",
+      "markExtId": "14215238|2026-08-27|Frax Facial",
+      "keepExtId": "14215238|2026-08-27T12:30|Frax Facial",
+      "amountArs": 0,
+      "amountUsd": null,
+      "patientId": "6226fb9d-be8e-4100-989e-6b4cb74f9f8d",
+      "paymentDate": "2026-08-27T03:00:00+00:00"
+    },
+    {
+      "markId": "b5c9d022-6619-4020-84b7-4bfd8949005e",
+      "keepId": "29be420b-c4a4-4aae-9b69-7b0e43f4dfe5",
+      "markExtId": "34388351|2026-08-27|Frax Capilar + Plasma",
+      "keepExtId": "34388351|2026-08-27T11:00|Frax Capilar + Plasma",
+      "amountArs": 280000,
+      "amountUsd": null,
+      "patientId": "71a4a2f7-8796-4f6c-aea6-ec9f4f7c46d8",
+      "paymentDate": "2026-08-27T03:00:00+00:00"
+    },
+    {
+      "markId": "bac013fe-2acd-4094-9ab6-2633c9a54fd9",
+      "keepId": "3f8803cf-46cb-4c89-b7e5-6cc23d190d4e",
+      "markExtId": "23435019|2026-08-27|Lp Light & Bright",
+      "keepExtId": "23435019|2026-08-27T10:00|Lp Light & Bright",
+      "amountArs": 280000,
+      "amountUsd": null,
+      "patientId": "425b8ed5-e85a-46c5-a400-c6a13ffaa388",
+      "paymentDate": "2026-08-27T03:00:00+00:00"
+    },
+    {
+      "markId": "560a670b-3213-45c6-a2f7-04fa42c979dd",
+      "keepId": "148317e5-a9fe-4960-9727-c6c0544b0f96",
+      "markExtId": "39718377|2026-08-27|Control Dermatológico",
+      "keepExtId": "39718377|2026-08-27T14:00|Control Dermatológico",
+      "amountArs": 35000,
+      "amountUsd": null,
+      "patientId": "5aa7a13a-c9aa-41fa-a102-b8e1e2aef33e",
+      "paymentDate": "2026-08-27T03:00:00+00:00"
+    },
+    {
+      "markId": "06f66386-46f4-43bd-9028-8d9c5c74ed91",
+      "keepId": "8c8b5316-fb9a-48b9-b5c7-2aae0cda38fe",
+      "markExtId": "31987931|2026-08-27|Lp Light & Bright,Mesoterapia Española - Fac O Cap",
+      "keepExtId": "31987931|2026-08-27T12:00|Lp Light & Bright,Mesoterapia Española - Fac O Cap",
+      "amountArs": 372000,
+      "amountUsd": null,
+      "patientId": "0799794d-baf7-48d1-ba0c-bec5a208bba0",
+      "paymentDate": "2026-08-27T03:00:00+00:00"
+    },
+    {
+      "markId": "f91f9263-5614-4eae-adb3-cfac236126b9",
+      "keepId": "7b008899-d4e6-4754-a61a-fc9a758a5d09",
+      "markExtId": "25711243|2026-08-27|Consulta",
+      "keepExtId": "25711243|2026-08-27T10:30|Consulta",
+      "amountArs": 110000,
+      "amountUsd": null,
+      "patientId": "3083a74c-148f-414b-aa22-e392ed6e8ba9",
+      "paymentDate": "2026-08-27T03:00:00+00:00"
+    },
+    {
+      "markId": "81e75f2a-a8ad-40f6-b070-5d9309d7693e",
+      "keepId": "60353760-523d-4d35-badf-b68fd502220d",
+      "markExtId": "24245148|2026-08-28|Frax Cicatrices Corporal",
+      "keepExtId": "24245148|2026-08-28T14:30|Frax Cicatrices Corporal",
+      "amountArs": 190000,
+      "amountUsd": null,
+      "patientId": "8763ab2b-e193-4a8e-9b52-a3e30b434b9e",
+      "paymentDate": "2026-08-28T03:00:00+00:00"
+    },
+    {
+      "markId": "5a52d8e6-4f10-41de-baf2-de8a49735555",
+      "keepId": "c6d51cc4-085b-4113-9b7e-0e2ca7b8a202",
+      "markExtId": "25937698|2026-08-28|Frax Capilar + Exosomas",
+      "keepExtId": "25937698|2026-08-28T13:30|Frax Capilar + Exosomas",
+      "amountArs": 280000,
+      "amountUsd": null,
+      "patientId": "9b06617c-bc9a-4c17-ac67-5c603affc1f0",
+      "paymentDate": "2026-08-28T03:00:00+00:00"
+    },
+    {
+      "markId": "8d745184-b2f0-4b5b-a7bc-9c2084289886",
+      "keepId": "60369749-c4ac-4f92-96dd-728ae2b9c21e",
+      "markExtId": "23051841|2026-08-28|Control Dermatológico,Frax Facial + Escote",
+      "keepExtId": "23051841|2026-08-28T12:30|Control Dermatológico,Frax Facial + Escote",
+      "amountArs": 315000,
+      "amountUsd": null,
+      "patientId": "56486536-829f-49ae-b222-620fdafbdfc9",
+      "paymentDate": "2026-08-28T03:00:00+00:00"
+    },
+    {
+      "markId": "4192f731-7efb-4405-8461-138934d43e70",
+      "keepId": "3e9ef741-e488-4ded-93d7-7ab0551325d7",
+      "markExtId": "44074876|2026-08-28|Consulta",
+      "keepExtId": "44074876|2026-08-28T11:00|Consulta",
+      "amountArs": 104000,
+      "amountUsd": null,
+      "patientId": "d5d9e9b7-955f-4feb-b47b-e6ae464ee352",
+      "paymentDate": "2026-08-28T03:00:00+00:00"
+    },
+    {
+      "markId": "982853bf-26ca-4959-9bee-6bd681901c35",
+      "keepId": "c7af09bb-99b3-4cd0-a8d0-48b30a7d6f4e",
+      "markExtId": "42487104|2026-08-28|Consulta",
+      "keepExtId": "42487104|2026-08-28T10:30|Consulta",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "94563a16-572e-4e1f-874f-db55968fe5ed",
+      "paymentDate": "2026-08-28T03:00:00+00:00"
+    },
+    {
+      "markId": "5f000be0-0e69-4e01-be46-dd70c55c61ee",
+      "keepId": "caa72e9a-0e4c-43a2-984b-d893fe3430ae",
+      "markExtId": "34110488|2026-08-28|Sunekos Periocular",
+      "keepExtId": "34110488|2026-08-28T16:00|Sunekos Periocular",
+      "amountArs": 220000,
+      "amountUsd": null,
+      "patientId": "75f5b536-36c5-4e2b-aa82-7c5f9fc95d5f",
+      "paymentDate": "2026-08-28T03:00:00+00:00"
+    },
+    {
+      "markId": "a8ac87a3-8ebb-48ac-80a2-0728b9471288",
+      "keepId": "77cf8c63-c748-4a30-ab08-65e5fa20e13c",
+      "markExtId": "22975290|2026-08-28|Lp Light & Bright,Frax Cicatrices",
+      "keepExtId": "22975290|2026-08-28T15:30|Lp Light & Bright,Frax Cicatrices",
+      "amountArs": 0,
+      "amountUsd": null,
+      "patientId": "b5e49f81-7517-45e3-be89-fe42fe6f6b86",
+      "paymentDate": "2026-08-28T03:00:00+00:00"
+    },
+    {
+      "markId": "a9259b7e-0421-4288-b864-a8ea300f1d16",
+      "keepId": "676b9e10-4bad-48ae-a418-3154a0a88bb1",
+      "markExtId": "11772898|2026-08-28|Consulta",
+      "keepExtId": "11772898|2026-08-28T14:00|Consulta",
+      "amountArs": 0,
+      "amountUsd": null,
+      "patientId": "edb68d55-d17c-40a3-839e-36687fcdcbf1",
+      "paymentDate": "2026-08-28T03:00:00+00:00"
+    },
+    {
+      "markId": "f30e8e3c-ecd6-478f-94e9-9d200bddf922",
+      "keepId": "641a1e92-c88b-4675-9386-53c94715b58c",
+      "markExtId": "25018819|2026-08-28|Elleva Facial",
+      "keepExtId": "25018819|2026-08-28T17:30|Elleva Facial",
+      "amountArs": 830000,
+      "amountUsd": null,
+      "patientId": "c1386818-375a-4749-896e-d56139584855",
+      "paymentDate": "2026-08-28T03:00:00+00:00"
+    },
+    {
+      "markId": "57379478-6ecb-49af-a8fc-d26d951ec5a3",
+      "keepId": "19b94b06-2ad6-4780-abd9-fd79d2ca2462",
+      "markExtId": "34660735|2026-08-28|Lp Light & Bright",
+      "keepExtId": "34660735|2026-08-28T15:00|Lp Light & Bright",
+      "amountArs": 370000,
+      "amountUsd": null,
+      "patientId": "cee6a840-3e0f-42f8-8d2f-49159e692759",
+      "paymentDate": "2026-08-28T03:00:00+00:00"
+    },
+    {
+      "markId": "8fc728f7-2256-4d60-9596-061ab57834b3",
+      "keepId": "990df14a-e4f0-48bd-b0c9-6b079a3c138a",
+      "markExtId": "28497987|2026-08-28|Consulta",
+      "keepExtId": "28497987|2026-08-28T13:00|Consulta",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "749f3b3b-d714-45eb-a278-73822de4b855",
+      "paymentDate": "2026-08-28T03:00:00+00:00"
+    },
+    {
+      "markId": "50047a49-1875-4bd9-9db5-d4c85d898318",
+      "keepId": "d582cd30-1cd9-4e1f-9f6d-7c7f80ffd0e6",
+      "markExtId": "39030029|2026-08-28|Consulta",
+      "keepExtId": "39030029|2026-08-28T12:00|Consulta",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "d0fe21a8-cee8-4578-86ac-3fafd2cd357a",
+      "paymentDate": "2026-08-28T03:00:00+00:00"
+    },
+    {
+      "markId": "92be5f28-bb98-4f11-8462-ca010ec047d1",
+      "keepId": "d05fd4e0-6234-4a0b-a8d5-ed45fa0069b3",
+      "markExtId": "26310497|2026-08-28|Endopeel",
+      "keepExtId": "26310497|2026-08-28T11:30|Endopeel",
+      "amountArs": 75000,
+      "amountUsd": null,
+      "patientId": "d099822b-d6a6-402c-a4e2-ffb55d30dd53",
+      "paymentDate": "2026-08-28T03:00:00+00:00"
+    },
+    {
+      "markId": "bbf55726-a23c-4e6d-916a-449562cfed87",
+      "keepId": "717e0515-e0dd-42c8-a72d-f71214a92b26",
+      "markExtId": "35298159|2026-08-31|Consulta",
+      "keepExtId": "35298159|2026-08-31T15:00|Consulta",
+      "amountArs": 0,
+      "amountUsd": null,
+      "patientId": "e5676a63-5714-4448-88d2-7cb6cbb44786",
+      "paymentDate": "2026-08-31T03:00:00+00:00"
+    },
+    {
+      "markId": "e2fcaa97-3df9-4db6-a83b-c4b44d1fdde6",
+      "keepId": "40bb451f-d8ef-4a3e-aeaa-7af610ef2f8f",
+      "markExtId": "42264361|2026-08-31|Consulta",
+      "keepExtId": "42264361|2026-08-31T14:00|Consulta",
+      "amountArs": 110000,
+      "amountUsd": null,
+      "patientId": "5cfb2f92-d646-475b-b947-d3dac785aadf",
+      "paymentDate": "2026-08-31T03:00:00+00:00"
+    },
+    {
+      "markId": "237522fd-50eb-4fcd-a37b-6d20ccba13bd",
+      "keepId": "a3f3cd7e-3abc-42e6-8720-107de81c9302",
+      "markExtId": "36104412|2026-08-31|Mesoterapia Española - Fac O Cap",
+      "keepExtId": "36104412|2026-08-31T13:00|Mesoterapia Española - Fac O Cap",
+      "amountArs": 92000,
+      "amountUsd": null,
+      "patientId": "dcfc43b7-e839-4902-bab3-979bcfb586a1",
+      "paymentDate": "2026-08-31T03:00:00+00:00"
+    },
+    {
+      "markId": "01f696aa-b29c-4cba-a799-900d50acd2dc",
+      "keepId": "d9a9dbb4-d016-463c-8a4a-bdede4506c26",
+      "markExtId": "30156029|2026-08-31|Control Dermatológico",
+      "keepExtId": "30156029|2026-08-31T10:00|Control Dermatológico",
+      "amountArs": 35000,
+      "amountUsd": null,
+      "patientId": "428284f4-98ba-44c9-94fe-7dc738b039b2",
+      "paymentDate": "2026-08-31T03:00:00+00:00"
+    },
+    {
+      "markId": "0ab245a2-bbcf-4ced-90f0-c836c8e0ff00",
+      "keepId": "2d4b091c-9cd1-4bf5-9116-b43af6e4746b",
+      "markExtId": "36381306|2026-08-31|Control Dermatológico",
+      "keepExtId": "36381306|2026-08-31T13:45|Control Dermatológico",
+      "amountArs": 35000,
+      "amountUsd": null,
+      "patientId": "fe2478da-3583-48a0-9679-3c05a6319342",
+      "paymentDate": "2026-08-31T03:00:00+00:00"
+    },
+    {
+      "markId": "d26c6d11-5b38-499d-8d69-32040becf0eb",
+      "keepId": "d9257b97-24dc-4eb3-a398-b30dac787d54",
+      "markExtId": "25018629|2026-08-31|Consulta",
+      "keepExtId": "25018629|2026-08-31T12:30|Consulta",
+      "amountArs": 60000,
+      "amountUsd": null,
+      "patientId": "4871e4d6-2142-49fc-8590-a13987038489",
+      "paymentDate": "2026-08-31T03:00:00+00:00"
+    },
+    {
+      "markId": "676f648d-db22-4754-82aa-b2672eba6256",
+      "keepId": "59868053-8d4b-44e3-b230-155678ca95c3",
+      "markExtId": "16850361|2026-08-31|Lp Light & Bright,Frax Capilar + Exosomas,mesoterapia Francesa",
+      "keepExtId": "16850361|2026-08-31T11:30|Lp Light & Bright,Frax Capilar + Exosomas,mesoterapia Francesa",
+      "amountArs": 760000,
+      "amountUsd": null,
+      "patientId": "79d9fd26-010f-4c7f-95b0-f65c951dfa54",
+      "paymentDate": "2026-08-31T03:00:00+00:00"
+    },
+    {
+      "markId": "84930d58-775c-4175-8db4-30e8fce4e35c",
+      "keepId": "885fa503-bfd7-4edb-8377-6cc2642405f6",
+      "markExtId": "22990925|2026-08-31|Fosfatidilcolina,Fosfatidilcolina,frax Capilar + Exosomas",
+      "keepExtId": "22990925|2026-08-31T10:30|Fosfatidilcolina,Fosfatidilcolina,frax Capilar + Exosomas",
+      "amountArs": 470000,
+      "amountUsd": null,
+      "patientId": "2c6fe0d9-478b-4b58-8436-3e5973734222",
+      "paymentDate": "2026-08-31T03:00:00+00:00"
+    },
+    {
+      "markId": "52a8a7ec-64c7-4792-822c-e70da8d0d8a5",
+      "keepId": "40abd2b9-d441-4361-b4e7-edad0fa3cb45",
+      "markExtId": "31047307|2026-08-31|Lp Light & Bright,Mesoterapia Francesa",
+      "keepExtId": "31047307|2026-08-31T15:30|Lp Light & Bright,Mesoterapia Francesa",
+      "amountArs": 480000,
+      "amountUsd": null,
+      "patientId": "1a40b3b9-3f6b-430b-89f9-b25393031b13",
+      "paymentDate": "2026-08-31T03:00:00+00:00"
+    },
+    {
+      "markId": "f29e7ca0-5ae6-4ecc-8fbb-ea47db8c7ddd",
+      "keepId": "2f3d751d-9f86-4bf9-aefe-27a3cbb1fbb0",
+      "markExtId": "39030975|2026-08-31|Frax Capilar + Exosomas",
+      "keepExtId": "39030975|2026-08-31T14:30|Frax Capilar + Exosomas",
+      "amountArs": 280000,
+      "amountUsd": null,
+      "patientId": "9611a747-bc0b-4e0e-9e24-9683876620c9",
+      "paymentDate": "2026-08-31T03:00:00+00:00"
+    },
+    {
+      "markId": "27567edd-8ade-4b86-89b7-0f828ab02a9e",
+      "keepId": "6d337cdb-088c-4ac5-97ed-cc456d2615b7",
+      "markExtId": "44152601|2026-08-31|Control Dermatológico",
+      "keepExtId": "44152601|2026-08-31T13:30|Control Dermatológico",
+      "amountArs": 35000,
+      "amountUsd": null,
+      "patientId": "3a5cdabd-f9f5-442a-ae1e-0deda83c36e0",
+      "paymentDate": "2026-08-31T03:00:00+00:00"
+    },
+    {
+      "markId": "212b23f3-2163-4913-8664-ad69ea64ea91",
+      "keepId": "624f6e16-422c-47ab-853e-0566b77bb701",
+      "markExtId": "21514671|2026-08-31|Lp Rostro, Cuello Y Escote",
+      "keepExtId": "21514671|2026-08-31T11:00|Lp Rostro, Cuello Y Escote",
+      "amountArs": 320000,
+      "amountUsd": null,
+      "patientId": "11cb2bd6-0496-40b2-8c96-d416f99bbaf4",
+      "paymentDate": "2026-08-31T03:00:00+00:00"
+    }
+  ]
+}

@@ -586,7 +586,13 @@ export default function ProductTable({
                         type="submit"
                         className={p.is_active ? styles.activeBtn : styles.pauseBtn}
                         disabled={userRole === 'cosmetologa'}
-                        title={userRole === 'cosmetologa' ? 'Solo lectura: rol cosmetóloga' : undefined}
+                        title={
+                          userRole === 'cosmetologa'
+                            ? 'Solo lectura: rol cosmetóloga'
+                            : p.is_active
+                              ? 'Desactivar producto (Baja lógica: oculta de tienda y recuentos preservando movimientos históricos)'
+                              : 'Activar producto en catálogo y operaciones'
+                        }
                       >
                         {p.is_active ? 'Activo' : 'Pausado'}
                       </button>
