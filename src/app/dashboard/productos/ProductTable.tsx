@@ -407,7 +407,11 @@ export default function ProductTable({
         setEditError(res.error || 'Error al guardar los cambios del producto.');
       }
     } catch (err: any) {
-      setEditError(err?.message || 'Error inesperado al guardar.');
+      let msg = err?.message || 'Error inesperado al guardar.';
+      if (msg.includes('Server Components render') || msg.includes('digest') || msg.includes('Failed to fetch')) {
+        msg = 'Error al procesar el archivo en el servidor. Verificá que la imagen no supere los 10 MB y sea JPG, PNG o WEBP.';
+      }
+      setEditError(msg);
     } finally {
       setIsSavingProduct(false);
       setIsUploading(false);

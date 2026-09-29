@@ -682,18 +682,23 @@ export async function uploadProductImage(
 
     const admin = createAdminClient();
 
-    // Bloque E3: Si se reemplaza una imagen anterior, borrarla del bucket para evitar huérfanas
-    if (previousUrl && previousUrl.includes('/products/')) {
+    // Bloque E3: Si se reemplaza una imagen anterior, borrarla del bucket SOLO si apunta a Supabase Storage
+    const isSupabaseStorageUrl =
+      previousUrl &&
+      (previousUrl.includes('supabase.co/storage/v1/object/public/products/') ||
+       previousUrl.includes('/storage/v1/object/public/products/'));
+
+    if (isSupabaseStorageUrl) {
       try {
         const parts = previousUrl.split('/products/');
         if (parts.length > 1) {
           const oldFileName = decodeURIComponent(parts[1].split('?')[0]);
-          if (oldFileName) {
+          if (oldFileName && !oldFileName.includes('/')) {
             await admin.storage.from('products').remove([oldFileName]);
           }
         }
       } catch (delErr) {
-        console.warn('[uploadProductImage] No se pudo borrar la imagen anterior:', delErr);
+        console.warn('[uploadProductImage] No se pudo borrar la imagen anterior de Supabase Storage:', delErr);
       }
     }
 
