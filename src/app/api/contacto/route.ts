@@ -38,12 +38,16 @@ export async function POST(req: NextRequest) {
       const { error: insertErr } = await supabase.from('leads').insert([leadPayload]);
       if (insertErr) {
         if (insertErr.code === '42501') {
-          // Si la política RLS para anon no ha sido ejecutada en SQL Editor, fallback transitorio a admin
-          console.warn('[Contacto] RLS 42501 para anon en leads. Usando fallback temporal service_role...');
+          // La política RLS para anon no ha sido ejecutada en SQL Editor
+          console.error(
+            '[Contacto / RLS CRÍTICO] La política RLS para usuarios anónimos en public.leads NO está aplicada en Supabase (Error 42501). ' +
+            'Se activó fallback transitorio a service_role para no descartar el mensaje del paciente. ' +
+            'Agustín debe ejecutar la migración 20260929_rpc_metricas_and_security.sql en Supabase SQL Editor para completar el desacople definitivo.'
+          );
           const admin = createAdminClient();
           await admin.from('leads').insert([leadPayload]);
         } else {
-          console.warn('[Contacto] Error al insertar lead:', insertErr.message);
+          console.error('[Contacto] Error al insertar lead con cliente anónimo:', insertErr.message);
         }
       }
     } catch (dbErr) {
