@@ -1,7 +1,19 @@
-// Webhook de MercadoPago — actualiza el estado de pago de la orden O de la gift card.
-// MP envía notificaciones con topic=payment cuando el estado cambia.
-// Verificamos la firma HMAC-SHA256 usando mp_webhook_secret de app_settings.
-// Identificamos gift cards por external_reference que comienza con "giftcard:"
+/**
+ * Webhook de MercadoPago — actualiza el estado de pago de la orden O de la gift card.
+ * MP envía notificaciones con topic=payment cuando el estado cambia.
+ * Verificamos la firma HMAC-SHA256 usando MP_WEBHOOK_SECRET.
+ * Identificamos gift cards por external_reference que comienza con "giftcard:"
+ *
+ * ============================================================================
+ * PROTOCOLO OBLIGATORIO DE ACTIVACIÓN DE MERCADO PAGO EN PRODUCCIÓN:
+ * Antes de configurar MP_WEBHOOK_SECRET en producción, DEBE completarse el
+ * siguiente protocolo de verificación en entorno de prueba (staging / local):
+ * 1. Configurar MP_WEBHOOK_SECRET en el entorno de prueba.
+ * 2. Mandar una request con firma HMAC válida y timestamp vigente -> Debe responder HTTP 200.
+ * 3. Mandar una request con firma inválida -> Debe responder HTTP 401 (Unauthorized).
+ * 4. Mandar una request con firma válida pero timestamp viejo (> 5 min) -> Rechazo por ventana temporal (HTTP 401).
+ * ============================================================================
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { createHmac } from 'crypto';
@@ -21,9 +33,10 @@ function verifySignature(
   paymentId: string | number,
   requestId: string,
   signature: string | null,
-  secret: string
-): boolean {
-  if (!signature || !secret) return false;
+  secret: string,
+  toleranceSeconds: number = 300 // 5 minutos de ventana máxima
+): { valid: boolean; reason?: string } {
+  if (!signature || !secret) return { valid: false, reason: 'missing_signature_or_secret' };
 
   // x-signature format: ts=...,v1=...
   const parts = signature.split(',').reduce<Record<string, string>>((acc, part) => {
@@ -34,13 +47,21 @@ function verifySignature(
 
   const ts = parts['ts'];
   const v1 = parts['v1'];
-  if (!ts || !v1) return false;
+  if (!ts || !v1) return { valid: false, reason: 'invalid_header_format' };
+
+  // Ventana temporal: rechazar timestamps con desfase mayor a toleranceSeconds (replay attack defense)
+  const tsNumber = Number(ts);
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  if (isNaN(tsNumber) || Math.abs(nowSeconds - tsNumber) > toleranceSeconds) {
+    return { valid: false, reason: 'timestamp_expired' };
+  }
 
   // Manifest template: id:[data.id];request-id:[x-request-id];ts:[ts];
   const manifest = `id:${paymentId};request-id:${requestId};ts:${ts};`;
   const computedHash = createHmac('sha256', secret).update(manifest).digest('hex');
 
-  return computedHash.toLowerCase() === v1.toLowerCase();
+  const matches = computedHash.toLowerCase() === v1.toLowerCase();
+  return { valid: matches, reason: matches ? undefined : 'hmac_mismatch' };
 }
 
 export async function POST(req: NextRequest) {
@@ -81,17 +102,21 @@ export async function POST(req: NextRequest) {
   const requestId = req.headers.get('x-request-id') ?? '';
   const signature = req.headers.get('x-signature');
 
-  // 3. CAPA 1: Validación estricta y obligatoria de la firma HMAC-SHA256
-  const isValid = verifySignature(manifestId, requestId, signature, webhookSecret);
+  // 3. CAPA 1: Validación estricta y obligatoria de la firma HMAC-SHA256 con ventana temporal
+  const { valid: isValid, reason: rejectReason } = verifySignature(manifestId, requestId, signature, webhookSecret);
   if (!isValid) {
     console.warn('[Webhook/MP] RECHAZADO 401: Intento de webhook con firma inválida o ausente.', {
       manifestId,
       requestId,
+      reason: rejectReason,
       hasSignature: Boolean(signature),
       clientIp: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'desconocida',
       timestamp: new Date().toISOString(),
     });
-    return NextResponse.json({ error: 'Firma de webhook inválida.' }, { status: 401 });
+    return NextResponse.json({
+      error: 'Firma de webhook inválida o timestamp fuera de ventana permitida.',
+      code: rejectReason
+    }, { status: 401 });
   }
 
   // 4. CAPA 2: Re-consulta directa a la API oficial de Mercado Pago para verificar estado real

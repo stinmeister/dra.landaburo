@@ -69,6 +69,7 @@ export async function getCierreDiarioData(rawDate?: string): Promise<CierreDiari
         patients ( full_name, dni ),
         profiles ( full_name )
       `)
+      .is('superseded_by', null)
       .gte('payment_date', startIso)
       .lte('payment_date', endIso)
       .order('payment_date', { ascending: true }),

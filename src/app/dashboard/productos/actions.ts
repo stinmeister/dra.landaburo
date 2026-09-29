@@ -902,12 +902,21 @@ export async function getStockReportData(
       for (const m of duringMovs) {
         const delta = m.quantity_delta ?? 0;
         const notesLower = (m.notes || '').toLowerCase();
-        // Separar altas / líneas de base iniciales para que no se computen como varianza de inventario (C3)
+        // Reconocer AMBAS convenciones de línea de base inicial:
+        // Convención A (productos iniciales): recuento + "línea de base" / "recuento inicial"
+        // Convención B (alta desde formulario): ajuste + "stock inicial" / "incorporación preexistente" / "línea de base"
         const isInitialBaseline =
-          m.movement_type === 'recuento' &&
-          (notesLower.includes('línea de base') ||
-            notesLower.includes('linea de base') ||
-            notesLower.includes('recuento inicial'));
+          (m.movement_type === 'recuento' &&
+            (notesLower.includes('línea de base') ||
+              notesLower.includes('linea de base') ||
+              notesLower.includes('recuento inicial'))) ||
+          (m.movement_type === 'ajuste' &&
+            (notesLower.includes('stock inicial') ||
+              notesLower.includes('incorporación preexistente') ||
+              notesLower.includes('incorporacion preexistente') ||
+              notesLower.includes('alta de producto') ||
+              notesLower.includes('línea de base') ||
+              notesLower.includes('linea de base')));
 
         if (isInitialBaseline) {
           baselineDelta += delta;

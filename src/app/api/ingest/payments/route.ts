@@ -799,6 +799,7 @@ export async function POST(req: NextRequest) {
         .from("payments")
         .select("id, payment_date")
         .eq("patient_id", patientId)
+        .is("superseded_by", null)
         .gte("payment_date", winStart.toISOString())
         .lte("payment_date", winEnd.toISOString());
 
@@ -823,6 +824,7 @@ export async function POST(req: NextRequest) {
           .from("payments")
           .select("id, payment_date")
           .eq("patient_id", patientId)
+          .is("superseded_by", null)
           .gte("payment_date", dayStartIso)
           .lte("payment_date", dayEndIso);
 

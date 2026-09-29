@@ -204,24 +204,27 @@ export default async function EjecutivoPage({
   // ═══════════════════════════════════════════════════════════════════════════
   const adminClient = createAdminClient();
 
-  // 1. Total payments en la DB
+  // 1. Total payments en la DB (vigentes)
   const { count: totalPaymentsCount } = await adminClient
     .from('payments')
-    .select('id', { count: 'exact', head: true });
+    .select('id', { count: 'exact', head: true })
+    .is('superseded_by', null);
   const totalInDb = totalPaymentsCount ?? 0;
 
-  // 2. Último cobro para mes por defecto
+  // 2. Último cobro para mes por defecto (vigente)
   const { data: latestPayment } = await adminClient
     .from('payments')
     .select('payment_date')
+    .is('superseded_by', null)
     .order('payment_date', { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  // 3. Meses con datos
+  // 3. Meses con datos (vigentes)
   const { data: dateRows } = await adminClient
     .from('payments')
-    .select('payment_date');
+    .select('payment_date')
+    .is('superseded_by', null);
 
   const monthsWithData = new Set<string>();
   (dateRows ?? []).forEach((r) => {
@@ -282,10 +285,11 @@ export default async function EjecutivoPage({
     latestMonthLabel = lRaw.charAt(0).toUpperCase() + lRaw.slice(1);
   }
 
-  // 1. Consulta agregada completa del mes (sin límite) para métricas exactas (Punto B)
+  // 1. Consulta agregada completa del mes (sin límite, solo vigentes) para métricas exactas (Punto B)
   const { data: monthTotalsRaw } = await adminClient
     .from('payments')
     .select('id, amount_ars, amount_usd, currency, commission_amount_ars, notes, professional_profile_id, patients ( full_name )')
+    .is('superseded_by', null)
     .gte('payment_date', monthStart)
     .lte('payment_date', monthEnd);
 
@@ -335,7 +339,7 @@ export default async function EjecutivoPage({
   // Facturación neta del consultorio (facturación total menos honorarios pagados a Mechi)
   const facturacionNetaConsultorio = totalARS - honorariosMercedes;
 
-  // 2. Consulta de cobros del mes para la tabla detallada (sin límite artificial)
+  // 2. Consulta de cobros del mes para la tabla detallada (sin límite artificial, solo vigentes)
   const { data: paymentsRaw, error: paymentsError } = await adminClient
     .from('payments')
     .select(`
@@ -350,6 +354,7 @@ export default async function EjecutivoPage({
       patients ( full_name ),
       profiles ( full_name )
     `)
+    .is('superseded_by', null)
     .gte('payment_date', monthStart)
     .lte('payment_date', monthEnd)
     .order('payment_date', { ascending: false });
