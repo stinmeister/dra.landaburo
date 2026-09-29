@@ -49,6 +49,7 @@ export default function MovimientosClient({ initialData }: Props) {
   } = initialData;
 
   // Totales consolidados de movimientos en el período
+  const totalBaseline = summary.reduce((acc, s) => acc + s.baselineDelta, 0);
   const totalPurchases = summary.reduce((acc, s) => acc + s.purchases, 0);
   const totalOnlineSales = summary.reduce((acc, s) => acc + s.salesOnline, 0);
   const totalCounterSales = summary.reduce((acc, s) => acc + s.salesCounter, 0);
@@ -159,7 +160,7 @@ export default function MovimientosClient({ initialData }: Props) {
           <div>
             <strong>Inventario 100% Conciliado:</strong> Para todos los {summary.length} productos del catálogo se verifica la ecuación de balance:
             <code style={{ marginLeft: '0.5rem', background: 'rgba(255,255,255,0.6)', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
-              Stock Inicial + ∑(Movimientos) === Stock Final
+              Stock Inicial + Altas/Base + ∑(Movimientos) === Stock Final
             </code>
           </div>
         </div>
@@ -177,6 +178,13 @@ export default function MovimientosClient({ initialData }: Props) {
         <div className={styles.summaryCard}>
           <span className={styles.summaryLabel}>Stock Inicial Período</span>
           <p className={styles.summaryValue}>{totalInitialStock} ud.</p>
+        </div>
+
+        <div className={styles.summaryCard}>
+          <span className={styles.summaryLabel}>Altas / Base (+)</span>
+          <p className={`${styles.summaryValue} ${totalBaseline > 0 ? styles.positiveDelta : ''}`}>
+            {totalBaseline > 0 ? `+${totalBaseline}` : totalBaseline}
+          </p>
         </div>
 
         <div className={styles.summaryCard}>
