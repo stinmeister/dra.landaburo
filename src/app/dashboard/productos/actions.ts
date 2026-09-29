@@ -435,6 +435,19 @@ export async function updateProduct(
         categoryId = catRow.id;
         categoryName = catRow.name;
       }
+    } else if (rawCategory) {
+      const { data: catRow } = await admin
+        .from('product_categories')
+        .select('id, name')
+        .ilike('name', rawCategory)
+        .maybeSingle();
+
+      if (catRow) {
+        categoryId = catRow.id;
+        categoryName = catRow.name;
+      } else {
+        categoryName = rawCategory;
+      }
     }
 
     const updateData: any = {
@@ -653,17 +666,18 @@ export async function uploadProductImage(
     const previousUrl = (formData.get('previous_url') as string)?.trim();
     const productSlug = (formData.get('slug') as string)?.trim() || 'producto';
 
-    if (!file || !(file instanceof File)) {
+    if (!file || typeof file !== 'object' || typeof (file as any).arrayBuffer !== 'function') {
       return { success: false, error: 'No se recibió ningún archivo válido.' };
     }
 
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
+    const fileType = (file.type || '').toLowerCase();
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(fileType)) {
       return { success: false, error: 'Formato no permitido. Solo se aceptan imágenes JPG, PNG o WEBP.' };
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      return { success: false, error: 'La imagen excede el límite permitido de 5 MB.' };
+    if (file.size > 10 * 1024 * 1024) {
+      return { success: false, error: 'La imagen excede el límite permitido de 10 MB.' };
     }
 
     const admin = createAdminClient();

@@ -517,6 +517,7 @@ export default function ProductTable({
                             width={44}
                             height={44}
                             className={styles.thumbImg}
+                            unoptimized
                           />
                         </button>
                       ) : (

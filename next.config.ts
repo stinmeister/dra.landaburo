@@ -11,6 +11,11 @@ if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb',
+    },
+  },
   images: {
     remotePatterns: [
       {
