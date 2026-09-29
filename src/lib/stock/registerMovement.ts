@@ -50,6 +50,9 @@ export interface StockReportSummaryItem {
   netChange: number;
   stockFinal: number;
   isBalanced: boolean;
+  catalogStock: number;
+  catalogDiff: number;
+  isCatalogSynced: boolean;
 }
 
 export interface StockReportData {
@@ -59,6 +62,8 @@ export interface StockReportData {
   summary: StockReportSummaryItem[];
   movements: any[];
   allBalanced: boolean;
+  allCatalogSynced: boolean;
+  catalogDiscrepanciesCount: number;
   totalInitialStock: number;
   totalFinalStock: number;
   totalNetChange: number;
@@ -186,8 +191,8 @@ export async function registerStockMovement(
 
     stockAfter = stockBefore + finalDelta;
 
-    // Validación de stock no negativo (excepto en ajuste o recuento)
-    if (stockAfter < 0 && type !== 'ajuste') {
+    // Validación de stock no negativo (excepto en ajuste o venta_online con cobro aprobado)
+    if (stockAfter < 0 && type !== 'ajuste' && type !== 'venta_online') {
       const cantSolicitada = Math.abs(finalDelta);
       return {
         ok: false,
@@ -263,6 +268,38 @@ export async function registerStockMovement(
       ok: false,
       error: `El movimiento se registró (#${movement.id}) pero falló la actualización del caché de productos: ${updateErr.message}`,
     };
+  }
+
+  // Si una venta online genera stock negativo (sobreventa por venta simultánea), alertar al staff
+  if (type === 'venta_online' && stockAfter < 0) {
+    console.warn(`[ALERTA SOBREVENTA] Producto "${product.name}" quedó en stock negativo (${stockAfter} ud.) tras venta online orden #${referenceId}.`);
+    try {
+      const { data: adminProfile } = await admin
+        .from('profiles')
+        .select('id')
+        .eq('role', 'admin')
+        .limit(1)
+        .maybeSingle();
+
+      if (adminProfile) {
+        const todayAR = new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'America/Argentina/Buenos_Aires',
+        }).format(new Date());
+
+        await admin.from('staff_tasks').insert({
+          assigned_profile_id: adminProfile.id,
+          task_type: 'stock_alert',
+          title: `Sobreventa online: ${product.name}`,
+          description: `Se vendieron ${Math.abs(finalDelta)} ud. de "${product.name}" por la web pero el stock quedó en ${stockAfter} ud. Reponer o contactar a la paciente. Orden #${referenceId || 'web'}.`,
+          due_date: todayAR,
+          related_entity_type: 'product',
+          related_entity_id: product.id,
+          status: 'pendiente',
+        });
+      }
+    } catch (taskErr) {
+      console.error('[registerStockMovement] Error creando tarea de alerta de sobreventa:', taskErr);
+    }
   }
 
   return {

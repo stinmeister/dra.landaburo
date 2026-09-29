@@ -5,18 +5,18 @@
  * Identificamos gift cards por external_reference que comienza con "giftcard:"
  *
  * ============================================================================
- * PROTOCOLO OBLIGATORIO DE ACTIVACIÓN DE MERCADO PAGO EN PRODUCCIÓN:
- * Antes de configurar MP_WEBHOOK_SECRET en producción, DEBE completarse el
- * siguiente protocolo de verificación en entorno de prueba (staging / local):
- * 1. Configurar MP_WEBHOOK_SECRET en el entorno de prueba.
- * 2. Mandar una request con firma HMAC válida y timestamp vigente -> Debe responder HTTP 200.
- * 3. Mandar una request con firma inválida -> Debe responder HTTP 401 (Unauthorized).
- * 4. Mandar una request con firma válida pero timestamp viejo (> 5 min) -> Rechazo por ventana temporal (HTTP 401).
+ * PROTOCOLO DE MERCADO PAGO:
+ * 1. Firma HMAC-SHA256 comparada en tiempo constante (timingSafeEqual).
+ * 2. Ventana de tolerancia temporal: 300 segundos (replay attack defense).
+ * 3. Si no valida firma o falta x-signature -> HTTP 401.
+ * 4. Si valida -> Respuesta HTTP 200 INMEDIATA a Mercado Pago, desacoplando
+ *    el procesamiento del pago y descuento de stock en segundo plano (after()).
+ * 5. Idempotencia garantizada por paymentId y reference_id en stock_movements.
  * ============================================================================
  */
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
-import { createHmac } from 'crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { registerStockMovement } from '@/lib/stock/registerMovement';
 
 const MP_STATUS_MAP: Record<string, string> = {
@@ -56,106 +56,59 @@ function verifySignature(
     return { valid: false, reason: 'timestamp_expired' };
   }
 
-  // Manifest template: id:[data.id];request-id:[x-request-id];ts:[ts];
+  // Manifest template oficial: id:[data.id];request-id:[x-request-id];ts:[ts];
   const manifest = `id:${paymentId};request-id:${requestId};ts:${ts};`;
   const computedHash = createHmac('sha256', secret).update(manifest).digest('hex');
 
-  const matches = computedHash.toLowerCase() === v1.toLowerCase();
-  return { valid: matches, reason: matches ? undefined : 'hmac_mismatch' };
+  // Comparación en tiempo constante (timing safe)
+  try {
+    const computedBuf = Buffer.from(computedHash, 'hex');
+    const receivedBuf = Buffer.from(v1, 'hex');
+    if (computedBuf.length !== receivedBuf.length || !timingSafeEqual(computedBuf, receivedBuf)) {
+      return { valid: false, reason: 'hmac_mismatch' };
+    }
+    return { valid: true };
+  } catch {
+    return { valid: false, reason: 'hmac_mismatch' };
+  }
 }
 
-export async function POST(req: NextRequest) {
-  const rawBody = await req.text();
-
-  let notification: Record<string, unknown>;
-  try {
-    notification = JSON.parse(rawBody);
-  } catch {
-    return NextResponse.json({ error: 'Cuerpo inválido.' }, { status: 400 });
-  }
-
-  if (notification.topic !== 'payment' && notification.type !== 'payment') {
-    return NextResponse.json({ ok: true });
-  }
-
-  const rawPaymentId = (notification.data as Record<string, unknown>)?.id ?? notification.id;
-  if (!rawPaymentId) {
-    return NextResponse.json({ error: 'payment_id faltante.' }, { status: 400 });
-  }
-  const paymentId = String(rawPaymentId);
-
-  // 1. Leer credenciales desde variables de entorno (sin tocar app_settings)
-  const webhookSecret = process.env.MP_WEBHOOK_SECRET;
-  const mpAccessToken = process.env.MP_ACCESS_TOKEN;
-
-  if (!webhookSecret) {
-    console.error('[Webhook/MP] RECHAZADO: MP_WEBHOOK_SECRET no está configurado en las variables de entorno.');
-    return NextResponse.json(
-      { error: 'Servicio no configurado para recibir webhooks de pago.' },
-      { status: 503 }
-    );
-  }
-
-  // 2. Extracción de identificador para manifiesto (query param data.id o body id)
-  const searchParams = req.nextUrl.searchParams;
-  const manifestId = searchParams.get('data.id') || searchParams.get('id') || paymentId;
-  const requestId = req.headers.get('x-request-id') ?? '';
-  const signature = req.headers.get('x-signature');
-
-  // 3. CAPA 1: Validación estricta y obligatoria de la firma HMAC-SHA256 con ventana temporal
-  const { valid: isValid, reason: rejectReason } = verifySignature(manifestId, requestId, signature, webhookSecret);
-  if (!isValid) {
-    console.warn('[Webhook/MP] RECHAZADO 401: Intento de webhook con firma inválida o ausente.', {
-      manifestId,
-      requestId,
-      reason: rejectReason,
-      hasSignature: Boolean(signature),
-      clientIp: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'desconocida',
-      timestamp: new Date().toISOString(),
-    });
-    return NextResponse.json({
-      error: 'Firma de webhook inválida o timestamp fuera de ventana permitida.',
-      code: rejectReason
-    }, { status: 401 });
-  }
-
-  // 4. CAPA 2: Re-consulta directa a la API oficial de Mercado Pago para verificar estado real
-  if (!mpAccessToken) {
-    console.error('[Webhook/MP] RECHAZADO: MP_ACCESS_TOKEN no configurado en servidor.');
-    return NextResponse.json({ error: 'Configuración incompleta en servidor.' }, { status: 503 });
-  }
-
+/**
+ * Procesa el pago de Mercado Pago en segundo plano de forma asíncrona.
+ * Ejecutado tras enviar HTTP 200 para evitar reintentos y timeouts.
+ */
+async function processPaymentNotification(paymentId: string, mpAccessToken: string) {
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { cookies: { getAll: () => [], setAll: () => {} } }
   );
 
-  // Consult MP for the actual payment data
+  // 1. Consultar estado real del pago en la API de Mercado Pago
   let mpPayment: Record<string, unknown>;
   try {
     const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
       headers: { Authorization: `Bearer ${mpAccessToken}` },
     });
     if (!mpRes.ok) {
-      console.error('[Webhook/MP] Error al obtener pago MP:', mpRes.status);
-      return NextResponse.json({ error: 'Error consultando MP.' }, { status: 502 });
+      console.error('[Webhook/MP Async] Error al consultar pago en MP API:', mpRes.status);
+      return;
     }
     mpPayment = await mpRes.json();
   } catch (err) {
-    console.error('[Webhook/MP] Error de red consultando MP:', err);
-    return NextResponse.json({ error: 'Error de red.' }, { status: 502 });
+    console.error('[Webhook/MP Async] Error de red consultando MP:', err);
+    return;
   }
 
   const mpStatus = mpPayment.status as string | undefined;
   const externalRef = mpPayment.external_reference as string | undefined;
 
   if (!externalRef || !mpStatus) {
-    console.warn('[Webhook/MP] Pago sin external_reference o status:', paymentId);
-    return NextResponse.json({ ok: true });
+    console.warn('[Webhook/MP Async] Pago sin external_reference o status:', paymentId);
+    return;
   }
 
-  // ----- GIFT CARD FLOW -----
+  // 2. Flujo de Gift Cards
   if (externalRef.startsWith('giftcard:')) {
     const giftCardId = externalRef.replace('giftcard:', '');
 
@@ -175,53 +128,35 @@ export async function POST(req: NextRequest) {
         .single();
 
       if (updateError) {
-        console.error('[Webhook/MP] Error activating gift card:', giftCardId, updateError);
-      } else if (card) {
-        // If delivery_method === 'fisica', create an event-driven task in staff_tasks for Ceci
-        if (card.delivery_method === 'fisica') {
-          try {
-            // Find Ceci's profile ID or default staff operative
-            const { data: ceciProfile } = await supabase
-              .from('profiles')
-              .select('id')
-              .or('full_name.ilike.%Ceci%,role.eq.operativo')
-              .limit(1)
-              .maybeSingle();
+        console.error('[Webhook/MP Async] Error activando gift card:', giftCardId, updateError);
+      } else if (card && card.delivery_method === 'fisica') {
+        try {
+          const { data: ceciProfile } = await supabase
+            .from('profiles')
+            .select('id')
+            .or('full_name.ilike.%Ceci%,role.eq.operativo')
+            .limit(1)
+            .maybeSingle();
 
-            if (ceciProfile) {
-              const todayAR = new Intl.DateTimeFormat('en-CA', {
-                timeZone: 'America/Argentina/Buenos_Aires',
-              }).format(new Date());
+          if (ceciProfile) {
+            const todayAR = new Intl.DateTimeFormat('en-CA', {
+              timeZone: 'America/Argentina/Buenos_Aires',
+            }).format(new Date());
 
-              await supabase.from('staff_tasks').insert({
-                assigned_profile_id: ceciProfile.id,
-                task_type: 'gift_card',
-                title: `Preparar Gift Card Física: ${card.code}`,
-                description: `Preparar tarjeta física para ${card.recipient_name || 'Agasajado/a'} (De parte de: ${card.sender_name}).`,
-                due_date: todayAR,
-                related_entity_type: 'gift_card',
-                related_entity_id: card.id,
-                status: 'pendiente',
-              });
-            }
-          } catch (taskErr) {
-            console.error('[Webhook/MP] Error creating physical gift card staff task:', taskErr);
+            await supabase.from('staff_tasks').insert({
+              assigned_profile_id: ceciProfile.id,
+              task_type: 'gift_card',
+              title: `Preparar Gift Card Física: ${card.code}`,
+              description: `Preparar tarjeta física para ${card.recipient_name || 'Agasajado/a'} (De parte de: ${card.sender_name}).`,
+              due_date: todayAR,
+              related_entity_type: 'gift_card',
+              related_entity_id: card.id,
+              status: 'pendiente',
+            });
           }
+        } catch (taskErr) {
+          console.error('[Webhook/MP Async] Error creando tarea en staff_tasks:', taskErr);
         }
-
-        const formatARS = (n: number) =>
-          new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n);
-
-        console.log('[GiftCard/Dispatch Email → sender]', {
-          to: card.sender_email,
-          subject: 'Tu Gift Card está lista — Dra. Landaburo',
-          code: card.code,
-          amount: formatARS(card.amount_ars),
-          recipient: card.recipient_name || 'Agasajado/a',
-          dedication: card.dedication,
-          delivery_method: card.delivery_method,
-          expiration: expirationDate.toLocaleDateString('es-AR'),
-        });
       }
     } else if (mpStatus === 'rejected' || mpStatus === 'cancelled') {
       await supabase
@@ -229,12 +164,23 @@ export async function POST(req: NextRequest) {
         .update({ status: 'cancelled', mp_payment_id: String(paymentId) })
         .eq('id', giftCardId);
     }
-
-    return NextResponse.json({ ok: true });
+    return;
   }
 
-  // ----- REGULAR ORDER FLOW -----
+  // 3. Flujo de Órdenes Regulares
   const newStatus = MP_STATUS_MAP[mpStatus] ?? 'pending';
+
+  // Idempotencia: verificar si la orden ya está pagada con este mismo payment_id
+  const { data: existingOrder } = await supabase
+    .from('orders')
+    .select('id, payment_status, mp_payment_id')
+    .eq('id', externalRef)
+    .maybeSingle();
+
+  if (existingOrder && existingOrder.payment_status === 'paid' && existingOrder.mp_payment_id === String(paymentId)) {
+    console.log(`[Webhook/MP Async] Orden #${externalRef} ya procesada como 'paid' para pago #${paymentId}. Omitiendo duplicado.`);
+    return;
+  }
 
   const { error: updateError } = await supabase
     .from('orders')
@@ -246,7 +192,7 @@ export async function POST(req: NextRequest) {
     .eq('id', externalRef);
 
   if (updateError) {
-    console.error('[Webhook/MP] Error actualizando orden:', externalRef, updateError);
+    console.error('[Webhook/MP Async] Error actualizando orden:', externalRef, updateError);
   }
 
   // Si la orden pasa a 'paid', descontar stock de los productos con tipo 'venta_online'
@@ -258,7 +204,7 @@ export async function POST(req: NextRequest) {
         .eq('order_id', externalRef);
 
       if (itemsErr) {
-        console.error('[Webhook/MP] Error obteniendo items de la orden para descontar stock:', externalRef, itemsErr);
+        console.error('[Webhook/MP Async] Error obteniendo items de la orden:', externalRef, itemsErr);
       } else if (orderItems && orderItems.length > 0) {
         for (const item of orderItems) {
           if (item.product_id && item.quantity > 0) {
@@ -272,15 +218,99 @@ export async function POST(req: NextRequest) {
             });
 
             if (!movementRes.ok) {
-              console.error(`[Webhook/MP] Error registrando venta_online para producto ${item.product_id}:`, movementRes.error);
+              console.error(`[Webhook/MP Async] Error registrando venta_online para producto ${item.product_id}:`, movementRes.error);
             }
           }
         }
       }
     } catch (stockErr) {
-      console.error('[Webhook/MP] Error inesperado descontando stock:', stockErr);
+      console.error('[Webhook/MP Async] Error inesperado descontando stock:', stockErr);
     }
   }
+}
+
+export async function POST(req: NextRequest) {
+  const rawBody = await req.text();
+
+  let notification: Record<string, unknown>;
+  try {
+    notification = JSON.parse(rawBody);
+  } catch {
+    return NextResponse.json({ error: 'Cuerpo inválido.' }, { status: 400 });
+  }
+
+  // 1. Extraer y loguear live_mode explícitamente en cada notificación (2.1 a)
+  const liveMode = typeof notification.live_mode === 'boolean' ? notification.live_mode : null;
+  const rawPaymentId = (notification.data as Record<string, unknown>)?.id ?? notification.id;
+  const paymentId = rawPaymentId ? String(rawPaymentId) : null;
+
+  console.log('[Webhook/MP] Notificación recibida:', {
+    live_mode: liveMode,
+    environment: liveMode === true ? 'PRODUCCIÓN' : liveMode === false ? 'TEST/SANDBOX' : 'NO_ESPECIFICADO',
+    topic: notification.topic || notification.type,
+    action: notification.action,
+    id: paymentId,
+    timestamp: new Date().toISOString(),
+  });
+
+  // Topics de Checkout Pro: atender payment; responder 200 en merchant_order u otros
+  if (notification.topic !== 'payment' && notification.type !== 'payment') {
+    return NextResponse.json({ ok: true });
+  }
+
+  if (!paymentId) {
+    return NextResponse.json({ error: 'payment_id faltante.' }, { status: 400 });
+  }
+
+  // 2. Leer credenciales desde variables de entorno
+  const webhookSecret = process.env.MP_WEBHOOK_SECRET;
+  const mpAccessToken = process.env.MP_ACCESS_TOKEN;
+
+  if (!webhookSecret) {
+    console.error('[Webhook/MP] RECHAZADO: MP_WEBHOOK_SECRET no está configurado en las variables de entorno.');
+    return NextResponse.json(
+      { error: 'Servicio no configurado para recibir webhooks de pago.' },
+      { status: 503 }
+    );
+  }
+
+  // 3. Extracción de identificador para manifiesto (query param data.id o body id)
+  const searchParams = req.nextUrl.searchParams;
+  const manifestId = searchParams.get('data.id') || searchParams.get('id') || paymentId;
+  const requestId = req.headers.get('x-request-id') ?? '';
+  const signature = req.headers.get('x-signature');
+
+  // 4. Validación estricta de la firma HMAC-SHA256 con ventana temporal y timingSafeEqual
+  const { valid: isValid, reason: rejectReason } = verifySignature(manifestId, requestId, signature, webhookSecret);
+  if (!isValid) {
+    console.warn('[Webhook/MP] RECHAZADO 401: Intento de webhook con firma inválida o ausente.', {
+      manifestId,
+      requestId,
+      reason: rejectReason,
+      hasSignature: Boolean(signature),
+      clientIp: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'desconocida',
+      timestamp: new Date().toISOString(),
+    });
+    return NextResponse.json({
+      error: 'Firma de webhook inválida o timestamp fuera de ventana permitida.',
+      code: rejectReason,
+    }, { status: 401 });
+  }
+
+  // 5. VALIDACIÓN OK -> Responder HTTP 200 INMEDIATO a Mercado Pago (2.1 c)
+  // Desacoplamos la consulta a la API de MP y descuento de stock en segundo plano
+  if (!mpAccessToken) {
+    console.error('[Webhook/MP] Advertencia: MP_ACCESS_TOKEN no configurado en servidor; no se puede procesar pago.');
+    return NextResponse.json({ ok: true, warning: 'token_missing' });
+  }
+
+  after(async () => {
+    try {
+      await processPaymentNotification(paymentId, mpAccessToken);
+    } catch (bgError) {
+      console.error('[Webhook/MP Async] Error no controlado en procesamiento de fondo:', bgError);
+    }
+  });
 
   return NextResponse.json({ ok: true });
 }

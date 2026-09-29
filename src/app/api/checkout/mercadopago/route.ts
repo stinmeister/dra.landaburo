@@ -79,12 +79,26 @@ export async function POST(req: NextRequest) {
   const productIds = items.map((i) => i.id);
   const { data: dbProducts, error: productsError } = await supabase
     .from('products')
-    .select('id, price_ars')
+    .select('id, name, price_ars, stock_quantity')
     .in('id', productIds);
 
   if (productsError || !dbProducts || dbProducts.length !== productIds.length) {
     console.error('[Checkout/MP] No se pudieron verificar precios de productos:', productsError);
     return NextResponse.json({ error: 'Producto no encontrado.' }, { status: 400 });
+  }
+
+  // Pre-validación de stock en el checkout antes de crear la preferencia (2.4 punto 1)
+  for (const item of items) {
+    const dbP = dbProducts.find((p) => p.id === item.id);
+    const availableStock = dbP?.stock_quantity ?? 0;
+    if (availableStock < item.quantity) {
+      return NextResponse.json(
+        {
+          error: `Stock insuficiente para "${dbP?.name || item.name}": quedan ${availableStock} unidad(es) disponible(s).`,
+        },
+        { status: 409 }
+      );
+    }
   }
 
   // Construimos un mapa id → price_ars para acceso O(1) al armar los items
@@ -104,10 +118,13 @@ export async function POST(req: NextRequest) {
   // Calcular total usando precios de la BD, no del cliente
   const totalARS = items.reduce((sum, i) => sum + priceMap.get(i.id)! * i.quantity, 0);
 
-  // Crear orden en Supabase
+  // Crear orden en Supabase (poblando tanto customer_* como buyer_*)
   const { data: order, error: orderError } = await supabase
     .from('orders')
     .insert({
+      customer_name: buyer.name.trim(),
+      customer_email: buyer.email.trim().toLowerCase(),
+      customer_phone: buyer.phone?.trim() || null,
       buyer_name: buyer.name.trim(),
       buyer_email: buyer.email.trim().toLowerCase(),
       buyer_phone: buyer.phone?.trim() || null,

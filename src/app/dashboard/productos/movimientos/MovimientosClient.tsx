@@ -43,6 +43,8 @@ export default function MovimientosClient({ initialData }: Props) {
     summary,
     movements,
     allBalanced,
+    allCatalogSynced,
+    catalogDiscrepanciesCount,
     totalInitialStock,
     totalFinalStock,
     totalNetChange,
@@ -154,21 +156,28 @@ export default function MovimientosClient({ initialData }: Props) {
       </form>
 
       {/* ── Banner de Conciliación ── */}
-      {allBalanced ? (
-        <div className={styles.balanceBannerOk}>
-          <CheckCircle2 size={24} color="#059669" />
-          <div>
-            <strong>Inventario 100% Conciliado:</strong> Para todos los {summary.length} productos del catálogo se verifica la ecuación de balance:
-            <code style={{ marginLeft: '0.5rem', background: 'rgba(255,255,255,0.6)', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
-              Stock Inicial + Altas/Base + ∑(Movimientos) === Stock Final
-            </code>
-          </div>
-        </div>
-      ) : (
+      {!allBalanced ? (
         <div className={styles.balanceBannerDiscrepancy}>
           <AlertTriangle size={24} color="#dc2626" />
           <div>
-            <strong>Discrepancia detectada en el balance:</strong> Al menos un producto presenta diferencias entre la suma acumulada de movimientos y el stock de cierre.
+            <strong>Discrepancia detectada en la ecuación:</strong> Al menos un producto presenta diferencias entre la suma acumulada de movimientos y el stock de cierre del libro.
+          </div>
+        </div>
+      ) : !allCatalogSynced ? (
+        <div className={styles.balanceBannerDiscrepancy} style={{ backgroundColor: '#fef2f2', borderColor: '#f87171' }}>
+          <AlertTriangle size={24} color="#dc2626" />
+          <div>
+            <strong style={{ color: '#991b1b' }}>Divergencia entre Libro y Catálogo ({catalogDiscrepanciesCount || 0} producto/s):</strong> El stock final del libro no coincide con el stock actual en la tabla de productos (caché). Verificá los productos marcados con advertencia.
+          </div>
+        </div>
+      ) : (
+        <div className={styles.balanceBannerOk}>
+          <CheckCircle2 size={24} color="#059669" />
+          <div>
+            <strong>Inventario 100% Conciliado:</strong> Para todos los {summary.length} productos del catálogo se verifica la ecuación de balance y coincide exactamente con el catálogo actual:
+            <code style={{ marginLeft: '0.5rem', background: 'rgba(255,255,255,0.6)', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
+              Stock Inicial + Altas/Base + ∑(Movimientos) === Stock Final === Catálogo
+            </code>
           </div>
         </div>
       )}
@@ -281,13 +290,17 @@ export default function MovimientosClient({ initialData }: Props) {
                   </td>
                   <td className={styles.numCell} style={{ fontWeight: 600 }}>{row.stockFinal}</td>
                   <td style={{ textAlign: 'center' }}>
-                    {row.isBalanced ? (
-                      <span className={styles.statusBalanced} title="Inicial + Movimientos === Final">
+                    {row.isBalanced && row.isCatalogSynced ? (
+                      <span className={styles.statusBalanced} title="Inicial + Movimientos === Final === Catálogo">
                         <Check size={14} /> OK
                       </span>
+                    ) : row.isBalanced && !row.isCatalogSynced ? (
+                      <span className={styles.statusDiscrepancy} style={{ backgroundColor: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca' }} title={`Libro: ${row.stockFinal} ud. vs Catálogo: ${row.catalogStock} ud.`}>
+                        ⚠️ Diff Cat ({row.catalogDiff > 0 ? `+${row.catalogDiff}` : row.catalogDiff})
+                      </span>
                     ) : (
-                      <span className={styles.statusDiscrepancy} title="Discrepancia en la suma">
-                        ⚠️ Error
+                      <span className={styles.statusDiscrepancy} title="Discrepancia en la suma matemática de movimientos">
+                        ⚠️ Error Eq
                       </span>
                     )}
                   </td>
@@ -393,7 +406,15 @@ export default function MovimientosClient({ initialData }: Props) {
                             PRUEBA TÉCNICA
                           </span>
                         )}
-                        <span>{m.notes || (m.reference_id ? `Ref: ${m.reference_type} #${m.reference_id}` : '—')}</span>
+                        <span>
+                          {m.notes
+                            ? (m.is_annulled
+                                ? m.notes.replace(/^ANULACI[ÓO]N\s*[-—:]*\s*/i, '')
+                                : m.is_test
+                                ? m.notes.replace(/^PRUEBA(?:\s+T[ÉE]CNICA)?\s*[-—:]*\s*/i, '')
+                                : m.notes)
+                            : (m.reference_id ? `Ref: ${m.reference_type} #${m.reference_id}` : '—')}
+                        </span>
                       </td>
                     </tr>
                   );

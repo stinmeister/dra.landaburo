@@ -1,7 +1,7 @@
 'use client';
 // Página del carrito — Client Component porque depende del CartContext (localStorage).
 // Incluye formulario de datos del comprador y botón de checkout con MercadoPago.
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useCart } from '@/contexts/CartContext';
@@ -22,6 +22,14 @@ export default function CarritoPage() {
   const [buyer, setBuyer] = useState<BuyerForm>({ name: '', email: '', phone: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isMpConfigured, setIsMpConfigured] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    fetch('/api/checkout/mercadopago/status')
+      .then((res) => res.json())
+      .then((data) => setIsMpConfigured(Boolean(data.isConfigured)))
+      .catch(() => setIsMpConfigured(false));
+  }, []);
 
   const handleBuyerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setBuyer(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -208,13 +216,50 @@ export default function CarritoPage() {
 
               {error && <p className={styles.errorMsg}>{error}</p>}
 
-              <button
-                type="submit"
-                className={styles.checkoutBtn}
-                disabled={loading}
-              >
-                {loading ? 'Procesando...' : 'Pagar con MercadoPago'}
-              </button>
+              {isMpConfigured === false ? (
+                <div style={{ marginTop: '1.25rem', textAlign: 'center' }}>
+                  <button
+                    type="button"
+                    className={styles.checkoutBtn}
+                    disabled
+                    style={{ opacity: 0.6, cursor: 'not-allowed', marginBottom: '0.75rem', backgroundColor: '#9ca3af' }}
+                  >
+                    Compra online próximamente
+                  </button>
+                  <p style={{ fontSize: '0.82rem', color: 'var(--color-gris)', marginBottom: '0.75rem', lineHeight: 1.4 }}>
+                    La pasarela de pago online está en proceso de activación. Podés coordinar tu compra directamente con nuestro equipo:
+                  </p>
+                  <a
+                    href={`https://wa.me/5491169684062?text=${encodeURIComponent(
+                      `Hola! Quisiera comprar los siguientes productos de la tienda:\n${items
+                        .map((i) => `• ${i.quantity}x ${i.name}`)
+                        .join('\n')}\nTotal: ${formatARS(totalARS)}`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.checkoutBtn}
+                    style={{
+                      display: 'inline-block',
+                      textDecoration: 'none',
+                      backgroundColor: '#25D366',
+                      borderColor: '#25D366',
+                      color: '#ffffff',
+                      fontWeight: 600,
+                      padding: '0.85rem 1.25rem',
+                    }}
+                  >
+                    Escribinos por WhatsApp
+                  </a>
+                </div>
+              ) : (
+                <button
+                  type="submit"
+                  className={styles.checkoutBtn}
+                  disabled={loading || isMpConfigured === null}
+                >
+                  {loading ? 'Procesando...' : 'Pagar con MercadoPago'}
+                </button>
+              )}
             </form>
           </aside>
         </div>

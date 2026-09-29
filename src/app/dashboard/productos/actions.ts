@@ -376,7 +376,7 @@ export async function getStockMovements(productId: string): Promise<{
 
     const enriched = (data || []).map((m: any) => ({
       ...m,
-      author_name: profilesMap[m.created_by] || 'Sistema / Personal',
+      author_name: profilesMap[m.created_by] || (m.created_by ? `Usuario (${m.created_by.slice(0, 8)})` : 'Sistema / Personal'),
     }));
 
     return { success: true, movements: enriched };
@@ -811,6 +811,8 @@ export async function getStockReportData(
         summary: [],
         movements: [],
         allBalanced: false,
+        allCatalogSynced: false,
+        catalogDiscrepanciesCount: 0,
         totalInitialStock: 0,
         totalFinalStock: 0,
         totalNetChange: 0,
@@ -847,6 +849,8 @@ export async function getStockReportData(
         summary: [],
         movements: [],
         allBalanced: false,
+        allCatalogSynced: false,
+        catalogDiscrepanciesCount: 0,
         totalInitialStock: 0,
         totalFinalStock: 0,
         totalNetChange: 0,
@@ -879,7 +883,7 @@ export async function getStockReportData(
           ...m,
           product_name: prod?.name || 'Producto eliminado',
           category: prod?.category || '—',
-          author_name: profilesMap[m.created_by] || 'Sistema / Personal',
+          author_name: profilesMap[m.created_by] || (m.created_by ? `Usuario (${m.created_by.slice(0, 8)})` : 'Sistema / Personal'),
           is_test: isTest,
           is_annulled: isAnnulled,
         };
@@ -889,6 +893,8 @@ export async function getStockReportData(
     // 3. Calcular balance consolidado por producto
     const summary: StockReportSummaryItem[] = [];
     let allBalanced = true;
+    let allCatalogSynced = true;
+    let catalogDiscrepanciesCount = 0;
     let totalInitialStock = 0;
     let totalFinalStock = 0;
     let totalNetChange = 0;
@@ -977,6 +983,14 @@ export async function getStockReportData(
       const isBalanced = stockInitial + netChange === stockFinal;
       if (!isBalanced) allBalanced = false;
 
+      const catalogStock = prod.stock_quantity ?? 0;
+      const isCatalogSynced = stockFinal === catalogStock;
+      const catalogDiff = catalogStock - stockFinal;
+      if (!isCatalogSynced) {
+        allCatalogSynced = false;
+        catalogDiscrepanciesCount++;
+      }
+
       totalInitialStock += stockInitial;
       totalFinalStock += stockFinal;
       totalNetChange += netChange;
@@ -996,6 +1010,9 @@ export async function getStockReportData(
         netChange,
         stockFinal,
         isBalanced,
+        catalogStock,
+        catalogDiff,
+        isCatalogSynced,
       });
     }
 
@@ -1006,6 +1023,8 @@ export async function getStockReportData(
       summary,
       movements: periodMovements,
       allBalanced,
+      allCatalogSynced,
+      catalogDiscrepanciesCount,
       totalInitialStock,
       totalFinalStock,
       totalNetChange,
@@ -1019,6 +1038,8 @@ export async function getStockReportData(
       summary: [],
       movements: [],
       allBalanced: false,
+      allCatalogSynced: false,
+      catalogDiscrepanciesCount: 0,
       totalInitialStock: 0,
       totalFinalStock: 0,
       totalNetChange: 0,
