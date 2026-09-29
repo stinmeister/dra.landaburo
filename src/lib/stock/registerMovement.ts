@@ -196,6 +196,21 @@ export async function registerStockMovement(
     }
   }
 
+  // Si el producto no registra movimientos previos en el libro, su primer recuento/ajuste
+  // es su línea de base fundacional. Se rotula explícitamente para computarlo en Altas / Base.
+  let finalNotes = notes?.trim() || null;
+  const { count: priorCount } = await admin
+    .from('stock_movements')
+    .select('id', { count: 'exact', head: true })
+    .eq('product_id', productId);
+
+  if ((priorCount === 0 || priorCount === null) && (type === 'recuento' || type === 'ajuste')) {
+    const lower = (finalNotes || '').toLowerCase();
+    if (!lower.includes('línea de base') && !lower.includes('linea de base') && !lower.includes('recuento inicial')) {
+      finalNotes = finalNotes ? `${finalNotes} (Línea de base / Recuento inicial)` : 'Línea de base / Recuento inicial';
+    }
+  }
+
   // 6. Insertar movimiento en stock_movements
   const insertPayload: any = {
     product_id: productId,
@@ -208,7 +223,7 @@ export async function registerStockMovement(
     created_by: authorUserId,
     reference_type: referenceType || null,
     reference_id: referenceId || null,
-    notes: notes?.trim() || null,
+    notes: finalNotes,
   };
 
   // Si hay sesión de usuario, insertar usando el cliente del usuario para ejercitar

@@ -495,7 +495,7 @@ export default function ProductTable({
               const isOut = currentStock === 0;
               const lowStock = currentStock <= threshold;
               const isUpdatingThis = stockPendingId === p.id;
-              const isPendingBaseline = pendingBaselineProductIds.includes(p.id) || p.name.toLowerCase().includes('antiox c');
+              const isPendingBaseline = pendingBaselineProductIds.includes(p.id);
               return (
                 <tr key={p.id} className={!p.is_active ? styles.rowInactive : ''}>
                   <td className={styles.imgCell}>
