@@ -101,11 +101,15 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
       <div className={styles.footer}>
         <div className={styles.contactItem}>
           <Phone size={20} />
-          <span>{siteContent.contact.phoneDisplay}</span>
+          <a href={`tel:${siteContent.contact.phone.replace(/[^0-9+]/g, '')}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+            {siteContent.contact.phoneDisplay}
+          </a>
         </div>
         <div className={styles.contactItem}>
           <Mail size={20} />
-          <span>{siteContent.contact.email}</span>
+          <a href={`mailto:${siteContent.contact.email}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+            {siteContent.contact.email}
+          </a>
         </div>
       </div>
     </div>

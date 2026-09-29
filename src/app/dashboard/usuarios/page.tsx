@@ -197,10 +197,6 @@ export default async function UsuariosPage() {
               <input name="email" type="email" required className={styles.input} placeholder="maria@consultorio.com" />
             </div>
             <div className={styles.field}>
-              <label className={styles.label}>Contrasena temporal</label>
-              <input name="password" type="password" required minLength={8} className={styles.input} placeholder="Minimo 8 caracteres" />
-            </div>
-            <div className={styles.field}>
               <label className={styles.label}>Rol</label>
               <select name="role" required className={styles.input}>
                 <option value="medico">Medico/a</option>
@@ -210,7 +206,10 @@ export default async function UsuariosPage() {
               </select>
             </div>
           </div>
-          <button type="submit" className={styles.createBtn}>Crear miembro del equipo</button>
+          <p style={{ fontSize: '0.85rem', color: 'var(--color-gris)', margin: '0.75rem 0' }}>
+            ℹ️ Por seguridad, el sistema enviará una invitación oficial al correo del nuevo miembro para que establezca su propia contraseña. Ningún administrador puede definirla.
+          </p>
+          <button type="submit" className={styles.createBtn}>Invitar miembro del equipo</button>
         </form>
       </div>
     </div>

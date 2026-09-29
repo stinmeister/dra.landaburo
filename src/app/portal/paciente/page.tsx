@@ -100,7 +100,7 @@ export default async function PortalPacientePage() {
     .from('patients')
     .select('id, profile_id')
     .eq('profile_id', user.id)
-    .single<PatientProfile>();
+    .maybeSingle<PatientProfile>();
 
   // All three queries can run in parallel once we have the patient ID
   const [appointmentsResult, ordersResult, giftCardsResult] = await Promise.all([

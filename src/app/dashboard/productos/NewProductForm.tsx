@@ -150,8 +150,9 @@ export default function NewProductForm({ categories, categoryNames }: Props) {
           </div>
 
           <div className={styles.field}>
-            <label className={styles.label}>Línea / Laboratorio (brand_type)</label>
-            <select name="brand_type" defaultValue="Bellivm" className={styles.input}>
+            <label className={styles.label}>Línea / Laboratorio *</label>
+            <select name="brand_type" required defaultValue="" className={styles.input}>
+              <option value="" disabled>Seleccionar laboratorio / línea...</option>
               <option value="Bellivm">Bellivm</option>
               <option value="Revitalash">Revitalash</option>
               <option value="Dra. Landaburo">Dra. Landaburo</option>
@@ -205,7 +206,7 @@ export default function NewProductForm({ categories, categoryNames }: Props) {
               placeholder="Composición, presentación y modo de aplicación..."
             />
             <span style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: isMedicamento ? '#b45309' : 'var(--color-gris)', fontWeight: isMedicamento ? 600 : 400 }}>
-              * Medicamentos bajo receta (Latisse, Minoxidil, Dutasteride): deben guardarse como no públicos conforme normativa ANMAT (Disp. 4059/2025).
+              * Medicamentos bajo receta (Latisse, Minoxidil, Dutasteride): deben guardarse como no públicos (venta bajo receta médica).
             </span>
           </div>
 

@@ -74,7 +74,9 @@ export default function Footer() {
           <h3 className={styles.title}>Contacto</h3>
           <div className={styles.infoItem}>
             <Phone size={20} />
-            <span>+54 9 11 6968-4062</span>
+            <a href="tel:+5491169684062" className={styles.link}>
+              +54 9 11 6968-4062
+            </a>
           </div>
           <div className={styles.infoItem}>
             <Mail size={20} />

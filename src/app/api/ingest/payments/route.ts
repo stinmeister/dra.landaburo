@@ -1,6 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { persistReviewItems } from "@/lib/ingest-review";
+import { loadProfessionals } from "@/lib/professionals";
+
+/**
+ * Genera variantes del external_id para búsqueda tolerante de duplicados
+ * (con hora vs sin hora / fecha pura YYYY-MM-DD).
+ */
+function getExternalIdVariants(claveUnica: string): string[] {
+  const variants = new Set<string>();
+  const trimmed = (claveUnica || "").trim();
+  if (!trimmed) return [];
+  variants.add(trimmed);
+
+  if (trimmed.includes("|")) {
+    const parts = trimmed.split("|");
+    if (parts.length >= 2) {
+      const datePart = parts[1].trim();
+      const dateMatch = datePart.match(/^(\d{4}-\d{2}-\d{2})/);
+      if (dateMatch) {
+        const normalizedDate = dateMatch[1];
+        const dateOnlyClave = `${parts[0]}|${normalizedDate}|${parts.slice(2).join("|")}`;
+        variants.add(dateOnlyClave);
+      }
+    }
+  }
+
+  return Array.from(variants);
+}
 
 // POST /api/ingest/payments
 // Auth: Authorization: Bearer $INGEST_SECRET
@@ -273,26 +300,6 @@ async function resolvePatient(
 
 // ─── Mapa de profesionales y tasas de comisión ────────────────────────────────
 
-const STATIC_PROFESSIONAL_MAP: Record<string, string> = {
-  // Dra. Paula Natalia Landaburo
-  "landaburo, natalia": "ed7a0c98-3333-4f08-8c44-09b8587652bd",
-  "landaburo, paula": "ed7a0c98-3333-4f08-8c44-09b8587652bd",
-  "paula natalia landaburo": "ed7a0c98-3333-4f08-8c44-09b8587652bd",
-  "paula landaburo": "ed7a0c98-3333-4f08-8c44-09b8587652bd",
-  "natalia landaburo": "ed7a0c98-3333-4f08-8c44-09b8587652bd",
-  "dra. landaburo": "ed7a0c98-3333-4f08-8c44-09b8587652bd",
-  "dra landaburo": "ed7a0c98-3333-4f08-8c44-09b8587652bd",
-  "dra paula landaburo": "ed7a0c98-3333-4f08-8c44-09b8587652bd",
-  "dra. paula landaburo": "ed7a0c98-3333-4f08-8c44-09b8587652bd",
-
-  // Mercedes Pasquet (Cosmetología)
-  "pasquet, mercedes": "11123745-1a5a-428c-9bed-29de4355d59c",
-  "mercedes pasquet": "11123745-1a5a-428c-9bed-29de4355d59c",
-  "mechi pasquet": "11123745-1a5a-428c-9bed-29de4355d59c",
-  "pasquet mercedes": "11123745-1a5a-428c-9bed-29de4355d59c",
-  "pasquet": "11123745-1a5a-428c-9bed-29de4355d59c",
-};
-
 interface ProfessionalInfo {
   id: string;
   fullName: string;
@@ -302,55 +309,35 @@ interface ProfessionalInfo {
 async function getProfesionalData(): Promise<{
   nameToIdMap: Map<string, string>;
   idToInfoMap: Map<string, ProfessionalInfo>;
+  resolveProfFn: (input: string | null | undefined) => any;
 }> {
   const nameToIdMap = new Map<string, string>();
   const idToInfoMap = new Map<string, ProfessionalInfo>();
+  let resolveProfFn: (input: string | null | undefined) => any = () => null;
 
   try {
-    const { data: profiles, error } = await supabaseAdmin
-      .from("profiles")
-      .select("id, full_name, role")
-      .in("role", ["admin", "medico", "cosmetologa"]);
+    const { professionals, resolveProfessional } = await loadProfessionals(supabaseAdmin);
+    resolveProfFn = resolveProfessional;
 
-    if (!error && profiles) {
-      for (const p of profiles) {
-        if (!p.full_name || !p.id) continue;
-        const info: ProfessionalInfo = {
-          id: p.id,
-          fullName: p.full_name,
-          role: p.role ?? "",
-        };
-        idToInfoMap.set(p.id, info);
+    for (const p of professionals) {
+      const info: ProfessionalInfo = {
+        id: p.id,
+        fullName: p.fullName,
+        role: p.role ?? "",
+      };
+      idToInfoMap.set(p.id, info);
 
-        const nameLower = p.full_name.toLowerCase();
-        nameToIdMap.set(p.full_name, p.id);
-        nameToIdMap.set(nameLower, p.id);
-
-        if (nameLower.includes("natalia") || nameLower.includes("paula")) {
-          nameToIdMap.set("Landaburo, Natalia", p.id);
-          nameToIdMap.set("landaburo, natalia", p.id);
-          nameToIdMap.set("Landaburo, Paula", p.id);
-          nameToIdMap.set("landaburo, paula", p.id);
-          nameToIdMap.set("Dra. Landaburo", p.id);
-          nameToIdMap.set("dra. landaburo", p.id);
-          nameToIdMap.set("Dra Landaburo", p.id);
-          nameToIdMap.set("dra landaburo", p.id);
-        }
-        if (nameLower.includes("pasquet") || nameLower.includes("mercedes")) {
-          nameToIdMap.set("Pasquet, Mercedes", p.id);
-          nameToIdMap.set("pasquet, mercedes", p.id);
-          nameToIdMap.set("Mercedes Pasquet", p.id);
-          nameToIdMap.set("mercedes pasquet", p.id);
-          nameToIdMap.set("Mechi Pasquet", p.id);
-          nameToIdMap.set("mechi pasquet", p.id);
-        }
+      nameToIdMap.set(p.fullName, p.id);
+      nameToIdMap.set(p.fullName.toLowerCase(), p.id);
+      for (const alias of p.aliases) {
+        nameToIdMap.set(alias, p.id);
       }
     }
   } catch (err) {
     console.warn("[ingest_payments] Excepción al consultar profiles:", err);
   }
 
-  return { nameToIdMap, idToInfoMap };
+  return { nameToIdMap, idToInfoMap, resolveProfFn };
 }
 
 async function getCommissionRatesMap(): Promise<Map<string, number>> {
@@ -444,7 +431,7 @@ export async function POST(req: NextRequest) {
   }
 
   // ── 3. Carga de mapa de profesionales, tasas de comisión y corte ──────────
-  const { nameToIdMap: profesionalMap, idToInfoMap } = await getProfesionalData();
+  const { nameToIdMap: profesionalMap, idToInfoMap, resolveProfFn } = await getProfesionalData();
   const commissionRatesMap = await getCommissionRatesMap();
   const cutoffDate = getCutoffDate();
   const { usdMax, arsMin } = getCurrencyThresholds();
@@ -514,10 +501,12 @@ export async function POST(req: NextRequest) {
     } | null = null;
 
     {
+      const extVariants = getExternalIdVariants(rec.clave_unica);
       const { data: existingData, error: extIdError } = await supabaseAdmin
         .from("payments")
         .select("id, amount_ars, amount_usd, currency, payment_method, notes")
-        .eq("external_id", rec.clave_unica)
+        .in("external_id", extVariants)
+        .limit(1)
         .maybeSingle();
 
       if (extIdError) {
@@ -657,8 +646,9 @@ export async function POST(req: NextRequest) {
     if (!resolvedProfId && rawProf) {
       const normProf = rawProf.toLowerCase();
       let mapped = profesionalMap.get(rawProf) || profesionalMap.get(normProf);
-      if (!mapped && STATIC_PROFESSIONAL_MAP[normProf]) {
-        mapped = STATIC_PROFESSIONAL_MAP[normProf];
+      if (!mapped && resolveProfFn) {
+        const found = resolveProfFn(rawProf);
+        if (found) mapped = found.id;
       }
       if (mapped) resolvedProfId = mapped;
     }
@@ -818,7 +808,35 @@ export async function POST(req: NextRequest) {
         approxQuery.eq("amount_ars", montoRaw);
       }
 
-      const { data: existingApprox, error: approxError } = await approxQuery.maybeSingle();
+      let { data: existingApprox, error: approxError } = await approxQuery.maybeSingle();
+
+      // Guardarraíl adicional: Si no coincidió en ventana de ±15 min (porque un registro fue
+      // guardado a medianoche y el otro con hora específica), buscar por día calendario completo en Argentina (-03:00)
+      if (!existingApprox && hasSpecificTime) {
+        const pYear = parsedDate.getFullYear();
+        const pMonth = String(parsedDate.getMonth() + 1).padStart(2, "0");
+        const pDay = String(parsedDate.getDate()).padStart(2, "0");
+        const dayStartIso = `${pYear}-${pMonth}-${pDay}T00:00:00-03:00`;
+        const dayEndIso = `${pYear}-${pMonth}-${pDay}T23:59:59.999-03:00`;
+
+        const sameDayQuery = supabaseAdmin
+          .from("payments")
+          .select("id, payment_date")
+          .eq("patient_id", patientId)
+          .gte("payment_date", dayStartIso)
+          .lte("payment_date", dayEndIso);
+
+        if (detectedCurrency === "USD") {
+          sameDayQuery.eq("amount_usd", montoRaw);
+        } else {
+          sameDayQuery.eq("amount_ars", montoRaw);
+        }
+
+        const { data: existingSameDay } = await sameDayQuery.limit(1).maybeSingle();
+        if (existingSameDay) {
+          existingApprox = existingSameDay;
+        }
+      }
 
       if (!approxError && existingApprox) {
         duplicates_approx++;

@@ -51,32 +51,41 @@ export async function createStaffUser(formData: FormData) {
 
   const fullName = (formData.get('full_name') as string)?.trim();
   const email    = (formData.get('email') as string)?.trim();
-  const password = (formData.get('password') as string)?.trim();
   const role     = formData.get('role') as string;
 
   const staffRoles = ['admin', 'medico', 'operativo', 'cosmetologa'];
-  if (!fullName || !email || !password || !staffRoles.includes(role)) {
+  if (!fullName || !email || !staffRoles.includes(role)) {
     throw new Error('Datos incompletos o rol inválido.');
   }
 
   const admin = createAdminClient();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://dralandaburo.com';
+  const redirectTo = `${siteUrl}/actualizar-contrasena`;
 
-  const { data: authData, error: authError } = await admin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    user_metadata: { full_name: fullName },
+  // Invitar al usuario por correo electrónico para que defina su propia clave
+  const { data: authData, error: authError } = await admin.auth.admin.inviteUserByEmail(email, {
+    data: { full_name: fullName },
+    redirectTo,
   });
 
-  if (authError || !authData.user) {
-    throw new Error(`Error al crear usuario en autenticación: ${authError?.message || 'Error desconocido'}`);
+  let userId = authData?.user?.id;
+
+  if (authError || !userId) {
+    // Si el usuario ya existía en auth, buscar su id para actualizar su rol
+    const { data: listData } = await admin.auth.admin.listUsers();
+    const existing = listData?.users?.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+    if (existing) {
+      userId = existing.id;
+    } else {
+      throw new Error(`Error al invitar usuario: ${authError?.message || 'Error desconocido'}`);
+    }
   }
 
-  // Upsert profile con email incluido (la tabla profiles tiene email NOT NULL)
+  // Upsert profile con email incluido
   const { error: profError } = await admin
     .from('profiles')
     .upsert({
-      id: authData.user.id,
+      id: userId,
       email,
       full_name: fullName,
       role,
@@ -150,36 +159,5 @@ export async function adminSendRecoveryEmail(
   }
 
   return { success: true };
-}
-
-export async function adminGenerateRecoveryLink(
-  email: string
-): Promise<{ success: boolean; recoveryLink?: string; error?: string }> {
-  await assertAdmin();
-
-  if (!email) {
-    return { success: false, error: 'Email no válido.' };
-  }
-
-  const admin = createAdminClient();
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://dralandaburo.com';
-  const redirectTo = `${siteUrl}/auth/callback?next=/actualizar-contrasena`;
-
-  const { data, error } = await admin.auth.admin.generateLink({
-    type: 'recovery',
-    email: email.trim(),
-    options: {
-      redirectTo,
-    },
-  });
-
-  if (error) {
-    return { success: false, error: `Error al generar enlace: ${error.message}` };
-  }
-
-  return {
-    success: true,
-    recoveryLink: data?.properties?.action_link,
-  };
 }
 

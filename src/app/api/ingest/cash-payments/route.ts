@@ -87,34 +87,13 @@ function parseName(raw: string): ParsedName {
   return { norm, sortedTokens, firstLast, lastFirst };
 }
 
+import { loadProfessionals } from "@/lib/professionals";
+
 interface CachedPatient {
   id: string;
   full_name: string;
   parsed: ParsedName;
 }
-
-const STATIC_PROFESSIONAL_MAP: Record<string, { id: string; name: string }> = {
-  "landaburo natalia": {
-    id: "ed7a0c98-3333-4f08-8c44-09b8587652bd",
-    name: "Dra. Paula Natalia Landaburo",
-  },
-  "pasquet mercedes": {
-    id: "11123745-1a5a-428c-9bed-29de4355d59c",
-    name: "Mercedes Pasquet",
-  },
-  nati: {
-    id: "ed7a0c98-3333-4f08-8c44-09b8587652bd",
-    name: "Dra. Paula Natalia Landaburo",
-  },
-  "paula landaburo": {
-    id: "ed7a0c98-3333-4f08-8c44-09b8587652bd",
-    name: "Dra. Paula Natalia Landaburo",
-  },
-  "natalia landaburo": {
-    id: "ed7a0c98-3333-4f08-8c44-09b8587652bd",
-    name: "Dra. Paula Natalia Landaburo",
-  },
-};
 
 function normalizePaymentMethod(raw: string): string {
   const norm = normalizeText(raw);
@@ -178,6 +157,7 @@ export async function POST(req: NextRequest) {
   }
 
   const supabaseAdmin = createAdminClient();
+  const { resolveProfessional } = await loadProfessionals(supabaseAdmin);
 
   // ── 3. Cargar padrón de pacientes para vinculación en memoria ───────────────
   let cachedPatients: CachedPatient[] = [];
@@ -257,22 +237,16 @@ export async function POST(req: NextRequest) {
       notesArr.push("[VENTA-MOSTRADOR]");
     }
 
-    // Asignación de Profesional
+    // Asignación de Profesional dinámico
     let profName: string | null = null;
     let profId: string | null = null;
 
-    if (!isProductSale) {
-      const normOrigin = normalizeText(rawOrigin);
-      if (STATIC_PROFESSIONAL_MAP[normOrigin]) {
-        profId = STATIC_PROFESSIONAL_MAP[normOrigin].id;
-        profName = STATIC_PROFESSIONAL_MAP[normOrigin].name;
-      } else if (normOrigin.includes("pasquet")) {
-        profId = "11123745-1a5a-428c-9bed-29de4355d59c";
-        profName = "Mercedes Pasquet";
-      } else if (normOrigin.includes("landaburo") || normOrigin === "nati") {
-        profId = "ed7a0c98-3333-4f08-8c44-09b8587652bd";
-        profName = "Dra. Paula Natalia Landaburo";
-      } else if (rawOrigin) {
+    if (!isProductSale && rawOrigin) {
+      const resolvedProf = resolveProfessional(rawOrigin);
+      if (resolvedProf) {
+        profId = resolvedProf.id;
+        profName = resolvedProf.fullName;
+      } else {
         profName = rawOrigin;
       }
     }

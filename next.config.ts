@@ -1,5 +1,14 @@
 import type { NextConfig } from "next";
 
+let supabaseHostname = 'mdletvbgwzbpenzevurr.supabase.co';
+if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  try {
+    supabaseHostname = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname;
+  } catch {
+    // fallback
+  }
+}
+
 const nextConfig: NextConfig = {
   output: 'standalone',
   images: {
@@ -7,6 +16,15 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'dralandaburo.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.dralandaburo.com',
+      },
+      {
+        protocol: 'https',
+        hostname: supabaseHostname,
+        pathname: '/storage/v1/object/public/**',
       },
     ],
   },

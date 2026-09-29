@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { isRateLimited, getClientIp } from '@/lib/rateLimit';
 
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O, no 1/I
 
@@ -42,6 +43,14 @@ interface ValidatedItem {
 }
 
 export async function POST(req: NextRequest) {
+  const clientIp = getClientIp(req.headers);
+  if (isRateLimited(clientIp, 'checkout-giftcard', { windowMs: 60 * 1000, max: 10 })) {
+    return NextResponse.json(
+      { error: 'Demasiadas solicitudes de compra de gift cards. Por favor aguarde un momento.' },
+      { status: 429 }
+    );
+  }
+
   let body: {
     items?: IncomingItem[];
     treatment_id?: string | null;

@@ -310,11 +310,18 @@ export default async function EjecutivoPage({
   );
   const totalUSD = usdRows.reduce((sum, p) => sum + Number(p.amount_usd ?? 0), 0);
 
-  // Comisiones de Mercedes Pasquet (Parte 3)
-  // El 70% le corresponde a Mechi y el 30% al consultorio. Se liquida sobre lo cobrado.
-  const MECHI_PROFILE_ID = '11123745-1a5a-428c-9bed-29de4355d59c';
+  // Comisiones de Cosmetología / Mechi Pasquet
+  // El 70% le corresponde a la profesional y el 30% al consultorio. Se liquida sobre lo cobrado.
+  const { data: cosmetologaProfiles } = await adminClient
+    .from('profiles')
+    .select('id, full_name')
+    .or('role.eq.cosmetologa,full_name.ilike.%pasquet%');
+
+  const mechiProfileIds = new Set((cosmetologaProfiles || []).map((p) => p.id));
   const mechiTreatmentRows = treatmentRows.filter(
-    (p: any) => p.professional_profile_id === MECHI_PROFILE_ID || p.notes?.toLowerCase().includes('pasquet')
+    (p: any) =>
+      (p.professional_profile_id && mechiProfileIds.has(p.professional_profile_id)) ||
+      p.notes?.toLowerCase().includes('pasquet')
   );
 
   const totalCobradoMechi = mechiTreatmentRows.reduce(
@@ -328,7 +335,7 @@ export default async function EjecutivoPage({
   // Facturación neta del consultorio (facturación total menos honorarios pagados a Mechi)
   const facturacionNetaConsultorio = totalARS - honorariosMercedes;
 
-  // 2. Consulta de cobros del mes para la tabla paginada (Punto B)
+  // 2. Consulta de cobros del mes para la tabla detallada (sin límite artificial)
   const { data: paymentsRaw, error: paymentsError } = await adminClient
     .from('payments')
     .select(`
@@ -345,8 +352,7 @@ export default async function EjecutivoPage({
     `)
     .gte('payment_date', monthStart)
     .lte('payment_date', monthEnd)
-    .order('payment_date', { ascending: false })
-    .limit(200);
+    .order('payment_date', { ascending: false });
 
   const payments: Payment[] = paymentsRaw
     ? (paymentsRaw as unknown as Payment[])

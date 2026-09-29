@@ -221,7 +221,7 @@ export default function GiftCardForm({ catalog }: { catalog: GiftCardCatalogItem
                       : f === 'treatment'
                       ? 'Cosmiatría (Mercedes)'
                       : f === 'product'
-                      ? 'Skincare (Sulderm)'
+                      ? 'Productos / Skincare'
                       : 'Monto Libre ($ ARS)'}
                   </button>
                 ))}

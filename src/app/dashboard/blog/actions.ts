@@ -107,7 +107,7 @@ export async function uploadBlogCover(formData: FormData): Promise<{ success: bo
     const buffer = Buffer.from(arrayBuffer);
 
     const { error: uploadErr } = await admin.storage
-      .from('products')
+      .from('blog')
       .upload(fileName, buffer, {
         contentType: file.type,
         upsert: true,
@@ -118,7 +118,7 @@ export async function uploadBlogCover(formData: FormData): Promise<{ success: bo
       return { success: false, error: `Error de almacenamiento: ${uploadErr.message}` };
     }
 
-    const { data: publicUrlData } = admin.storage.from('products').getPublicUrl(fileName);
+    const { data: publicUrlData } = admin.storage.from('blog').getPublicUrl(fileName);
     return { success: true, url: publicUrlData.publicUrl };
   } catch (err: any) {
     console.error('[uploadBlogCover Error]:', err);

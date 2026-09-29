@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { isRateLimited, getClientIp } from '@/lib/rateLimit';
 
 interface CartItemPayload {
   id: string;
@@ -31,6 +32,14 @@ function isValidEmail(email: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
+  const clientIp = getClientIp(req.headers);
+  if (isRateLimited(clientIp, 'checkout-mp', { windowMs: 60 * 1000, max: 10 })) {
+    return NextResponse.json(
+      { error: 'Demasiadas solicitudes de compra. Por favor aguarde un momento.' },
+      { status: 429 }
+    );
+  }
+
   let body: CheckoutBody;
   try {
     body = await req.json();

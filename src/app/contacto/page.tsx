@@ -48,7 +48,11 @@ export default function ContactoPage() {
                     <Phone className={styles.icon} size={24} />
                     <div>
                       <h3>Teléfono / WhatsApp</h3>
-                      <p>+54 9 11 6968-4062</p>
+                      <p>
+                        <a href="tel:+5491169684062" style={{ color: 'inherit', textDecoration: 'none' }}>+54 9 11 6968-4062</a>
+                        {' · '}
+                        <a href="https://wa.me/5491169684062" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-champagne)', textDecoration: 'underline' }}>WhatsApp</a>
+                      </p>
                     </div>
                   </div>
                   
@@ -56,7 +60,9 @@ export default function ContactoPage() {
                     <Mail className={styles.icon} size={24} />
                     <div>
                       <h3>Email</h3>
-                      <p>Paula@dralandaburo.com</p>
+                      <p>
+                        <a href="mailto:Paula@dralandaburo.com" style={{ color: 'inherit', textDecoration: 'none' }}>Paula@dralandaburo.com</a>
+                      </p>
                     </div>
                   </div>
                   

@@ -9,8 +9,9 @@ import type { Product } from '@/lib/types/product';
 import styles from './ProductCard.module.css';
 
 export const formatARS = (n: number | string | undefined | null) => {
+  if (n === null || n === undefined || n === '') return 'A consultar';
   const num = typeof n === 'number' ? n : parseFloat(String(n || 0));
-  if (isNaN(num)) return '$ 0';
+  if (isNaN(num) || num <= 0) return 'A consultar';
   return `$ ${Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
 };
 

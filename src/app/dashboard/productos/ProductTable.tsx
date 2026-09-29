@@ -562,7 +562,13 @@ export default function ProductTable({
                   </td>
                   <td className={styles.catCell}>{p.category}</td>
                   <td className={styles.priceCell}>
-                    ${Number(p.price_ars).toLocaleString('es-AR', { minimumFractionDigits: 0 })}
+                    {p.price_ars !== null && p.price_ars !== undefined && Number(p.price_ars) > 0 ? (
+                      `$${Number(p.price_ars).toLocaleString('es-AR', { minimumFractionDigits: 0 })}`
+                    ) : (
+                      <span style={{ color: 'var(--color-gris)', fontStyle: 'italic', fontSize: '0.85rem' }}>
+                        A consultar
+                      </span>
+                    )}
                   </td>
                   <td className={isOut ? styles.stockLow : (lowStock ? styles.stockLow : styles.stockOk)}>
                     {currentStock} ud.
