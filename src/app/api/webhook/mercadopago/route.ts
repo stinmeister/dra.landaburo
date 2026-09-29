@@ -91,7 +91,11 @@ async function processPaymentNotification(paymentId: string, mpAccessToken: stri
       headers: { Authorization: `Bearer ${mpAccessToken}` },
     });
     if (!mpRes.ok) {
-      console.error('[Webhook/MP Async] Error al consultar pago en MP API:', mpRes.status);
+      if (mpRes.status === 404) {
+        console.warn(`[Webhook/MP Async] Pago #${paymentId} no encontrado en la API de Mercado Pago (404 Not Found). Simulación del panel o ID inexistente. Ignorado de forma segura sin reintentos.`);
+      } else {
+        console.error('[Webhook/MP Async] Error al consultar pago en MP API:', mpRes.status);
+      }
       return;
     }
     mpPayment = await mpRes.json();
@@ -113,6 +117,18 @@ async function processPaymentNotification(paymentId: string, mpAccessToken: stri
     const giftCardId = externalRef.replace('giftcard:', '');
 
     if (mpStatus === 'approved') {
+      // Idempotencia: verificar si la gift card ya está activa con este pago
+      const { data: existingCard } = await supabase
+        .from('gift_cards')
+        .select('id, status, mp_payment_id')
+        .eq('id', giftCardId)
+        .maybeSingle();
+
+      if (existingCard && existingCard.status === 'active' && existingCard.mp_payment_id === String(paymentId)) {
+        console.log(`[Webhook/MP Async] Gift Card #${giftCardId} ya procesada como 'active' para pago #${paymentId}. Omitiendo duplicado.`);
+        return;
+      }
+
       const expirationDate = new Date();
       expirationDate.setDate(expirationDate.getDate() + 90);
 
@@ -239,7 +255,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Cuerpo inválido.' }, { status: 400 });
   }
 
-  // 1. Extraer y loguear live_mode explícitamente en cada notificación (2.1 a)
+  // 1. Extraer y loguear live_mode informativamente en cada notificación.
+  // NOTA ARQUITECTÓNICA: live_mode se utiliza únicamente con fines de auditoría.
+  // El simulador oficial del panel de Mercado Pago envía `live_mode: false` incluso contra la URL de producción.
+  // Por diseño explícito, este handler NUNCA bifurca bases de datos, tablas ni credenciales basándose en live_mode;
+  // opera de forma consistente contra el entorno único de producción configurado en .env.local.
   const liveMode = typeof notification.live_mode === 'boolean' ? notification.live_mode : null;
   const rawPaymentId = (notification.data as Record<string, unknown>)?.id ?? notification.id;
   const paymentId = rawPaymentId ? String(rawPaymentId) : null;
@@ -267,7 +287,10 @@ export async function POST(req: NextRequest) {
   const mpAccessToken = process.env.MP_ACCESS_TOKEN;
 
   if (!webhookSecret) {
-    console.error('[Webhook/MP] RECHAZADO: MP_WEBHOOK_SECRET no está configurado en las variables de entorno.');
+    const reqId = req.headers.get('x-request-id') || 'desconocido';
+    console.error(
+      `[Webhook/MP] RECHAZADO 503: MP_WEBHOOK_SECRET no está configurado en las variables de entorno. data.id=${paymentId}, x-request-id=${reqId}`
+    );
     return NextResponse.json(
       { error: 'Servicio no configurado para recibir webhooks de pago.' },
       { status: 503 }

@@ -177,7 +177,6 @@ export async function POST(req: NextRequest) {
       failure: `${siteUrl}/tienda/pago/fallo?order_id=${order.id}`,
     },
     auto_return: 'approved',
-    notification_url: `${siteUrl}/api/webhook/mercadopago`,
     statement_descriptor: 'DRA LANDABURO',
   };
 

@@ -222,12 +222,12 @@ export default function CarritoPage() {
                     type="button"
                     className={styles.checkoutBtn}
                     disabled
-                    style={{ opacity: 0.6, cursor: 'not-allowed', marginBottom: '0.75rem', backgroundColor: '#9ca3af' }}
+                    style={{ opacity: 0.7, cursor: 'not-allowed', marginBottom: '0.75rem', backgroundColor: '#9ca3af' }}
                   >
-                    Compra online próximamente
+                    Los pagos online están temporalmente fuera de servicio
                   </button>
-                  <p style={{ fontSize: '0.82rem', color: 'var(--color-gris)', marginBottom: '0.75rem', lineHeight: 1.4 }}>
-                    La pasarela de pago online está en proceso de activación. Podés coordinar tu compra directamente con nuestro equipo:
+                  <p style={{ fontSize: '0.85rem', color: 'var(--color-gris)', marginBottom: '0.75rem', lineHeight: 1.4 }}>
+                    Escribinos por WhatsApp para coordinar tu compra:
                   </p>
                   <a
                     href={`https://wa.me/5491169684062?text=${encodeURIComponent(

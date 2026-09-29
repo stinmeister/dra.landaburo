@@ -313,7 +313,6 @@ export async function POST(req: NextRequest) {
       failure: `${siteUrl}/tienda/pago/fallo?gift_card=${giftCard.id}`,
     },
     auto_return: 'approved',
-    notification_url: `${siteUrl}/api/webhook/mercadopago`,
     statement_descriptor: 'DRA LANDABURO GIFT',
   };
 

@@ -57,7 +57,7 @@ interface CartItem {
 - Inserta los registros correspondientes en `order_items`.
 - Llama a `https://api.mercadopago.com/checkout/preferences` con:
   - `external_reference: order.id`
-  - `notification_url: https://dralandaburo.com/api/webhook/mercadopago`
+  - *(Sin `notification_url` en preferencia: se configura a nivel aplicación en el panel Developers de Mercado Pago para habilitar la firma secreta HMAC-SHA256).*
   - `back_urls`: `success: /tienda/pago/exito`, `failure: /tienda/pago/fallo`, `pending: /tienda/pago/pendiente`.
   - `auto_return: "approved"`.
 
