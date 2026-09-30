@@ -273,7 +273,14 @@ export async function POST(req: NextRequest) {
     timestamp: new Date().toISOString(),
   });
 
-  // Topics de Checkout Pro: atender payment; responder 200 en merchant_order u otros
+  // DECISIÓN ARQUITECTÓNICA DELIBERADA:
+  // Checkout Pro dispara eventos tanto de 'payment' como de 'merchant_order' o 'test'.
+  // Nuestra arquitectura procesa únicamente eventos 'payment' (que acreditan o rechazan cobros reales).
+  // Los eventos ajenos a 'payment' no mutan la base de datos ni modifican stock.
+  // Responder HTTP 200 inmediatamente a 'merchant_order' u otros evita que Mercado Pago inicie
+  // una tormenta de reintentos con backoff durante 24 horas sobre eventos no requeridos.
+  // Por diseño, el 503 por falta de MP_WEBHOOK_SECRET protege únicamente la ruta crítica de 'payment',
+  // permitiendo que pings o eventos informativos sean absorbidos limpiamente sin generar falsas alertas.
   if (notification.topic !== 'payment' && notification.type !== 'payment') {
     return NextResponse.json({ ok: true });
   }
