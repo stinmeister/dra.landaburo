@@ -78,10 +78,10 @@ export default async function OperativoDashboard() {
   try {
     let query = supabase
       .from('staff_tasks')
-      .select('id, title, description, status')
-      .eq('due_date', todayAR)
+      .select('id, title, description, status, due_date')
       .eq('status', 'pendiente')
-      .order('task_type', { ascending: true });
+      .lte('due_date', todayAR)
+      .order('due_date', { ascending: true });
 
     if (profile.role !== 'admin') {
       query = query.eq('assigned_profile_id', profile.id);
@@ -94,6 +94,8 @@ export default async function OperativoDashboard() {
       title: t.title,
       description: t.description ?? null,
       is_completed: t.status === 'completada',
+      due_date: t.due_date ?? null,
+      is_overdue: t.due_date ? t.due_date < todayAR : false,
     }));
   } catch {
     // Table may not exist yet — show empty gracefully

@@ -12,6 +12,8 @@ export type TaskItem = {
   title: string;
   description: string | null;
   is_completed: boolean;
+  due_date?: string | null;
+  is_overdue?: boolean;
 };
 
 type Props = {
@@ -97,7 +99,7 @@ function TaskRow({
 }) {
   return (
     <div
-      className={`${styles.row} ${isCompleted ? styles.rowCompleted : ''}`}
+      className={`${styles.row} ${isCompleted ? styles.rowCompleted : ''} ${task.is_overdue && !isCompleted ? styles.rowOverdue : ''}`}
     >
       <button
         className={`${styles.checkbox} ${isCompleted ? styles.checkboxChecked : ''}`}
@@ -118,7 +120,14 @@ function TaskRow({
         )}
       </button>
       <div className={styles.taskContent}>
-        <p className={styles.taskTitle}>{task.title}</p>
+        <div className={styles.titleRow}>
+          <p className={styles.taskTitle}>{task.title}</p>
+          {task.is_overdue && !isCompleted && (
+            <span className={styles.overdueBadge}>
+              Vencida {task.due_date ? `(${task.due_date})` : ''}
+            </span>
+          )}
+        </div>
         {task.description && (
           <p className={styles.taskDesc}>{task.description}</p>
         )}
