@@ -103,3 +103,11 @@ interface CartItem {
 3. Según el prefijo de `external_reference`:
    - Si comienza con `giftcard:`: Actualiza la tabla `gift_cards` y dispara el envío de la tarjeta digital por Resend.
    - Si es UUID estándar: Actualiza `orders`, decrementa inventario y notifica al comprador y al consultorio.
+
+### 4.3. Política ante Quiebre de Stock en Venta Online (Opción 1 — Confirmada 01/10/2026)
+- **Pre-validación en Checkout:** `/api/checkout/mercadopago` verifica preventivamente que los productos tengan `stock_quantity > 0` antes de generar la preferencia.
+- **Cobro Aprobado con Stock Insuficiente:** Si dos pacientes compran simultáneamente el último producto o hay desfasaje físico, la orden pagada se cobra y aprueba. En `registerStockMovement`, la `venta_online` queda eximida del bloqueo de stock negativo: asienta la venta contable en el libro mayor y permite que el stock quede temporalmente negativo (ej. `-1`).
+- **Alerta Operativa Automática:** Al registrar un saldo negativo, el sistema inserta una tarea prioritaria en `staff_tasks` asignada al administrador (`task_type: 'stock_alert'`) con el detalle del producto, número de orden y fecha de hoy para coordinar reposición inmediata o contacto con la paciente.
+- **Alternativas descartadas formalmente:**
+  - *Opción 2 (Encolar en revisión sin mover stock):* Descartada porque desalinea el saldo cobrado del libro contable e induce riesgo de órdenes en el limbo si no hay monitoreo manual.
+  - *Opción 3 (Reserva / Hold temporal con TTL):* Descartada por complejidad y sobrecarga de cronjobs en esta fase.

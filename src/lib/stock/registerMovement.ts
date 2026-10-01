@@ -191,7 +191,22 @@ export async function registerStockMovement(
 
     stockAfter = stockBefore + finalDelta;
 
-    // Validación de stock no negativo (excepto en ajuste o venta_online con cobro aprobado)
+    // =========================================================================
+    // DECISIÓN ARQUITECTÓNICA: MANEJO DE SOBREVENTA ONLINE (OPCIÓN 1)
+    // Confirmada el 01/10/2026: Si una venta online fue cobrada y aprobada por Mercado Pago
+    // pero el stock físico resulta insuficiente (por ejemplo, compra simultánea o desfasaje),
+    // el sistema PRIORIZA LA REALIDAD CONTABLE: asienta la venta en el libro mayor y permite
+    // que el stock quede temporalmente negativo (ej. -1).
+    //
+    // Alternativas evaluadas y descartadas:
+    // - Opción 2 (Encolar en revisión sin mover stock): Descartada porque desalinea el saldo cobrado
+    //   del libro mayor y requiere operador manual permanente para no dejar órdenes en el limbo.
+    // - Opción 3 (Reserva / Hold temporal en checkout con TTL): Descartada para esta etapa por su
+    //   alta complejidad de concurrencia y necesidad de cronjobs de desbloqueo de carritos abandonados.
+    //
+    // Consecuencia operativa: se dispara inmediatamente una alerta prioritaria en staff_tasks
+    // para que el personal reponga el producto o contacte a la paciente para coordinar la entrega.
+    // =========================================================================
     if (stockAfter < 0 && type !== 'ajuste' && type !== 'venta_online') {
       const cantSolicitada = Math.abs(finalDelta);
       return {
