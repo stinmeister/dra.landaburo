@@ -22,9 +22,18 @@ interface BuyerPayload {
   phone: string;
 }
 
+interface DeliveryPayload {
+  method?: 'retiro' | 'envio';
+  address?: string;
+  city?: string;
+  postalCode?: string;
+  notes?: string;
+}
+
 interface CheckoutBody {
   items: CartItemPayload[];
   buyer: BuyerPayload;
+  delivery?: DeliveryPayload;
 }
 
 function isValidEmail(email: string): boolean {
@@ -47,7 +56,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Cuerpo de la solicitud inválido.' }, { status: 400 });
   }
 
-  const { items, buyer } = body;
+  const { items, buyer, delivery } = body;
 
   // Validaciones básicas
   if (!Array.isArray(items) || items.length === 0) {
@@ -73,6 +82,37 @@ export async function POST(req: NextRequest) {
       },
     }
   );
+
+  // Verificar estado del checkout y envíos en store_config
+  const { data: storeConfig, error: configError } = await supabase
+    .from('store_config')
+    .select('checkout_enabled, shipping_enabled')
+    .eq('id', 1)
+    .maybeSingle();
+
+  if (configError || !storeConfig?.checkout_enabled) {
+    return NextResponse.json(
+      { error: 'Los pagos online están temporalmente desactivados.' },
+      { status: 403 }
+    );
+  }
+
+  // Validación de entrega
+  const isEnvio = delivery?.method === 'envio';
+  if (isEnvio) {
+    if (!storeConfig.shipping_enabled) {
+      return NextResponse.json(
+        { error: 'Los envíos a domicilio no están habilitados actualmente.' },
+        { status: 400 }
+      );
+    }
+    if (!delivery?.address?.trim() || !delivery?.city?.trim() || !delivery?.postalCode?.trim()) {
+      return NextResponse.json(
+        { error: 'Dirección, localidad y código postal son obligatorios para el envío a domicilio.' },
+        { status: 400 }
+      );
+    }
+  }
 
   // SEGURIDAD: nunca confiar en el precio enviado por el cliente.
   // Buscamos el precio real de cada producto directamente en la BD.
@@ -118,7 +158,7 @@ export async function POST(req: NextRequest) {
   // Calcular total usando precios de la BD, no del cliente
   const totalARS = items.reduce((sum, i) => sum + priceMap.get(i.id)! * i.quantity, 0);
 
-  // Crear orden en Supabase (poblando tanto customer_* como buyer_*)
+  // Crear orden en Supabase (poblando customer_*, buyer_* y datos de entrega)
   const { data: order, error: orderError } = await supabase
     .from('orders')
     .insert({
@@ -131,8 +171,14 @@ export async function POST(req: NextRequest) {
       total_ars: totalARS,
       payment_status: 'pending',
       payment_method: 'mercadopago',
+      delivery_method: isEnvio ? 'envio' : 'retiro',
+      delivery_address: isEnvio ? delivery!.address!.trim() : null,
+      delivery_city: isEnvio ? delivery!.city!.trim() : null,
+      delivery_postal_code: isEnvio ? delivery!.postalCode!.trim() : null,
+      delivery_notes: isEnvio && delivery?.notes?.trim() ? delivery.notes.trim() : null,
+      fulfillment_status: 'pendiente',
     })
-    .select('id')
+    .select('id, order_number')
     .single();
 
   if (orderError || !order) {

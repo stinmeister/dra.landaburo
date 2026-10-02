@@ -18,13 +18,14 @@ import { NextRequest, NextResponse, after } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { registerStockMovement } from '@/lib/stock/registerMovement';
+import { sendOrderEmails } from '@/lib/email/orderEmails';
 
 const MP_STATUS_MAP: Record<string, string> = {
-  approved: 'paid',
+  approved: 'approved',
   pending: 'pending',
   in_process: 'pending',
-  rejected: 'failed',
-  cancelled: 'failed',
+  rejected: 'rejected',
+  cancelled: 'rejected',
   refunded: 'refunded',
   charged_back: 'refunded',
 };
@@ -193,8 +194,12 @@ async function processPaymentNotification(paymentId: string, mpAccessToken: stri
     .eq('id', externalRef)
     .maybeSingle();
 
-  if (existingOrder && existingOrder.payment_status === 'paid' && existingOrder.mp_payment_id === String(paymentId)) {
-    console.log(`[Webhook/MP Async] Orden #${externalRef} ya procesada como 'paid' para pago #${paymentId}. Omitiendo duplicado.`);
+  if (
+    existingOrder &&
+    (existingOrder.payment_status === 'approved' || existingOrder.payment_status === 'paid') &&
+    existingOrder.mp_payment_id === String(paymentId)
+  ) {
+    console.log(`[Webhook/MP Async] Orden #${externalRef} ya procesada como 'approved' para pago #${paymentId}. Omitiendo duplicado.`);
     return;
   }
 
@@ -211,12 +216,12 @@ async function processPaymentNotification(paymentId: string, mpAccessToken: stri
     console.error('[Webhook/MP Async] Error actualizando orden:', externalRef, updateError);
   }
 
-  // Si la orden pasa a 'paid', descontar stock de los productos con tipo 'venta_online'
-  if (newStatus === 'paid') {
+  // Si la orden pasa a 'approved', descontar stock, crear tarea operativa y despachar emails
+  if (newStatus === 'approved' || newStatus === 'paid') {
     try {
       const { data: orderItems, error: itemsErr } = await supabase
         .from('order_items')
-        .select('product_id, quantity')
+        .select('product_id, quantity, unit_price_ars, products(name)')
         .eq('order_id', externalRef);
 
       if (itemsErr) {
@@ -239,8 +244,90 @@ async function processPaymentNotification(paymentId: string, mpAccessToken: stri
           }
         }
       }
+
+      // Obtener datos completos de la orden para tarea y emails
+      const { data: orderData, error: orderErr } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('id', externalRef)
+        .maybeSingle();
+
+      if (orderErr || !orderData) {
+        console.error('[Webhook/MP Async] Error obteniendo datos de orden para tareas/emails:', orderErr);
+      } else {
+        const orderNum = orderData.order_number || `ORD-${externalRef.slice(0, 8)}`;
+        const buyerName = orderData.buyer_name || orderData.customer_name || 'Compradora';
+        const methodDesc = orderData.delivery_method === 'envio' ? 'Envío a domicilio' : 'Retiro en consultorio';
+
+        // 1. Crear tarea en staff_tasks para el equipo operativo (4.5)
+        try {
+          const todayAR = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'America/Argentina/Buenos_Aires',
+          }).format(new Date());
+
+          await supabase.from('staff_tasks').insert({
+            target_role: 'operativo',
+            assigned_profile_id: null,
+            task_type: 'recurrente',
+            title: `Preparar pedido ${orderNum}`,
+            description: `Pedido de ${buyerName}. Método: ${methodDesc}. Total: $${Number(orderData.total_ars).toLocaleString('es-AR')}.`,
+            due_date: todayAR,
+            status: 'pendiente',
+          });
+          console.log(`[Webhook/MP Async] Tarea creada para pedido ${orderNum} en staff_tasks`);
+        } catch (taskErr) {
+          console.error('[Webhook/MP Async] Error creando tarea en staff_tasks:', taskErr);
+        }
+
+        // 2. Consultar store_config para datos de entrega del consultorio
+        let storeConfig = {
+          pickup_address: 'Leandro N. Alem 45, Gualeguaychú, Entre Ríos',
+          pickup_hours: 'Lunes a Viernes de 9:00 a 17:00 hs',
+        };
+        try {
+          const { data: scData } = await supabase
+            .from('store_config')
+            .select('pickup_address, pickup_hours')
+            .eq('id', 1)
+            .maybeSingle();
+          if (scData) {
+            if (scData.pickup_address) storeConfig.pickup_address = scData.pickup_address;
+            if (scData.pickup_hours) storeConfig.pickup_hours = scData.pickup_hours;
+          }
+        } catch (scErr) {
+          console.error('[Webhook/MP Async] Error leyendo store_config:', scErr);
+        }
+
+        // 3. Despachar emails por Resend (compradora y consultorio)
+        const itemsForEmail = (orderItems || []).map((fi: any) => ({
+          product_name: fi.products?.name || 'Producto',
+          quantity: fi.quantity,
+          unit_price_ars: Number(fi.unit_price_ars || 0),
+        }));
+
+        const buyerEmail = orderData.buyer_email || orderData.customer_email;
+        if (buyerEmail) {
+          await sendOrderEmails({
+            order: {
+              id: orderData.id,
+              order_number: orderNum,
+              buyer_name: buyerName,
+              buyer_email: buyerEmail,
+              buyer_phone: orderData.buyer_phone || orderData.customer_phone || null,
+              total_ars: Number(orderData.total_ars),
+              delivery_method: orderData.delivery_method || 'retiro',
+              delivery_address: orderData.delivery_address || null,
+              delivery_city: orderData.delivery_city || null,
+              delivery_postal_code: orderData.delivery_postal_code || null,
+              delivery_notes: orderData.delivery_notes || null,
+            },
+            items: itemsForEmail,
+            storeConfig,
+          });
+        }
+      }
     } catch (stockErr) {
-      console.error('[Webhook/MP Async] Error inesperado descontando stock:', stockErr);
+      console.error('[Webhook/MP Async] Error inesperado en procesamiento de orden pagada:', stockErr);
     }
   }
 }

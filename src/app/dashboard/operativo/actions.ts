@@ -22,26 +22,33 @@ export async function toggleTask(taskId: string, currentValue: boolean) {
 
   if (!profile || !STAFF_ROLES.includes(profile.role)) redirect('/dashboard/operativo');
 
-  // Verify the task belongs to this user (or user is admin)
+  // Verify the task belongs to this user, is claimed by this user, is a team task, or user is admin
   const { data: task } = await supabase
     .from('staff_tasks')
-    .select('assigned_profile_id')
+    .select('assigned_profile_id, claimed_by, target_role')
     .eq('id', taskId)
     .single();
 
   if (!task) throw new Error('Tarea no encontrada.');
-  if (task.assigned_profile_id !== profile.id && profile.role !== 'admin') {
+  const isAssignedToUser = task.assigned_profile_id === profile.id;
+  const isClaimedByUser = task.claimed_by === profile.id;
+  const isTeamTask = !task.assigned_profile_id && (task.target_role === profile.role || profile.role === 'admin' || profile.role === 'operativo');
+
+  if (!isAssignedToUser && !isClaimedByUser && !isTeamTask && profile.role !== 'admin') {
     throw new Error('Sin permisos para modificar esta tarea.');
   }
 
   const newStatus = currentValue ? 'pendiente' : 'completada';
 
+  const updatePayload: Record<string, any> = {
+    status: newStatus,
+    completed_at: newStatus === 'completada' ? new Date().toISOString() : null,
+    completed_by: newStatus === 'completada' ? profile.id : null,
+  };
+
   const { error } = await supabase
     .from('staff_tasks')
-    .update({
-      status: newStatus,
-      completed_at: newStatus === 'completada' ? new Date().toISOString() : null,
-    })
+    .update(updatePayload)
     .eq('id', taskId);
 
   if (error) throw new Error(`No se pudo actualizar la tarea: ${error.message}`);
@@ -207,6 +214,140 @@ export async function toggleKioskAdmissionStatus(id: string, newStatus: 'nuevo' 
   if (error) throw new Error(error.message);
 
   revalidatePath('/dashboard/operativo');
+  return { success: true };
+}
+
+export async function claimTask(taskId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, id')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile || !STAFF_ROLES.includes(profile.role)) {
+    throw new Error('Sin permisos para tomar tareas.');
+  }
+
+  const { data: task } = await supabase
+    .from('staff_tasks')
+    .select('id, claimed_by, status')
+    .eq('id', taskId)
+    .single();
+
+  if (!task) throw new Error('Tarea no encontrada.');
+  if (task.status === 'completada') throw new Error('La tarea ya fue completada.');
+  if (task.claimed_by && task.claimed_by !== profile.id && profile.role !== 'admin') {
+    throw new Error('La tarea ya fue tomada por otra persona.');
+  }
+
+  const { error } = await supabase
+    .from('staff_tasks')
+    .update({
+      claimed_by: profile.id,
+      claimed_at: new Date().toISOString(),
+    })
+    .eq('id', taskId);
+
+  if (error) throw new Error(`Error al tomar la tarea: ${error.message}`);
+
+  revalidatePath('/dashboard/operativo');
+  return { success: true };
+}
+
+export async function prepareOrder(orderId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, id')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile || !STAFF_ROLES.includes(profile.role)) {
+    throw new Error('Sin permisos para preparar pedidos.');
+  }
+
+  const { error } = await supabase
+    .from('orders')
+    .update({
+      fulfillment_status: 'preparado',
+      prepared_by: profile.id,
+      prepared_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', orderId);
+
+  if (error) throw new Error(`Error al marcar pedido como preparado: ${error.message}`);
+
+  revalidatePath('/dashboard/operativo');
+  return { success: true };
+}
+
+export async function deliverOrder(orderId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, id')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile || !STAFF_ROLES.includes(profile.role)) {
+    throw new Error('Sin permisos para entregar pedidos.');
+  }
+
+  const { error } = await supabase
+    .from('orders')
+    .update({
+      fulfillment_status: 'entregado',
+      delivered_by: profile.id,
+      delivered_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', orderId);
+
+  if (error) throw new Error(`Error al marcar pedido como entregado: ${error.message}`);
+
+  revalidatePath('/dashboard/operativo');
+  return { success: true };
+}
+
+export async function toggleStoreConfig(field: 'checkout_enabled' | 'shipping_enabled', value: boolean) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, id')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile || profile.role !== 'admin') {
+    throw new Error('Solo administradores pueden modificar la configuración de la tienda.');
+  }
+
+  const { error } = await supabase
+    .from('store_config')
+    .update({
+      [field]: value,
+      updated_at: new Date().toISOString(),
+      updated_by: profile.id,
+    })
+    .eq('id', 1);
+
+  if (error) throw new Error(`Error actualizando store_config: ${error.message}`);
+
+  revalidatePath('/dashboard/operativo');
+  revalidatePath('/tienda/carrito');
   return { success: true };
 }
 

@@ -12,6 +12,8 @@ import TreatmentSearch from '@/components/dashboard/TreatmentSearch';
 import ConfiguracionOperativa from '@/components/dashboard/ConfiguracionOperativa';
 import CampanasWidget from '@/components/dashboard/CampanasWidget';
 import KioskAdmissionsList from '@/components/dashboard/KioskAdmissionsList';
+import OrdersInbox, { OrderRecord } from '@/components/dashboard/OrdersInbox';
+import StoreConfigSwitch from '@/components/dashboard/StoreConfigSwitch';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
@@ -73,33 +75,160 @@ export default async function OperativoDashboard() {
   // Generación "al vuelo" e idempotente de tareas recurrentes del día (ej: viernes de stock)
   await ensureDailyRecurringTasks(todayAR);
 
-  // Read from staff_tasks (new table) — falls back to empty array if table doesn't exist yet
+  // Read from staff_tasks with claimed_by, target_role and profile joins
   let tasks: TaskItem[] = [];
   try {
     let query = supabase
       .from('staff_tasks')
-      .select('id, title, description, status, due_date')
-      .eq('status', 'pendiente')
+      .select(`
+        id,
+        title,
+        description,
+        status,
+        due_date,
+        target_role,
+        assigned_profile_id,
+        claimed_by,
+        claimed_at,
+        completed_by,
+        completed_at,
+        assigned_user:profiles!staff_tasks_assigned_profile_id_fkey(full_name),
+        claimed_by_user:profiles!staff_tasks_claimed_by_fkey(full_name),
+        completed_by_user:profiles!staff_tasks_completed_by_fkey(full_name)
+      `)
       .lte('due_date', todayAR)
       .order('due_date', { ascending: true });
 
     if (profile.role !== 'admin') {
-      query = query.eq('assigned_profile_id', profile.id);
+      query = query.or(
+        `assigned_profile_id.eq.${profile.id},claimed_by.eq.${profile.id},and(assigned_profile_id.is.null,target_role.in.(operativo,${profile.role}))`
+      );
     }
 
-    const { data: tasksRaw } = await query;
-
-    tasks = (tasksRaw ?? []).map((t) => ({
-      id: t.id,
-      title: t.title,
-      description: t.description ?? null,
-      is_completed: t.status === 'completada',
-      due_date: t.due_date ?? null,
-      is_overdue: t.due_date ? t.due_date < todayAR : false,
-    }));
-  } catch {
-    // Table may not exist yet — show empty gracefully
+    const { data: tasksRaw, error: tasksErr } = await query;
+    if (tasksErr) {
+      console.error('[Dashboard/Operativo] Error consultando staff_tasks:', tasksErr);
+    } else {
+      tasks = (tasksRaw ?? []).map((t: any) => {
+        const isMyTask = t.assigned_profile_id === profile.id || t.claimed_by === profile.id;
+        const isTeamTask = !t.assigned_profile_id && !t.claimed_by;
+        return {
+          id: t.id,
+          title: t.title,
+          description: t.description ?? null,
+          is_completed: t.status === 'completada',
+          due_date: t.due_date ?? null,
+          is_overdue: t.due_date ? t.due_date < todayAR : false,
+          assigned_profile_id: t.assigned_profile_id,
+          assigned_profile_name: t.assigned_user?.full_name || null,
+          claimed_by: t.claimed_by,
+          claimed_by_name: t.claimed_by_user?.full_name || null,
+          completed_by: t.completed_by,
+          completed_by_name: t.completed_by_user?.full_name || null,
+          target_role: t.target_role,
+          is_team_task: isTeamTask,
+          is_my_task: isMyTask,
+        };
+      });
+    }
+  } catch (err) {
+    console.error('[Dashboard/Operativo] Excepción en staff_tasks:', err);
     tasks = [];
+  }
+
+  // Query paid online orders for the Inbox
+  let paidOrders: OrderRecord[] = [];
+  try {
+    const { data: ordersRaw, error: ordersErr } = await supabase
+      .from('orders')
+      .select(`
+        id,
+        order_number,
+        created_at,
+        buyer_name,
+        buyer_email,
+        buyer_phone,
+        customer_name,
+        customer_email,
+        customer_phone,
+        total_ars,
+        delivery_method,
+        delivery_address,
+        delivery_city,
+        delivery_postal_code,
+        delivery_notes,
+        fulfillment_status,
+        prepared_at,
+        delivered_at,
+        buyer_email_sent,
+        buyer_email_error,
+        staff_email_sent,
+        staff_email_error,
+        prepared_by_user:profiles!orders_prepared_by_fkey(full_name),
+        delivered_by_user:profiles!orders_delivered_by_fkey(full_name),
+        order_items(id, quantity, unit_price_ars, products(name))
+      `)
+      .in('payment_status', ['approved', 'paid'])
+      .order('created_at', { ascending: false })
+      .limit(25);
+
+    if (ordersErr) {
+      console.error('[Dashboard/Operativo] Error consultando órdenes:', ordersErr);
+    } else if (ordersRaw) {
+      paidOrders = ordersRaw.map((o: any) => ({
+        id: o.id,
+        order_number: o.order_number || `ORD-${o.id.slice(0, 8)}`,
+        created_at: o.created_at,
+        buyer_name: o.buyer_name || o.customer_name || 'Compradora',
+        buyer_email: o.buyer_email || o.customer_email || 'Sin email',
+        buyer_phone: o.buyer_phone || o.customer_phone || null,
+        total_ars: Number(o.total_ars || 0),
+        delivery_method: o.delivery_method || 'retiro',
+        delivery_address: o.delivery_address,
+        delivery_city: o.delivery_city,
+        delivery_postal_code: o.delivery_postal_code,
+        delivery_notes: o.delivery_notes,
+        fulfillment_status: o.fulfillment_status || 'pendiente',
+        prepared_at: o.prepared_at,
+        prepared_by_name: o.prepared_by_user?.full_name || null,
+        delivered_at: o.delivered_at,
+        delivered_by_name: o.delivered_by_user?.full_name || null,
+        buyer_email_sent: Boolean(o.buyer_email_sent),
+        buyer_email_error: o.buyer_email_error,
+        staff_email_sent: Boolean(o.staff_email_sent),
+        staff_email_error: o.staff_email_error,
+        items: (o.order_items || []).map((it: any) => ({
+          id: it.id,
+          product_name: it.products?.name || 'Producto',
+          quantity: it.quantity,
+          unit_price_ars: Number(it.unit_price_ars || 0),
+        })),
+      }));
+    }
+  } catch (err) {
+    console.error('[Dashboard/Operativo] Excepción consultando órdenes:', err);
+    paidOrders = [];
+  }
+
+  // Query store_config for admin toggles
+  let storeConfig = {
+    checkout_enabled: false,
+    shipping_enabled: false,
+  };
+  try {
+    const { data: scData } = await supabase
+      .from('store_config')
+      .select('checkout_enabled, shipping_enabled')
+      .eq('id', 1)
+      .maybeSingle();
+    if (scData) {
+      storeConfig = {
+        checkout_enabled: Boolean(scData.checkout_enabled),
+        shipping_enabled: Boolean(scData.shipping_enabled),
+      };
+    }
+  } catch (err) {
+    console.error('[Dashboard/Operativo] Error consultando store_config:', err);
   }
 
   // Load staff profiles for assignment configuration
@@ -219,9 +348,16 @@ export default async function OperativoDashboard() {
           {/* Kiosk admissions check-ins */}
           <KioskAdmissionsList initialAdmissions={kioskAdmissions} />
 
+          {/* Bandeja de Pedidos Online (Tienda) */}
+          <section className={styles.card}>
+            <h2 className={styles.cardTitle}>Pedidos Online (Tienda)</h2>
+            <p className={styles.cardHelper}>Armado, despacho y autoría de entregas web</p>
+            <OrdersInbox orders={paidOrders} />
+          </section>
+
           <section className={styles.card}>
             <h2 className={styles.cardTitle}>Tareas del día</h2>
-            <TaskList tasks={tasks} />
+            <TaskList tasks={tasks} currentUserId={profile.id} currentUserRole={profile.role} />
           </section>
 
           <section className={styles.card}>
@@ -258,14 +394,20 @@ export default async function OperativoDashboard() {
           {/* Active Campaigns Widget */}
           <CampanasWidget campaigns={activeCampaigns} />
 
-          {/* Operational Assignment Config for Admins */}
+          {/* Operational Assignment Config & Store Switches for Admins */}
           {profile.role === 'admin' && (
-            <ConfiguracionOperativa
-              profiles={staffProfiles}
-              stockRule={stockRule}
-              birthdayRule={birthdayRule}
-              giftcardRule={giftcardRule}
-            />
+            <>
+              <StoreConfigSwitch
+                checkoutEnabled={storeConfig.checkout_enabled}
+                shippingEnabled={storeConfig.shipping_enabled}
+              />
+              <ConfiguracionOperativa
+                profiles={staffProfiles}
+                stockRule={stockRule}
+                birthdayRule={birthdayRule}
+                giftcardRule={giftcardRule}
+              />
+            </>
           )}
 
           {/* Google Reviews reminder banner */}

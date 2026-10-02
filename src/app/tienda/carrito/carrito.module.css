@@ -384,3 +384,93 @@
   margin: 0 0 var(--space-xl);
   line-height: var(--leading-normal);
 }
+
+/* Selector de entrega */
+.deliverySection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-top: var(--space-xs);
+}
+
+.deliveryOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.deliveryCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1.5px solid var(--color-gris-claro);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  background-color: var(--color-blanco);
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.deliveryCard:hover {
+  border-color: var(--color-champagne);
+}
+
+.deliveryCardSelected {
+  border-color: var(--color-champagne);
+  background-color: rgba(197, 164, 126, 0.06);
+}
+
+.deliveryRadio {
+  margin-top: 0.2rem;
+  accent-color: var(--color-champagne);
+  cursor: pointer;
+}
+
+.deliveryCardContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  flex: 1;
+}
+
+.deliveryCardTitle {
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-negro);
+}
+
+.deliveryCardDesc {
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  color: var(--color-gris);
+  line-height: 1.35;
+}
+
+.pickupDetailsBox {
+  margin-top: 0.4rem;
+  padding: 0.75rem 0.9rem;
+  background-color: #faf7f2;
+  border: 1px solid rgba(197, 164, 126, 0.4);
+  border-radius: 4px;
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  color: #374151;
+  line-height: 1.45;
+}
+
+.pickupDetailsBox p {
+  margin: 0.2rem 0;
+}
+
+.shippingFields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-top: 0.5rem;
+  padding: 0.75rem 0.9rem;
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+}
+
