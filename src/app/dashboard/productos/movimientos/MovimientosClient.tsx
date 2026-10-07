@@ -409,9 +409,9 @@ export default function MovimientosClient({ initialData }: Props) {
                         <span>
                           {m.notes
                             ? (m.is_annulled
-                                ? m.notes.replace(/^ANULACI[ÓO]N\s*[-—:]*\s*/i, '')
+                                ? m.notes.replace(/^\s*ANULACI[ÓOóo]N\s*[-—–:]*\s*/i, '').replace(/^[—–-]\s*/, '').trim()
                                 : m.is_test
-                                ? m.notes.replace(/^PRUEBA(?:\s+T[ÉE]CNICA)?\s*[-—:]*\s*/i, '')
+                                ? m.notes.replace(/^\s*PRUEBA(?:\s+T[ÉEée]CNICA)?\s*[-—–:]*\s*/i, '').replace(/^[—–-]\s*/, '').trim()
                                 : m.notes)
                             : (m.reference_id ? `Ref: ${m.reference_type} #${m.reference_id}` : '—')}
                         </span>

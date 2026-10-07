@@ -110,3 +110,153 @@ export async function toggleTreatment(formData: FormData) {
   revalidatePath('/tratamientos');
   revalidatePath('/tienda/gift-cards');
 }
+
+async function assertAdminOnlyTreatment() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+  const { data: profile } = await supabase.from('profiles').select('id, role').eq('id', user.id).maybeSingle();
+  if (!profile || profile.role !== 'admin') {
+    throw new Error('Acción no autorizada: Solo administradores pueden eliminar tratamientos.');
+  }
+  return { user, profile };
+}
+
+/**
+ * Eliminación de un tratamiento.
+ * PostgreSQL decide si se puede borrar (ON DELETE RESTRICT en appointments / gift_cards).
+ * Si hay registros históricos, se rechaza y se ofrece pausar/archivar en su lugar.
+ */
+export async function deleteTreatment(
+  id: string,
+  confirmationTitle: string
+): Promise<{ success: boolean; error?: string; canArchive?: boolean }> {
+  try {
+    const { user, profile } = await assertAdminOnlyTreatment();
+
+    if (!id || !id.trim()) {
+      return { success: false, error: 'ID de tratamiento no válido.' };
+    }
+
+    const admin = createAdminClient();
+
+    const { data: treatment, error: fetchErr } = await admin
+      .from('treatments')
+      .select('id, title')
+      .eq('id', id)
+      .single();
+
+    if (fetchErr || !treatment) {
+      return { success: false, error: 'El tratamiento no fue encontrado.' };
+    }
+
+    if (confirmationTitle.trim().toLowerCase() !== treatment.title.trim().toLowerCase()) {
+      return {
+        success: false,
+        error: `El nombre ingresado no coincide con "${treatment.title}". Verificá la escritura.`,
+      };
+    }
+
+    const { error: deleteError } = await admin.from('treatments').delete().eq('id', id);
+
+    if (deleteError) {
+      // 23503: foreign_key_violation
+      if (deleteError.code === '23503') {
+        const { count: appCount } = await admin
+          .from('appointments')
+          .select('*', { count: 'exact', head: true })
+          .eq('treatment_id', id);
+
+        if (appCount && appCount > 0) {
+          return {
+            success: false,
+            error: `No se puede eliminar porque tiene ${appCount} cita(s) o turnos asociados. Podés pausarlo o archivarlo.`,
+            canArchive: true,
+          };
+        }
+
+        const { count: gcCount } = await admin
+          .from('gift_cards')
+          .select('*', { count: 'exact', head: true })
+          .eq('treatment_id', id);
+
+        if (gcCount && gcCount > 0) {
+          return {
+            success: false,
+            error: `No se puede eliminar porque tiene ${gcCount} gift card(s) emitidas con este tratamiento. Podés pausarlo o archivarlo.`,
+            canArchive: true,
+          };
+        }
+
+        return {
+          success: false,
+          error: 'No se puede eliminar porque tiene registros históricos asociados en el sistema. Podés pausarlo o archivarlo.',
+          canArchive: true,
+        };
+      }
+
+      return {
+        success: false,
+        error: `Error al eliminar tratamiento: ${deleteError.message}`,
+      };
+    }
+
+    // Auditoría
+    try {
+      await admin.from('deletion_audit').insert({
+        user_id: user.id,
+        entity_type: 'treatment',
+        entity_id: id,
+        entity_name: treatment.title,
+      });
+    } catch {
+      // Si la tabla de auditoría aún no existe
+    }
+    console.log(`[AUDIT] Tratamiento eliminado: "${treatment.title}" (ID: ${id}) por usuario ${user.id} (${profile.role})`);
+
+    revalidatePath('/dashboard/tratamientos');
+    revalidatePath('/tratamientos');
+    revalidatePath('/tienda/gift-cards');
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('[deleteTreatment] Error:', err);
+    return { success: false, error: err?.message || 'Error al procesar la eliminación.' };
+  }
+}
+
+/**
+ * Archivado / pausado de tratamiento.
+ */
+export async function archiveTreatment(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { user } = await assertAdminOnlyTreatment();
+
+    if (!id || !id.trim()) {
+      return { success: false, error: 'ID de tratamiento no válido.' };
+    }
+
+    const admin = createAdminClient();
+    const { error } = await admin
+      .from('treatments')
+      .update({ is_active: false })
+      .eq('id', id);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    console.log(`[AUDIT] Tratamiento pausado/archivado: ID ${id} por usuario ${user.id}`);
+
+    revalidatePath('/dashboard/tratamientos');
+    revalidatePath('/tratamientos');
+    revalidatePath('/tienda/gift-cards');
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('[archiveTreatment] Error:', err);
+    return { success: false, error: err?.message || 'Error al archivar el tratamiento.' };
+  }
+}

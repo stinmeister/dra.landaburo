@@ -56,7 +56,7 @@ export default async function TratamientosDashboardPage() {
       </div>
 
       {/* ── Tabla interactiva de tratamientos ── */}
-      <TratamientosTable treatments={rows} categories={CATEGORIES} />
+      <TratamientosTable treatments={rows} categories={CATEGORIES} isAdmin={role === 'admin'} />
 
       {/* ── Formulario nuevo tratamiento ── */}
       <div className={styles.newTreatment}>

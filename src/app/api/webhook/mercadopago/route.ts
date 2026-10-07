@@ -268,7 +268,7 @@ async function processPaymentNotification(paymentId: string, mpAccessToken: stri
           await supabase.from('staff_tasks').insert({
             target_role: 'operativo',
             assigned_profile_id: null,
-            task_type: 'recurrente',
+            task_type: 'pedido',
             title: `Preparar pedido ${orderNum}`,
             description: `Pedido de ${buyerName}. Método: ${methodDesc}. Total: $${Number(orderData.total_ars).toLocaleString('es-AR')}.`,
             due_date: todayAR,

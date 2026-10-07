@@ -213,6 +213,180 @@ export async function toggleProduct(formData: FormData) {
   revalidatePath('/tienda');
 }
 
+async function assertAdminOnly() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('Sesión no iniciada. Por favor iniciá sesión nuevamente.');
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id, role')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile || profile.role !== 'admin') {
+    throw new Error('Acción no autorizada: Solo el Administrador tiene permisos para realizar esta acción.');
+  }
+  return { user, profile };
+}
+
+/**
+ * Eliminación de un producto.
+ * PostgreSQL decide si se puede borrar (ON DELETE RESTRICT en stock_movements).
+ * Si hay dependencias, PostgreSQL rechaza con 23503 y se informa amigablemente
+ * la cantidad de movimientos para sugerir archivar en su lugar.
+ */
+export async function deleteProduct(
+  id: string,
+  confirmationName: string
+): Promise<{ success: boolean; error?: string; canArchive?: boolean }> {
+  try {
+    const { user, profile } = await assertAdminOnly();
+
+    if (!id || !id.trim()) {
+      return { success: false, error: 'ID de producto no válido.' };
+    }
+
+    const admin = createAdminClient();
+
+    // Obtener producto para verificar nombre de confirmación
+    const { data: product, error: fetchErr } = await admin
+      .from('products')
+      .select('id, name, is_active')
+      .eq('id', id)
+      .single();
+
+    if (fetchErr || !product) {
+      return { success: false, error: 'El producto no fue encontrado.' };
+    }
+
+    if (confirmationName.trim().toLowerCase() !== product.name.trim().toLowerCase()) {
+      return {
+        success: false,
+        error: `El nombre ingresado no coincide con "${product.name}". Verificá la escritura.`,
+      };
+    }
+
+    // Ejecutar borrado directo en PostgreSQL (que decida la base)
+    const { error: deleteError } = await admin.from('products').delete().eq('id', id);
+
+    if (deleteError) {
+      // 23503: foreign_key_violation
+      if (deleteError.code === '23503') {
+        const { count: movCount } = await admin
+          .from('stock_movements')
+          .select('*', { count: 'exact', head: true })
+          .eq('product_id', id);
+
+        if (movCount && movCount > 0) {
+          return {
+            success: false,
+            error: `No se puede eliminar porque tiene ${movCount} movimiento(s) de stock asociados. Podés archivarlo.`,
+            canArchive: true,
+          };
+        }
+
+        const { count: batchCount } = await admin
+          .from('product_batches')
+          .select('*', { count: 'exact', head: true })
+          .eq('product_id', id);
+
+        if (batchCount && batchCount > 0) {
+          return {
+            success: false,
+            error: `No se puede eliminar porque tiene ${batchCount} lote(s) asociados en inventario. Podés archivarlo.`,
+            canArchive: true,
+          };
+        }
+
+        const { count: orderCount } = await admin
+          .from('order_items')
+          .select('*', { count: 'exact', head: true })
+          .eq('product_id', id);
+
+        if (orderCount && orderCount > 0) {
+          return {
+            success: false,
+            error: `No se puede eliminar porque tiene ${orderCount} pedido(s) web asociados. Podés archivarlo.`,
+            canArchive: true,
+          };
+        }
+
+        return {
+          success: false,
+          error: 'No se puede eliminar porque tiene registros históricos asociados en el sistema. Podés archivarlo.',
+          canArchive: true,
+        };
+      }
+
+      return {
+        success: false,
+        error: `Error al eliminar producto: ${deleteError.message}`,
+      };
+    }
+
+    // Auditoría
+    try {
+      await admin.from('deletion_audit').insert({
+        user_id: user.id,
+        entity_type: 'product',
+        entity_id: id,
+        entity_name: product.name,
+      });
+    } catch {
+      // Si la tabla de auditoría aún no fue creada por Agustín
+    }
+    console.log(`[AUDIT] Producto eliminado: "${product.name}" (ID: ${id}) por usuario ${user.id} (${profile.role})`);
+
+    revalidatePath('/dashboard/productos');
+    revalidatePath('/tienda');
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('[deleteProduct] Error:', err);
+    return { success: false, error: err?.message || 'Error al procesar la eliminación.' };
+  }
+}
+
+/**
+ * Archivado (desactivación) de producto.
+ */
+export async function archiveProduct(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { user } = await assertAdminOnly();
+
+    if (!id || !id.trim()) {
+      return { success: false, error: 'ID de producto no válido.' };
+    }
+
+    const admin = createAdminClient();
+    const { error } = await admin
+      .from('products')
+      .update({ is_active: false })
+      .eq('id', id);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    console.log(`[AUDIT] Producto archivado: ID ${id} por usuario ${user.id}`);
+
+    revalidatePath('/dashboard/productos');
+    revalidatePath('/tienda');
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('[archiveProduct] Error:', err);
+    return { success: false, error: err?.message || 'Error al archivar el producto.' };
+  }
+}
+
 /**
  * Modificación rápida de stock (+1 / -1) desde la tabla de productos.
  * Utiliza exclusivamente registerStockMovement:
@@ -797,10 +971,11 @@ export async function getStockReportData(
     endObj.setHours(23, 59, 59, 999);
     const endIso = endObj.toISOString();
 
-    // 1. Obtener todos los productos
+    // 1. Obtener todos los productos activos (los inactivos como Claude 28/09 no cuentan en el balance de inventario activo)
     const { data: products, error: prodErr } = await admin
       .from('products')
       .select('id, name, category, stock_quantity')
+      .eq('is_active', true)
       .order('name', { ascending: true });
 
     if (prodErr || !products) {
@@ -876,12 +1051,18 @@ export async function getStockReportData(
       .map((m: any) => {
         const prod = products.find((p) => p.id === m.product_id);
         const notesStr = m.notes || '';
-        const isTest = notesStr.toUpperCase().startsWith('PRUEBA');
-        const isAnnulled =
-          notesStr.toUpperCase().startsWith('ANULACIÓN') || notesStr.toUpperCase().startsWith('ANULACION');
+        const isTest = /^\s*PRUEBA/i.test(notesStr);
+        const isAnnulled = /^\s*ANULACI[ÓOóo]N/i.test(notesStr);
+        let cleanNotes = notesStr;
+        if (isAnnulled) {
+          cleanNotes = notesStr.replace(/^\s*ANULACI[ÓOóo]N\s*[-—–:]*\s*/i, '').replace(/^[—–-]\s*/, '').trim();
+        } else if (isTest) {
+          cleanNotes = notesStr.replace(/^\s*PRUEBA(?:\s+T[ÉEée]CNICA)?\s*[-—–:]*\s*/i, '').replace(/^[—–-]\s*/, '').trim();
+        }
         return {
           ...m,
-          product_name: prod?.name || 'Producto eliminado',
+          notes: cleanNotes || notesStr,
+          product_name: prod?.name || 'Producto del historial',
           category: prod?.category || '—',
           author_name: profilesMap[m.created_by] || (m.created_by ? `Usuario (${m.created_by.slice(0, 8)})` : 'Sistema / Personal'),
           is_test: isTest,
