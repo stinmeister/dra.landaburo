@@ -224,7 +224,7 @@ async function assertAdminOnly() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, role')
+    .select('id, role, full_name')
     .eq('id', user.id)
     .single();
 
@@ -253,10 +253,10 @@ export async function deleteProduct(
 
     const admin = createAdminClient();
 
-    // Obtener producto para verificar nombre de confirmación
+    // Obtener producto completo para snapshot y para verificar nombre de confirmación
     const { data: product, error: fetchErr } = await admin
       .from('products')
-      .select('id, name, is_active')
+      .select('*')
       .eq('id', id)
       .single();
 
@@ -329,18 +329,23 @@ export async function deleteProduct(
       };
     }
 
-    // Auditoría
+    // Auditoría inmutable de eliminación
+    const actorName = profile.full_name || user.email || 'Administrador';
     try {
       await admin.from('deletion_audit').insert({
-        user_id: user.id,
-        entity_type: 'product',
+        actor_id: user.id,
+        actor_name: actorName,
+        action: 'eliminado',
+        entity_type: 'producto',
         entity_id: id,
         entity_name: product.name,
+        reason: 'Eliminación definitiva por Administrador en Dashboard',
+        snapshot: product,
       });
-    } catch {
-      // Si la tabla de auditoría aún no fue creada por Agustín
+    } catch (auditErr) {
+      console.error('[AUDIT ERROR]', auditErr);
     }
-    console.log(`[AUDIT] Producto eliminado: "${product.name}" (ID: ${id}) por usuario ${user.id} (${profile.role})`);
+    console.log(`[AUDIT] Producto eliminado: "${product.name}" (ID: ${id}) por ${actorName} (${user.id})`);
 
     revalidatePath('/dashboard/productos');
     revalidatePath('/tienda');
@@ -359,13 +364,21 @@ export async function archiveProduct(
   id: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { user } = await assertAdminOnly();
+    const { user, profile } = await assertAdminOnly();
 
     if (!id || !id.trim()) {
       return { success: false, error: 'ID de producto no válido.' };
     }
 
     const admin = createAdminClient();
+
+    // Obtener producto antes de archivar para snapshot
+    const { data: product } = await admin
+      .from('products')
+      .select('*')
+      .eq('id', id)
+      .single();
+
     const { error } = await admin
       .from('products')
       .update({ is_active: false })
@@ -375,7 +388,23 @@ export async function archiveProduct(
       return { success: false, error: error.message };
     }
 
-    console.log(`[AUDIT] Producto archivado: ID ${id} por usuario ${user.id}`);
+    // Auditoría inmutable de archivado
+    const actorName = profile.full_name || user.email || 'Administrador';
+    try {
+      await admin.from('deletion_audit').insert({
+        actor_id: user.id,
+        actor_name: actorName,
+        action: 'archivado',
+        entity_type: 'producto',
+        entity_id: id,
+        entity_name: product?.name || `Producto ${id}`,
+        reason: 'Archivado / desactivación manual desde catálogo',
+        snapshot: product || { id, is_active: false },
+      });
+    } catch (auditErr) {
+      console.error('[AUDIT ERROR]', auditErr);
+    }
+    console.log(`[AUDIT] Producto archivado: ID ${id} por ${actorName} (${user.id})`);
 
     revalidatePath('/dashboard/productos');
     revalidatePath('/tienda');

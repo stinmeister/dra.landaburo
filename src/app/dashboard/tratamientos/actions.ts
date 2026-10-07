@@ -115,7 +115,7 @@ async function assertAdminOnlyTreatment() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
-  const { data: profile } = await supabase.from('profiles').select('id, role').eq('id', user.id).maybeSingle();
+  const { data: profile } = await supabase.from('profiles').select('id, role, full_name').eq('id', user.id).maybeSingle();
   if (!profile || profile.role !== 'admin') {
     throw new Error('Acción no autorizada: Solo administradores pueden eliminar tratamientos.');
   }
@@ -140,9 +140,10 @@ export async function deleteTreatment(
 
     const admin = createAdminClient();
 
+    // Obtener tratamiento completo para snapshot y validación
     const { data: treatment, error: fetchErr } = await admin
       .from('treatments')
-      .select('id, title')
+      .select('*')
       .eq('id', id)
       .single();
 
@@ -201,18 +202,23 @@ export async function deleteTreatment(
       };
     }
 
-    // Auditoría
+    // Auditoría inmutable de eliminación
+    const actorName = profile.full_name || user.email || 'Administrador';
     try {
       await admin.from('deletion_audit').insert({
-        user_id: user.id,
-        entity_type: 'treatment',
+        actor_id: user.id,
+        actor_name: actorName,
+        action: 'eliminado',
+        entity_type: 'tratamiento',
         entity_id: id,
         entity_name: treatment.title,
+        reason: 'Eliminación definitiva por Administrador en Dashboard',
+        snapshot: treatment,
       });
-    } catch {
-      // Si la tabla de auditoría aún no existe
+    } catch (auditErr) {
+      console.error('[AUDIT ERROR]', auditErr);
     }
-    console.log(`[AUDIT] Tratamiento eliminado: "${treatment.title}" (ID: ${id}) por usuario ${user.id} (${profile.role})`);
+    console.log(`[AUDIT] Tratamiento eliminado: "${treatment.title}" (ID: ${id}) por ${actorName} (${user.id})`);
 
     revalidatePath('/dashboard/tratamientos');
     revalidatePath('/tratamientos');
@@ -232,13 +238,21 @@ export async function archiveTreatment(
   id: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { user } = await assertAdminOnlyTreatment();
+    const { user, profile } = await assertAdminOnlyTreatment();
 
     if (!id || !id.trim()) {
       return { success: false, error: 'ID de tratamiento no válido.' };
     }
 
     const admin = createAdminClient();
+
+    // Obtener tratamiento antes de archivar para snapshot
+    const { data: treatment } = await admin
+      .from('treatments')
+      .select('*')
+      .eq('id', id)
+      .single();
+
     const { error } = await admin
       .from('treatments')
       .update({ is_active: false })
@@ -248,7 +262,23 @@ export async function archiveTreatment(
       return { success: false, error: error.message };
     }
 
-    console.log(`[AUDIT] Tratamiento pausado/archivado: ID ${id} por usuario ${user.id}`);
+    // Auditoría inmutable de archivado
+    const actorName = profile.full_name || user.email || 'Administrador';
+    try {
+      await admin.from('deletion_audit').insert({
+        actor_id: user.id,
+        actor_name: actorName,
+        action: 'archivado',
+        entity_type: 'tratamiento',
+        entity_id: id,
+        entity_name: treatment?.title || `Tratamiento ${id}`,
+        reason: 'Archivado / pausado manual desde catálogo',
+        snapshot: treatment || { id, is_active: false },
+      });
+    } catch (auditErr) {
+      console.error('[AUDIT ERROR]', auditErr);
+    }
+    console.log(`[AUDIT] Tratamiento pausado/archivado: ID ${id} por ${actorName} (${user.id})`);
 
     revalidatePath('/dashboard/tratamientos');
     revalidatePath('/tratamientos');
