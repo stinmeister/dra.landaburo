@@ -18,6 +18,7 @@ import {
   Tags,
   Trash2,
   AlertTriangle,
+  ShieldAlert,
 } from 'lucide-react';
 import {
   toggleProduct,
@@ -518,6 +519,17 @@ export default function ProductTable({
             <History size={16} />
             <span>Movimientos e Historial</span>
           </Link>
+          {isAdmin && (
+            <Link
+              href="/dashboard/productos/auditoria"
+              className={styles.manageCatBtn}
+              style={{ textDecoration: 'none', borderColor: '#fca5a5' }}
+              title="Ver registro inmutable de eliminaciones y archivados (deletion_audit)"
+            >
+              <ShieldAlert size={16} color="#991b1b" />
+              <span style={{ color: '#991b1b' }}>Auditoría de Bajas</span>
+            </Link>
+          )}
         </div>
 
         <Link

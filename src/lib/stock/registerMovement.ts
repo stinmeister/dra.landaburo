@@ -53,6 +53,7 @@ export interface StockReportSummaryItem {
   catalogStock: number;
   catalogDiff: number;
   isCatalogSynced: boolean;
+  isArchived?: boolean;
 }
 
 export interface StockReportData {
@@ -67,6 +68,8 @@ export interface StockReportData {
   totalInitialStock: number;
   totalFinalStock: number;
   totalNetChange: number;
+  activeCount?: number;
+  archivedCount?: number;
   error?: string;
 }
 

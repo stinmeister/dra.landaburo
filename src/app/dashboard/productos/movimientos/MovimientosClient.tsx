@@ -174,7 +174,13 @@ export default function MovimientosClient({ initialData }: Props) {
         <div className={styles.balanceBannerOk}>
           <CheckCircle2 size={24} color="#059669" />
           <div>
-            <strong>Inventario 100% Conciliado:</strong> Para todos los {summary.length} productos del catálogo se verifica la ecuación de balance y coincide exactamente con el catálogo actual:
+            <strong>Inventario 100% Conciliado:</strong> Verificados{' '}
+            <strong>
+              {(initialData.archivedCount ?? summary.filter((s) => s.isArchived).length) > 0
+                ? `${initialData.activeCount ?? summary.filter((s) => !s.isArchived).length} productos activos + ${initialData.archivedCount ?? summary.filter((s) => s.isArchived).length} archivado${(initialData.archivedCount ?? summary.filter((s) => s.isArchived).length) !== 1 ? 's' : ''} con movimientos en el período`
+                : `todos los ${initialData.activeCount ?? summary.filter((s) => !s.isArchived).length} productos activos del catálogo`}
+            </strong>
+            . Para cada uno se verifica la ecuación de balance y coincide exactamente con el catálogo actual:
             <code style={{ marginLeft: '0.5rem', background: 'rgba(255,255,255,0.6)', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
               Stock Inicial + Altas/Base + ∑(Movimientos) === Stock Final === Catálogo
             </code>
@@ -261,7 +267,27 @@ export default function MovimientosClient({ initialData }: Props) {
             <tbody>
               {summary.map((row) => (
                 <tr key={row.productId}>
-                  <td style={{ fontWeight: 500 }}>{row.productName}</td>
+                  <td style={{ fontWeight: 500 }}>
+                    {row.productName}
+                    {row.isArchived && (
+                      <span
+                        style={{
+                          marginLeft: '0.45rem',
+                          fontSize: '0.7rem',
+                          padding: '0.1rem 0.35rem',
+                          backgroundColor: '#f3f4f6',
+                          color: '#6b7280',
+                          borderRadius: '3px',
+                          border: '1px solid #d1d5db',
+                          fontWeight: 600,
+                          letterSpacing: '0.02em',
+                        }}
+                        title="Producto archivado / fuera de catálogo activo"
+                      >
+                        Archivado
+                      </span>
+                    )}
+                  </td>
                   <td style={{ color: 'var(--color-gris)', fontSize: '0.8rem' }}>{row.category}</td>
                   <td className={styles.numCell}>{row.stockInitial}</td>
                   <td className={`${styles.numCell} ${row.baselineDelta > 0 ? styles.positiveDelta : styles.zeroDelta}`}>
@@ -355,7 +381,27 @@ export default function MovimientosClient({ initialData }: Props) {
                       <td style={{ whiteSpace: 'nowrap', fontSize: '0.8rem' }}>
                         {formatTimestamp(m.created_at)}
                       </td>
-                      <td style={{ fontWeight: 500 }}>{m.product_name}</td>
+                      <td style={{ fontWeight: 500 }}>
+                        {m.product_name}
+                        {m.is_archived && (
+                          <span
+                            style={{
+                              marginLeft: '0.45rem',
+                              fontSize: '0.7rem',
+                              padding: '0.1rem 0.35rem',
+                              backgroundColor: '#f3f4f6',
+                              color: '#6b7280',
+                              borderRadius: '3px',
+                              border: '1px solid #d1d5db',
+                              fontWeight: 600,
+                              letterSpacing: '0.02em',
+                            }}
+                            title="Producto archivado / fuera de catálogo activo"
+                          >
+                            Archivado
+                          </span>
+                        )}
+                      </td>
                       <td style={{ color: 'var(--color-gris)', fontSize: '0.8rem' }}>{m.category}</td>
                       <td>
                         <span className={`${styles.badgeType} ${badgeClass}`}>

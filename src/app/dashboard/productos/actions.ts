@@ -271,80 +271,78 @@ export async function deleteProduct(
       };
     }
 
-    // Ejecutar borrado directo en PostgreSQL (que decida la base)
-    const { error: deleteError } = await admin.from('products').delete().eq('id', id);
+    // 1. Verificar dependencias previamente (integridad referencial RESTRICT)
+    const { count: movCount } = await admin
+      .from('stock_movements')
+      .select('*', { count: 'exact', head: true })
+      .eq('product_id', id);
 
-    if (deleteError) {
-      // 23503: foreign_key_violation
-      if (deleteError.code === '23503') {
-        const { count: movCount } = await admin
-          .from('stock_movements')
-          .select('*', { count: 'exact', head: true })
-          .eq('product_id', id);
-
-        if (movCount && movCount > 0) {
-          return {
-            success: false,
-            error: `No se puede eliminar porque tiene ${movCount} movimiento(s) de stock asociados. Podés archivarlo.`,
-            canArchive: true,
-          };
-        }
-
-        const { count: batchCount } = await admin
-          .from('product_batches')
-          .select('*', { count: 'exact', head: true })
-          .eq('product_id', id);
-
-        if (batchCount && batchCount > 0) {
-          return {
-            success: false,
-            error: `No se puede eliminar porque tiene ${batchCount} lote(s) asociados en inventario. Podés archivarlo.`,
-            canArchive: true,
-          };
-        }
-
-        const { count: orderCount } = await admin
-          .from('order_items')
-          .select('*', { count: 'exact', head: true })
-          .eq('product_id', id);
-
-        if (orderCount && orderCount > 0) {
-          return {
-            success: false,
-            error: `No se puede eliminar porque tiene ${orderCount} pedido(s) web asociados. Podés archivarlo.`,
-            canArchive: true,
-          };
-        }
-
-        return {
-          success: false,
-          error: 'No se puede eliminar porque tiene registros históricos asociados en el sistema. Podés archivarlo.',
-          canArchive: true,
-        };
-      }
-
+    if (movCount && movCount > 0) {
       return {
         success: false,
-        error: `Error al eliminar producto: ${deleteError.message}`,
+        error: `No se puede eliminar porque tiene ${movCount} movimiento(s) de stock asociados. Podés archivarlo.`,
+        canArchive: true,
       };
     }
 
-    // Auditoría inmutable de eliminación
-    const actorName = profile.full_name || user.email || 'Administrador';
-    try {
-      await admin.from('deletion_audit').insert({
-        actor_id: user.id,
-        actor_name: actorName,
-        action: 'eliminado',
-        entity_type: 'producto',
-        entity_id: id,
-        entity_name: product.name,
-        reason: 'Eliminación definitiva por Administrador en Dashboard',
-        snapshot: product,
-      });
-    } catch (auditErr) {
-      console.error('[AUDIT ERROR]', auditErr);
+    const { count: batchCount } = await admin
+      .from('product_batches')
+      .select('*', { count: 'exact', head: true })
+      .eq('product_id', id);
+
+    if (batchCount && batchCount > 0) {
+      return {
+        success: false,
+        error: `No se puede eliminar porque tiene ${batchCount} lote(s) asociados en inventario. Podés archivarlo.`,
+        canArchive: true,
+      };
     }
+
+    const { count: orderCount } = await admin
+      .from('order_items')
+      .select('*', { count: 'exact', head: true })
+      .eq('product_id', id);
+
+    if (orderCount && orderCount > 0) {
+      return {
+        success: false,
+        error: `No se puede eliminar porque tiene ${orderCount} pedido(s) web asociados. Podés archivarlo.`,
+        canArchive: true,
+      };
+    }
+
+    // 2. Registro de Auditoría ANTES del borrado (si falla la auditoría, NO se borra)
+    const actorName = profile.full_name || user.email || 'Administrador';
+    const { error: auditError } = await admin.from('deletion_audit').insert({
+      actor_id: user.id,
+      actor_name: actorName,
+      action: 'eliminado',
+      entity_type: 'producto',
+      entity_id: id,
+      entity_name: product.name,
+      reason: 'Eliminación definitiva por Administrador en Dashboard',
+      snapshot: product,
+    });
+
+    if (auditError) {
+      console.error('[AUDIT ERROR PRE-DELETE]', auditError);
+      return {
+        success: false,
+        error: `No se puede eliminar el producto: fallo en el registro obligatorio de auditoría (${auditError.message}). Operación abortada por seguridad.`,
+      };
+    }
+
+    // 3. Ejecutar borrado definitivo en PostgreSQL
+    const { error: deleteError } = await admin.from('products').delete().eq('id', id);
+
+    if (deleteError) {
+      console.error('[DELETE ERROR]', deleteError);
+      return {
+        success: false,
+        error: `Error al eliminar producto en base de datos: ${deleteError.message}`,
+      };
+    }
+
     console.log(`[AUDIT] Producto eliminado: "${product.name}" (ID: ${id}) por ${actorName} (${user.id})`);
 
     revalidatePath('/dashboard/productos');
@@ -358,7 +356,7 @@ export async function deleteProduct(
 }
 
 /**
- * Archivado (desactivación) de producto.
+ * Archivado (desactivación) de producto con auditoría inmutable obligatoria.
  */
 export async function archiveProduct(
   id: string
@@ -373,37 +371,51 @@ export async function archiveProduct(
     const admin = createAdminClient();
 
     // Obtener producto antes de archivar para snapshot
-    const { data: product } = await admin
+    const { data: product, error: fetchErr } = await admin
       .from('products')
       .select('*')
       .eq('id', id)
       .single();
 
-    const { error } = await admin
+    if (fetchErr || !product) {
+      return { success: false, error: 'Producto no encontrado para archivar.' };
+    }
+
+    // 1. Registro obligatorio en deletion_audit antes de actualizar estado
+    const actorName = profile.full_name || user.email || 'Administrador';
+    const { error: auditError } = await admin.from('deletion_audit').insert({
+      actor_id: user.id,
+      actor_name: actorName,
+      action: 'archivado',
+      entity_type: 'producto',
+      entity_id: id,
+      entity_name: product.name,
+      reason: 'Archivado / desactivación manual desde catálogo',
+      snapshot: product,
+    });
+
+    if (auditError) {
+      if (auditError.code === 'PGRST205') {
+        console.warn('[AUDIT NOTICE] deletion_audit aún no existe en BD. Procediendo con archivado reversible.');
+      } else {
+        console.error('[AUDIT ERROR PRE-ARCHIVE]', auditError);
+        return {
+          success: false,
+          error: `No se puede archivar el producto: fallo en el registro obligatorio de auditoría (${auditError.message}).`,
+        };
+      }
+    }
+
+    // 2. Desactivar producto en catálogo
+    const { error: updateError } = await admin
       .from('products')
       .update({ is_active: false })
       .eq('id', id);
 
-    if (error) {
-      return { success: false, error: error.message };
+    if (updateError) {
+      return { success: false, error: updateError.message };
     }
 
-    // Auditoría inmutable de archivado
-    const actorName = profile.full_name || user.email || 'Administrador';
-    try {
-      await admin.from('deletion_audit').insert({
-        actor_id: user.id,
-        actor_name: actorName,
-        action: 'archivado',
-        entity_type: 'producto',
-        entity_id: id,
-        entity_name: product?.name || `Producto ${id}`,
-        reason: 'Archivado / desactivación manual desde catálogo',
-        snapshot: product || { id, is_active: false },
-      });
-    } catch (auditErr) {
-      console.error('[AUDIT ERROR]', auditErr);
-    }
     console.log(`[AUDIT] Producto archivado: ID ${id} por ${actorName} (${user.id})`);
 
     revalidatePath('/dashboard/productos');
@@ -415,6 +427,50 @@ export async function archiveProduct(
     return { success: false, error: err?.message || 'Error al archivar el producto.' };
   }
 }
+
+/**
+ * Obtener historial inmutable de eliminaciones y archivados (solo admin).
+ */
+export async function getDeletionAuditLogs(): Promise<{
+  success: boolean;
+  logs?: Array<{
+    id: string;
+    occurred_at: string;
+    actor_id: string | null;
+    actor_name: string;
+    action: 'eliminado' | 'archivado' | 'restaurado';
+    entity_type: string;
+    entity_id: string;
+    entity_name: string;
+    reason?: string | null;
+    snapshot?: Record<string, any>;
+  }>;
+  tablePending?: boolean;
+  error?: string;
+}> {
+  try {
+    await assertAdminOnly();
+    const admin = createAdminClient();
+
+    const { data, error } = await admin
+      .from('deletion_audit')
+      .select('*')
+      .order('occurred_at', { ascending: false });
+
+    if (error) {
+      if (error.code === 'PGRST205') {
+        return { success: true, logs: [], tablePending: true };
+      }
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, logs: data || [] };
+  } catch (err: any) {
+    console.error('[getDeletionAuditLogs] Error:', err);
+    return { success: false, error: err?.message || 'Error al obtener registros de auditoría' };
+  }
+}
+
 
 /**
  * Modificación rápida de stock (+1 / -1) desde la tabla de productos.
@@ -991,23 +1047,17 @@ export async function getStockReportData(
     await assertStaffCanManageProducts();
     const admin = createAdminClient();
 
-    // Normalizar fechas: inicio a las 00:00:00 y fin a las 23:59:59.999
-    const startObj = new Date(startDateStr);
-    startObj.setHours(0, 0, 0, 0);
-    const startIso = startObj.toISOString();
+    // Normalizar fechas respetando la zona horaria del consultorio (America/Argentina/Buenos_Aires: UTC-3)
+    const startIso = new Date(`${startDateStr}T00:00:00-03:00`).toISOString();
+    const endIso = new Date(`${endDateStr}T23:59:59.999-03:00`).toISOString();
 
-    const endObj = new Date(endDateStr);
-    endObj.setHours(23, 59, 59, 999);
-    const endIso = endObj.toISOString();
-
-    // 1. Obtener todos los productos activos (los inactivos como Claude 28/09 no cuentan en el balance de inventario activo)
-    const { data: products, error: prodErr } = await admin
+    // 1. Obtener TODOS los productos (activos y archivados) para resolver nombres en el libro y clasificar
+    const { data: allProducts, error: prodErr } = await admin
       .from('products')
-      .select('id, name, category, stock_quantity')
-      .eq('is_active', true)
+      .select('id, name, category, stock_quantity, is_active')
       .order('name', { ascending: true });
 
-    if (prodErr || !products) {
+    if (prodErr || !allProducts) {
       return {
         success: false,
         startDate: startDateStr,
@@ -1020,6 +1070,8 @@ export async function getStockReportData(
         totalInitialStock: 0,
         totalFinalStock: 0,
         totalNetChange: 0,
+        activeCount: 0,
+        archivedCount: 0,
         error: prodErr?.message || 'Error al obtener productos',
       };
     }
@@ -1058,6 +1110,8 @@ export async function getStockReportData(
         totalInitialStock: 0,
         totalFinalStock: 0,
         totalNetChange: 0,
+        activeCount: 0,
+        archivedCount: 0,
         error: movErr.message,
       };
     }
@@ -1075,10 +1129,11 @@ export async function getStockReportData(
     }
 
     // Movimientos del período (para tabla cronológica detallada)
+    // El nombre del producto SIEMPRE se resuelve contra allProducts (activos y archivados)
     const periodMovements = allMovements
       .filter((m: any) => m.created_at >= startIso && m.created_at <= endIso)
       .map((m: any) => {
-        const prod = products.find((p) => p.id === m.product_id);
+        const prod = allProducts.find((p) => p.id === m.product_id);
         const notesStr = m.notes || '';
         const isTest = /^\s*PRUEBA/i.test(notesStr);
         const isAnnulled = /^\s*ANULACI[ÓOóo]N/i.test(notesStr);
@@ -1093,6 +1148,7 @@ export async function getStockReportData(
           notes: cleanNotes || notesStr,
           product_name: prod?.name || 'Producto del historial',
           category: prod?.category || '—',
+          is_archived: prod ? !prod.is_active : false,
           author_name: profilesMap[m.created_by] || (m.created_by ? `Usuario (${m.created_by.slice(0, 8)})` : 'Sistema / Personal'),
           is_test: isTest,
           is_annulled: isAnnulled,
@@ -1101,6 +1157,11 @@ export async function getStockReportData(
       .reverse(); // Más recientes primero para la tabla de auditoría
 
     // 3. Calcular balance consolidado por producto
+    // Reglas de negocio de auditoría:
+    // a) Producto activo: siempre entra al balance.
+    // b) Producto archivado con stock físico distinto de cero: entra al balance, marcado como archivado.
+    // c) Producto archivado con stock cero: entra al balance si tuvo movimientos dentro del período para computar sus deltas.
+    // d) Producto archivado con stock cero y sin movimientos en el período: queda excluido para no ensuciar.
     const summary: StockReportSummaryItem[] = [];
     let allBalanced = true;
     let allCatalogSynced = true;
@@ -1109,10 +1170,18 @@ export async function getStockReportData(
     let totalFinalStock = 0;
     let totalNetChange = 0;
 
-    for (const prod of products) {
+    for (const prod of allProducts) {
       const prodMovs = allMovements.filter((m: any) => m.product_id === prod.id);
       const beforeMovs = prodMovs.filter((m: any) => m.created_at < startIso);
       const duringMovs = prodMovs.filter((m: any) => m.created_at >= startIso && m.created_at <= endIso);
+
+      const hasStock = (prod.stock_quantity ?? 0) !== 0;
+      const hasActivityInPeriod = duringMovs.length > 0;
+
+      // Si está inactivo y no tiene stock ni actividad en el período, se omite
+      if (!prod.is_active && !hasStock && !hasActivityInPeriod) {
+        continue;
+      }
 
       // Determinar stock inicial
       let stockInitial = 0;
@@ -1209,6 +1278,7 @@ export async function getStockReportData(
         productId: prod.id,
         productName: prod.name,
         category: prod.category || 'General',
+        isArchived: !prod.is_active,
         stockInitial,
         baselineDelta,
         purchases,
@@ -1226,6 +1296,9 @@ export async function getStockReportData(
       });
     }
 
+    const activeCount = summary.filter((s) => !s.isArchived).length;
+    const archivedCount = summary.filter((s) => s.isArchived).length;
+
     return {
       success: true,
       startDate: startDateStr,
@@ -1238,6 +1311,8 @@ export async function getStockReportData(
       totalInitialStock,
       totalFinalStock,
       totalNetChange,
+      activeCount,
+      archivedCount,
     };
   } catch (err: any) {
     console.error('[getStockReportData Error]:', err);

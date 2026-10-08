@@ -158,66 +158,65 @@ export async function deleteTreatment(
       };
     }
 
-    const { error: deleteError } = await admin.from('treatments').delete().eq('id', id);
+    // 1. Verificar dependencias previamente (integridad referencial RESTRICT)
+    const { count: appCount } = await admin
+      .from('appointments')
+      .select('*', { count: 'exact', head: true })
+      .eq('treatment_id', id);
 
-    if (deleteError) {
-      // 23503: foreign_key_violation
-      if (deleteError.code === '23503') {
-        const { count: appCount } = await admin
-          .from('appointments')
-          .select('*', { count: 'exact', head: true })
-          .eq('treatment_id', id);
-
-        if (appCount && appCount > 0) {
-          return {
-            success: false,
-            error: `No se puede eliminar porque tiene ${appCount} cita(s) o turnos asociados. Podés pausarlo o archivarlo.`,
-            canArchive: true,
-          };
-        }
-
-        const { count: gcCount } = await admin
-          .from('gift_cards')
-          .select('*', { count: 'exact', head: true })
-          .eq('treatment_id', id);
-
-        if (gcCount && gcCount > 0) {
-          return {
-            success: false,
-            error: `No se puede eliminar porque tiene ${gcCount} gift card(s) emitidas con este tratamiento. Podés pausarlo o archivarlo.`,
-            canArchive: true,
-          };
-        }
-
-        return {
-          success: false,
-          error: 'No se puede eliminar porque tiene registros históricos asociados en el sistema. Podés pausarlo o archivarlo.',
-          canArchive: true,
-        };
-      }
-
+    if (appCount && appCount > 0) {
       return {
         success: false,
-        error: `Error al eliminar tratamiento: ${deleteError.message}`,
+        error: `No se puede eliminar porque tiene ${appCount} cita(s) o turnos asociados. Podés pausarlo o archivarlo.`,
+        canArchive: true,
       };
     }
 
-    // Auditoría inmutable de eliminación
-    const actorName = profile.full_name || user.email || 'Administrador';
-    try {
-      await admin.from('deletion_audit').insert({
-        actor_id: user.id,
-        actor_name: actorName,
-        action: 'eliminado',
-        entity_type: 'tratamiento',
-        entity_id: id,
-        entity_name: treatment.title,
-        reason: 'Eliminación definitiva por Administrador en Dashboard',
-        snapshot: treatment,
-      });
-    } catch (auditErr) {
-      console.error('[AUDIT ERROR]', auditErr);
+    const { count: gcCount } = await admin
+      .from('gift_cards')
+      .select('*', { count: 'exact', head: true })
+      .eq('treatment_id', id);
+
+    if (gcCount && gcCount > 0) {
+      return {
+        success: false,
+        error: `No se puede eliminar porque tiene ${gcCount} gift card(s) emitidas con este tratamiento. Podés pausarlo o archivarlo.`,
+        canArchive: true,
+      };
     }
+
+    // 2. Auditoría inmutable de eliminación ANTES del borrado físico (si falla la auditoría, NO se borra)
+    const actorName = profile.full_name || user.email || 'Administrador';
+    const { error: auditError } = await admin.from('deletion_audit').insert({
+      actor_id: user.id,
+      actor_name: actorName,
+      action: 'eliminado',
+      entity_type: 'tratamiento',
+      entity_id: id,
+      entity_name: treatment.title,
+      reason: 'Eliminación definitiva por Administrador en Dashboard',
+      snapshot: treatment,
+    });
+
+    if (auditError) {
+      console.error('[AUDIT ERROR PRE-DELETE]', auditError);
+      return {
+        success: false,
+        error: `No se puede eliminar el tratamiento: fallo en el registro obligatorio de auditoría (${auditError.message}). Operación abortada por seguridad.`,
+      };
+    }
+
+    // 3. Ejecutar borrado definitivo en PostgreSQL
+    const { error: deleteError } = await admin.from('treatments').delete().eq('id', id);
+
+    if (deleteError) {
+      console.error('[DELETE ERROR]', deleteError);
+      return {
+        success: false,
+        error: `Error al eliminar tratamiento en base de datos: ${deleteError.message}`,
+      };
+    }
+
     console.log(`[AUDIT] Tratamiento eliminado: "${treatment.title}" (ID: ${id}) por ${actorName} (${user.id})`);
 
     revalidatePath('/dashboard/tratamientos');
@@ -232,7 +231,7 @@ export async function deleteTreatment(
 }
 
 /**
- * Archivado / pausado de tratamiento.
+ * Archivado / pausado de tratamiento con auditoría inmutable obligatoria.
  */
 export async function archiveTreatment(
   id: string
@@ -247,38 +246,52 @@ export async function archiveTreatment(
     const admin = createAdminClient();
 
     // Obtener tratamiento antes de archivar para snapshot
-    const { data: treatment } = await admin
+    const { data: treatment, error: fetchErr } = await admin
       .from('treatments')
       .select('*')
       .eq('id', id)
       .single();
 
-    const { error } = await admin
+    if (fetchErr || !treatment) {
+      return { success: false, error: 'Tratamiento no encontrado para archivar.' };
+    }
+
+    // 1. Registro obligatorio en deletion_audit antes de actualizar estado
+    const actorName = profile.full_name || user.email || 'Administrador';
+    const { error: auditError } = await admin.from('deletion_audit').insert({
+      actor_id: user.id,
+      actor_name: actorName,
+      action: 'archivado',
+      entity_type: 'tratamiento',
+      entity_id: id,
+      entity_name: treatment.title,
+      reason: 'Archivado / pausado manual desde catálogo',
+      snapshot: treatment,
+    });
+
+    if (auditError) {
+      if (auditError.code === 'PGRST205') {
+        console.warn('[AUDIT NOTICE] deletion_audit aún no existe en BD. Procediendo con archivado reversible.');
+      } else {
+        console.error('[AUDIT ERROR PRE-ARCHIVE]', auditError);
+        return {
+          success: false,
+          error: `No se puede archivar el tratamiento: fallo en el registro obligatorio de auditoría (${auditError.message}). Operación abortada por seguridad.`,
+        };
+      }
+    }
+
+    // 2. Desactivar tratamiento en catálogo
+    const { error: updateError } = await admin
       .from('treatments')
       .update({ is_active: false })
       .eq('id', id);
 
-    if (error) {
-      return { success: false, error: error.message };
+    if (updateError) {
+      return { success: false, error: updateError.message };
     }
 
-    // Auditoría inmutable de archivado
-    const actorName = profile.full_name || user.email || 'Administrador';
-    try {
-      await admin.from('deletion_audit').insert({
-        actor_id: user.id,
-        actor_name: actorName,
-        action: 'archivado',
-        entity_type: 'tratamiento',
-        entity_id: id,
-        entity_name: treatment?.title || `Tratamiento ${id}`,
-        reason: 'Archivado / pausado manual desde catálogo',
-        snapshot: treatment || { id, is_active: false },
-      });
-    } catch (auditErr) {
-      console.error('[AUDIT ERROR]', auditErr);
-    }
-    console.log(`[AUDIT] Tratamiento pausado/archivado: ID ${id} por ${actorName} (${user.id})`);
+    console.log(`[AUDIT] Tratamiento archivado: ID ${id} por ${actorName} (${user.id})`);
 
     revalidatePath('/dashboard/tratamientos');
     revalidatePath('/tratamientos');
