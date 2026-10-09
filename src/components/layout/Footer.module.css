@@ -84,6 +84,14 @@
   opacity: 0.85;
 }
 
+.licenseBadge {
+  font-family: var(--font-sans);
+  font-size: 0.68rem;
+  color: var(--color-champagne);
+  letter-spacing: 0.05em;
+  margin-top: 0.25rem;
+}
+
 .description {
   color: var(--color-gris-claro, #D2D3D3);
   line-height: 1.6;

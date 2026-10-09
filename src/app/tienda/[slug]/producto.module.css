@@ -202,3 +202,57 @@
   padding-top: var(--space-sm);
   border-top: 1px solid var(--color-gris-claro);
 }
+
+/* Información de entrega */
+.deliveryBox {
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  background-color: #faf7f2;
+  border: 1px solid rgba(197, 164, 126, 0.4);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.deliveryTitle {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-negro);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.deliveryText {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: #555555;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Botón WhatsApp */
+.whatsappCta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.85rem 1.25rem;
+  margin-top: var(--space-sm);
+  background-color: #25D366;
+  color: #ffffff;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.whatsappCta:hover {
+  background-color: #1eb956;
+}
+

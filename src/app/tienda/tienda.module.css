@@ -165,3 +165,51 @@
   padding: var(--space-3xl) 0;
   text-align: center;
 }
+
+/* Banner de información de entrega y WhatsApp en catálogo */
+.storeInfoBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  background-color: #faf7f2;
+  border: 1px solid rgba(197, 164, 126, 0.35);
+  border-radius: 4px;
+  padding: 0.85rem 1.25rem;
+  margin-bottom: var(--space-lg);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-negro);
+}
+
+.storeInfoItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.storeInfoIcon {
+  color: var(--color-champagne-dark);
+  flex-shrink: 0;
+}
+
+.storeInfoWhatsapp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.9rem;
+  background-color: #25D366;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: var(--text-xs);
+  text-decoration: none;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+  white-space: nowrap;
+}
+
+.storeInfoWhatsapp:hover {
+  background-color: #1eb956;
+}
+

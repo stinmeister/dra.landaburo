@@ -19,6 +19,7 @@ import { createServerClient } from '@supabase/ssr';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { registerStockMovement } from '@/lib/stock/registerMovement';
 import { sendOrderEmails } from '@/lib/email/orderEmails';
+import { sendMetaPurchaseCapi } from '@/lib/tracking/metaCapi';
 
 const MP_STATUS_MAP: Record<string, string> = {
   approved: 'approved',
@@ -324,6 +325,32 @@ async function processPaymentNotification(paymentId: string, mpAccessToken: stri
             items: itemsForEmail,
             storeConfig,
           });
+        }
+
+        // 4. Despachar evento Purchase a Meta Conversions API (CAPI) (3.2)
+        try {
+          const capiItems = (orderItems || []).map((fi: any) => ({
+            product_id: fi.product_id,
+            product_name: fi.products?.name || 'Producto',
+            quantity: fi.quantity,
+            unit_price_ars: Number(fi.unit_price_ars || 0),
+          }));
+
+          await sendMetaPurchaseCapi({
+            order: {
+              id: orderData.id,
+              order_number: orderNum,
+              buyer_name: buyerName,
+              buyer_email: buyerEmail,
+              buyer_phone: orderData.buyer_phone || orderData.customer_phone || null,
+              delivery_city: orderData.delivery_city || null,
+              total_ars: orderData.total_ars,
+            },
+            items: capiItems,
+            externalRef,
+          });
+        } catch (capiErr) {
+          console.error('[Webhook/MP Async] Error no controlado en Meta CAPI:', capiErr);
         }
       }
     } catch (stockErr) {

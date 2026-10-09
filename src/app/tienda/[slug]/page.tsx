@@ -8,6 +8,8 @@ import { createClient } from '@/lib/supabase/server';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import AddToCartButton from '@/components/tienda/AddToCartButton';
+import ProductViewTracker from '@/components/tienda/ProductViewTracker';
+import { MessageCircle, MapPin } from 'lucide-react';
 import type { Product } from '@/lib/types/product';
 import styles from './producto.module.css';
 
@@ -42,14 +44,26 @@ export default async function ProductoPage({ params }: Props) {
   const { slug } = await params;
   const supabase = await createClient();
 
-  const { data: productRaw } = await supabase
-    .from('products')
-    .select('id, name, slug, description, brand_type, price_ars, compare_price_ars, image_url, images, category, stock_quantity, is_active, is_public, created_at')
-    .eq('slug', slug)
-    .eq('is_active', true)
-    .single();
+  const [productResult, storeConfigResult] = await Promise.all([
+    supabase
+      .from('products')
+      .select('id, name, slug, description, brand_type, price_ars, compare_price_ars, image_url, images, category, stock_quantity, is_active, is_public, created_at')
+      .eq('slug', slug)
+      .eq('is_active', true)
+      .single(),
+    supabase
+      .from('store_config')
+      .select('pickup_address, pickup_hours, shipping_enabled')
+      .eq('id', 1)
+      .maybeSingle(),
+  ]);
 
+  const productRaw = productResult.data;
   if (!productRaw || productRaw.is_public === false) notFound();
+
+  const storeConfig = storeConfigResult.data;
+  const pickupAddress = storeConfig?.pickup_address || 'Leandro N. Alem 45, Gualeguaychú, Entre Ríos';
+  const pickupHours = storeConfig?.pickup_hours || 'Lunes a Viernes de 9:00 a 17:00 hs';
 
   const product = productRaw as unknown as Product;
   const hasDiscount =
@@ -160,6 +174,30 @@ export default async function ProductoPage({ params }: Props) {
 
               <AddToCartButton product={product} />
 
+              {/* Información de entrega leída de store_config */}
+              <div className={styles.deliveryBox}>
+                <div className={styles.deliveryTitle}>
+                  <MapPin size={16} color="var(--color-champagne-dark)" />
+                  <span>Retiro en consultorio (Sin costo)</span>
+                </div>
+                <p className={styles.deliveryText}>
+                  <strong>Dirección:</strong> {pickupAddress}<br />
+                  <strong>Horario de retiro:</strong> {pickupHours}
+                </p>
+              </div>
+
+              {/* Botón directo de WhatsApp para consultas */}
+              <a
+                href={`https://wa.me/5491169684062?text=${encodeURIComponent(`Hola, quisiera consultar sobre el producto "${product.name}".`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.whatsappCta}
+                aria-label="Consultar por WhatsApp"
+              >
+                <MessageCircle size={18} />
+                <span>Consultar por WhatsApp (+54 9 11 6968-4062)</span>
+              </a>
+
               <p className={styles.disclaimer}>
                 Producto recomendado por la Dra. Landaburo para uso en el hogar.
                 Ante cualquier duda consultá con tu médica.
@@ -168,6 +206,7 @@ export default async function ProductoPage({ params }: Props) {
           </div>
         </div>
       </main>
+      <ProductViewTracker product={product} />
       <Footer />
     </>
   );

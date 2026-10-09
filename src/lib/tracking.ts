@@ -142,6 +142,49 @@ export function trackWhatsAppClick(location: string = 'floating_button') {
 }
 
 /**
+ * 2.1 Visualización de Ficha de Producto (ViewContent / view_item)
+ */
+export interface ProductViewParam {
+  id: string | number;
+  slug?: string;
+  name: string;
+  price_ars: number | null;
+  category?: string | null;
+}
+
+export function trackViewContent(product: ProductViewParam) {
+  const price = product.price_ars ? Number(product.price_ars) : 0;
+  const contentIds = [String(product.id)];
+  if (product.slug && product.slug !== String(product.id)) {
+    contentIds.push(product.slug);
+  }
+
+  // 1. GA4 (view_item)
+  trackGA4Event('view_item', {
+    currency: 'ARS',
+    value: price,
+    items: [
+      {
+        item_id: String(product.id),
+        item_name: product.name,
+        item_category: product.category || 'Skincare',
+        price,
+        quantity: 1,
+      },
+    ],
+  });
+
+  // 2. Meta Pixel (ViewContent)
+  trackMetaEvent('ViewContent', {
+    content_ids: contentIds,
+    content_name: product.name,
+    content_type: 'product',
+    value: price,
+    currency: 'ARS',
+  });
+}
+
+/**
  * 3. Clic en "Agregar al carrito" (Tienda)
  */
 export interface CartProductParam {

@@ -332,6 +332,15 @@ export async function deleteProduct(
       };
     }
 
+    // 2.1 Limpieza defensiva de dependencias polimórficas huérfanas (Bloque 5)
+    // Al ser relaciones polimórficas (entity_id / related_entity_id), PostgreSQL no tiene FK CASCADE.
+    try {
+      await admin.from('practice_material_links').delete().eq('entity_id', id);
+      await admin.from('staff_tasks').delete().eq('related_entity_id', id);
+    } catch (cleanErr: any) {
+      console.warn('[deleteProduct] Advertencia limpiando dependencias polimórficas:', cleanErr?.message);
+    }
+
     // 3. Ejecutar borrado definitivo en PostgreSQL
     const { error: deleteError } = await admin.from('products').delete().eq('id', id);
 

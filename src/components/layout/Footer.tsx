@@ -36,7 +36,8 @@ export default function Footer() {
             />
             <div className={styles.logoTextGroup}>
               <span className={styles.logoTitle}>Dra. Landaburo</span>
-              <span className={styles.logoSubtitle}>Dermatóloga</span>
+              <span className={styles.logoSubtitle}>Medicina Estética</span>
+              <span className={styles.licenseBadge}>M.P. 11.439 (Entre Ríos) · M.N. [Pendiente]</span>
             </div>
           </Link>
           <p className={styles.description}>
@@ -52,19 +53,19 @@ export default function Footer() {
 
         {/* Col 2 */}
         <div className={styles.col}>
-          <h3 className={styles.title}>Sedes y Horarios</h3>
+          <h3 className={styles.title}>Consultorio y Horarios</h3>
           <div className={styles.infoItem}>
             <MapPin size={20} />
             <span>
-              <strong>Gualeguaychú:</strong> Leandro N. Alem 45<br />
-              <strong>Buenos Aires:</strong> Güemes 4832, Palermo
+              <strong>Consultorio:</strong> Leandro N. Alem 45<br />
+              Gualeguaychú, Entre Ríos
             </span>
           </div>
           <div className={styles.infoItem}>
             <Clock size={20} />
             <span>
-              Lun-Vier: 10:00 – 19:00 hs<br />
-              Sáb: Solo con cita previa
+              Lun-Vier: 9:00 – 17:00 hs<br />
+              Sáb: Con cita previa
             </span>
           </div>
         </div>

@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import ProductCard from '@/components/tienda/ProductCard';
+import { MapPin, MessageCircle } from 'lucide-react';
 import type { Product } from '@/lib/types/product';
 import styles from './tienda.module.css';
 
@@ -59,8 +60,18 @@ export default async function TiendaPage({
     query = query.eq('category', category);
   }
 
-  const { data: productsRaw, error } = await query;
+  const [{ data: productsRaw, error }, { data: storeConfig }] = await Promise.all([
+    query,
+    supabase
+      .from('store_config')
+      .select('pickup_address, pickup_hours, shipping_enabled')
+      .eq('id', 1)
+      .maybeSingle(),
+  ]);
+
   const products: Product[] = (productsRaw ? (productsRaw as unknown as Product[]) : []);
+  const pickupAddress = storeConfig?.pickup_address || 'Leandro N. Alem 45, Gualeguaychú, Entre Ríos';
+  const pickupHours = storeConfig?.pickup_hours || 'Lunes a Viernes de 9:00 a 17:00 hs';
 
   return (
     <>
@@ -72,6 +83,26 @@ export default async function TiendaPage({
             <p className={styles.subtitle}>
               Productos seleccionados por la Dra. Landaburo para el cuidado diario de tu piel.
             </p>
+          </div>
+
+          {/* Banner de información de entrega y WhatsApp oficial */}
+          <div className={styles.storeInfoBanner}>
+            <div className={styles.storeInfoItem}>
+              <MapPin size={18} className={styles.storeInfoIcon} />
+              <span>
+                <strong>Retiro sin costo en consultorio:</strong> {pickupAddress} ({pickupHours})
+              </span>
+            </div>
+            <a
+              href="https://wa.me/5491169684062?text=Hola%2C%20quisiera%20consultar%20sobre%20los%20productos%20de%20la%20tienda."
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.storeInfoWhatsapp}
+              aria-label="Consultas por WhatsApp"
+            >
+              <MessageCircle size={16} />
+              <span>Consultas: +54 9 11 6968-4062</span>
+            </a>
           </div>
 
           {/* Banner discreto de Gift Cards */}
