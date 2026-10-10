@@ -36,8 +36,7 @@ export default function Footer() {
             />
             <div className={styles.logoTextGroup}>
               <span className={styles.logoTitle}>Dra. Landaburo</span>
-              <span className={styles.logoSubtitle}>Medicina Estética</span>
-              <span className={styles.licenseBadge}>M.P. 11.439 (Entre Ríos) · M.N. [Pendiente]</span>
+              <span className={styles.logoSubtitle}>Dermatóloga</span>
             </div>
           </Link>
           <p className={styles.description}>

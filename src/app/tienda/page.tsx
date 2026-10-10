@@ -12,7 +12,7 @@ import type { Product } from '@/lib/types/product';
 import styles from './tienda.module.css';
 
 export const metadata: Metadata = {
-  title: 'Tienda | Dra. Landaburo',
+  title: 'Tienda',
   description: 'Productos de skincare recomendados por la Dra. Landaburo. Cuidado y protección para tu piel.',
 };
 

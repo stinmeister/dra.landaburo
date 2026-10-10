@@ -185,6 +185,29 @@ export async function deleteTreatment(
       };
     }
 
+    const { count: linkCount } = await admin
+      .from('practice_material_links')
+      .select('*', { count: 'exact', head: true })
+      .eq('entity_id', id)
+      .in('entity_type', ['tratamiento', 'treatment']);
+
+    const { count: taskCount } = await admin
+      .from('staff_tasks')
+      .select('*', { count: 'exact', head: true })
+      .eq('related_entity_id', id)
+      .in('related_entity_type', ['tratamiento', 'treatment']);
+
+    if ((linkCount && linkCount > 0) || (taskCount && taskCount > 0)) {
+      const parts: string[] = [];
+      if (linkCount && linkCount > 0) parts.push(`${linkCount} folleto(s)`);
+      if (taskCount && taskCount > 0) parts.push(`${taskCount} tarea(s)`);
+      return {
+        success: false,
+        error: `No se puede eliminar porque tiene ${parts.join(' y ')} asociada(s). Podés archivarlo o pausarlo.`,
+        canArchive: true,
+      };
+    }
+
     // 2. Auditoría inmutable de eliminación ANTES del borrado físico (si falla la auditoría, NO se borra)
     const actorName = profile.full_name || user.email || 'Administrador';
     const { error: auditError } = await admin.from('deletion_audit').insert({
@@ -204,15 +227,6 @@ export async function deleteTreatment(
         success: false,
         error: `No se puede eliminar el tratamiento: fallo en el registro obligatorio de auditoría (${auditError.message}). Operación abortada por seguridad.`,
       };
-    }
-
-    // 2.1 Limpieza defensiva de dependencias polimórficas huérfanas (Bloque 5)
-    // Al ser relaciones polimórficas (entity_id / related_entity_id), PostgreSQL no tiene FK CASCADE.
-    try {
-      await admin.from('practice_material_links').delete().eq('entity_id', id);
-      await admin.from('staff_tasks').delete().eq('related_entity_id', id);
-    } catch (cleanErr: any) {
-      console.warn('[deleteTreatment] Advertencia limpiando dependencias polimórficas:', cleanErr?.message);
     }
 
     // 3. Ejecutar borrado definitivo en PostgreSQL

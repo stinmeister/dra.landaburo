@@ -17,6 +17,10 @@ export default function ProductViewTracker({ product }: ProductViewTrackerProps)
   const trackedRef = useRef(false);
 
   useEffect(() => {
+    if (product.name) {
+      document.title = `${product.name} | Tienda | Dra. Landaburo`;
+    }
+
     if (trackedRef.current) return;
     trackedRef.current = true;
 

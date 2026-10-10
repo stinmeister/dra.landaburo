@@ -17,13 +17,14 @@ type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
+  const decodedSlug = decodeURIComponent(slug);
   const supabase = await createClient();
   const { data } = await supabase
     .from('products')
     .select('name, description, is_public')
-    .eq('slug', slug)
+    .eq('slug', decodedSlug)
     .eq('is_active', true)
-    .single();
+    .maybeSingle();
 
   if (!data || data.is_public === false) return { title: 'Producto no encontrado' };
 
@@ -42,15 +43,16 @@ const formatARS = (n: number | string | undefined | null) => {
 
 export default async function ProductoPage({ params }: Props) {
   const { slug } = await params;
+  const decodedSlug = decodeURIComponent(slug);
   const supabase = await createClient();
 
   const [productResult, storeConfigResult] = await Promise.all([
     supabase
       .from('products')
       .select('id, name, slug, description, brand_type, price_ars, compare_price_ars, image_url, images, category, stock_quantity, is_active, is_public, created_at')
-      .eq('slug', slug)
+      .eq('slug', decodedSlug)
       .eq('is_active', true)
-      .single(),
+      .maybeSingle(),
     supabase
       .from('store_config')
       .select('pickup_address, pickup_hours, shipping_enabled')

@@ -311,6 +311,31 @@ export async function deleteProduct(
       };
     }
 
+    // 1.1 Dependencias polimórficas (practice_material_links y staff_tasks)
+    // No se borran nunca filas de staff_tasks ni links huérfanos; si existen dependientes se bloquea la baja.
+    const { count: linkCount } = await admin
+      .from('practice_material_links')
+      .select('*', { count: 'exact', head: true })
+      .eq('entity_id', id)
+      .in('entity_type', ['producto', 'product']);
+
+    const { count: taskCount } = await admin
+      .from('staff_tasks')
+      .select('*', { count: 'exact', head: true })
+      .eq('related_entity_id', id)
+      .in('related_entity_type', ['producto', 'product']);
+
+    if ((linkCount && linkCount > 0) || (taskCount && taskCount > 0)) {
+      const parts: string[] = [];
+      if (linkCount && linkCount > 0) parts.push(`${linkCount} folleto(s)`);
+      if (taskCount && taskCount > 0) parts.push(`${taskCount} tarea(s)`);
+      return {
+        success: false,
+        error: `No se puede eliminar porque tiene ${parts.join(' y ')} asociada(s). Podés archivarlo.`,
+        canArchive: true,
+      };
+    }
+
     // 2. Registro de Auditoría ANTES del borrado (si falla la auditoría, NO se borra)
     const actorName = profile.full_name || user.email || 'Administrador';
     const { error: auditError } = await admin.from('deletion_audit').insert({
@@ -330,15 +355,6 @@ export async function deleteProduct(
         success: false,
         error: `No se puede eliminar el producto: fallo en el registro obligatorio de auditoría (${auditError.message}). Operación abortada por seguridad.`,
       };
-    }
-
-    // 2.1 Limpieza defensiva de dependencias polimórficas huérfanas (Bloque 5)
-    // Al ser relaciones polimórficas (entity_id / related_entity_id), PostgreSQL no tiene FK CASCADE.
-    try {
-      await admin.from('practice_material_links').delete().eq('entity_id', id);
-      await admin.from('staff_tasks').delete().eq('related_entity_id', id);
-    } catch (cleanErr: any) {
-      console.warn('[deleteProduct] Advertencia limpiando dependencias polimórficas:', cleanErr?.message);
     }
 
     // 3. Ejecutar borrado definitivo en PostgreSQL
