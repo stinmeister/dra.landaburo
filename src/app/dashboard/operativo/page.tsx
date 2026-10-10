@@ -139,7 +139,11 @@ export default async function OperativoDashboard() {
   // Query paid online orders for the Inbox
   let paidOrders: OrderRecord[] = [];
   try {
-    const { data: ordersRaw, error: ordersErr } = await supabase
+    let ordersRaw: any[] | null = null;
+    let ordersErr: any = null;
+
+    // Intentar consultar con columnas meta_capi_* (2.2)
+    const resWithCapi = await supabase
       .from('orders')
       .select(`
         id,
@@ -164,6 +168,8 @@ export default async function OperativoDashboard() {
         buyer_email_error,
         staff_email_sent,
         staff_email_error,
+        meta_capi_sent,
+        meta_capi_error,
         prepared_by_user:profiles!orders_prepared_by_fkey(full_name),
         delivered_by_user:profiles!orders_delivered_by_fkey(full_name),
         order_items(id, quantity, unit_price_ars, products(name))
@@ -171,6 +177,46 @@ export default async function OperativoDashboard() {
       .in('payment_status', ['approved', 'paid'])
       .order('created_at', { ascending: false })
       .limit(25);
+
+    if (resWithCapi.error && (resWithCapi.error.code === '42703' || resWithCapi.error.message.includes('meta_capi'))) {
+      const resFallback = await supabase
+        .from('orders')
+        .select(`
+          id,
+          order_number,
+          created_at,
+          buyer_name,
+          buyer_email,
+          buyer_phone,
+          customer_name,
+          customer_email,
+          customer_phone,
+          total_ars,
+          delivery_method,
+          delivery_address,
+          delivery_city,
+          delivery_postal_code,
+          delivery_notes,
+          fulfillment_status,
+          prepared_at,
+          delivered_at,
+          buyer_email_sent,
+          buyer_email_error,
+          staff_email_sent,
+          staff_email_error,
+          prepared_by_user:profiles!orders_prepared_by_fkey(full_name),
+          delivered_by_user:profiles!orders_delivered_by_fkey(full_name),
+          order_items(id, quantity, unit_price_ars, products(name))
+        `)
+        .in('payment_status', ['approved', 'paid'])
+        .order('created_at', { ascending: false })
+        .limit(25);
+      ordersRaw = resFallback.data;
+      ordersErr = resFallback.error;
+    } else {
+      ordersRaw = resWithCapi.data;
+      ordersErr = resWithCapi.error;
+    }
 
     if (ordersErr) {
       console.error('[Dashboard/Operativo] Error consultando órdenes:', ordersErr);
@@ -225,6 +271,8 @@ export default async function OperativoDashboard() {
         buyer_email_error: o.buyer_email_error,
         staff_email_sent: Boolean(o.staff_email_sent),
         staff_email_error: o.staff_email_error,
+        meta_capi_sent: o.meta_capi_sent !== undefined ? Boolean(o.meta_capi_sent) : undefined,
+        meta_capi_error: o.meta_capi_error || null,
         oversell_alerts: oversellMap[o.id] || [],
         items: (o.order_items || []).map((it: any) => ({
           id: it.id,

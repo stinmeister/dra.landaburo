@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 
 export interface MetaCapiOrderItem {
   product_id?: string;
+  product_slug?: string;
   id?: string;
   product_name: string;
   quantity: number;
@@ -180,8 +181,9 @@ export async function sendMetaPurchaseCapi({
             currency: 'ARS',
             value: totalARS,
             content_type: 'product',
+            content_ids: items.map((i) => String(i.product_slug || i.product_id || i.id || i.product_name)),
             contents: items.map((i) => ({
-              id: String(i.product_id || i.id || i.product_name),
+              id: String(i.product_slug || i.product_id || i.id || i.product_name),
               quantity: Number(i.quantity || 1),
               item_price: Number(i.unit_price_ars || 0),
               title: i.product_name,

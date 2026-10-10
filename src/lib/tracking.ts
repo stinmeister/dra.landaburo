@@ -154,10 +154,8 @@ export interface ProductViewParam {
 
 export function trackViewContent(product: ProductViewParam) {
   const price = product.price_ars ? Number(product.price_ars) : 0;
-  const contentIds = [String(product.id)];
-  if (product.slug && product.slug !== String(product.id)) {
-    contentIds.push(product.slug);
-  }
+  // Identificador único y consistente para retargeting de catálogo (FIX-075): el slug del producto
+  const contentId = product.slug || String(product.id);
 
   // 1. GA4 (view_item)
   trackGA4Event('view_item', {
@@ -165,7 +163,7 @@ export function trackViewContent(product: ProductViewParam) {
     value: price,
     items: [
       {
-        item_id: String(product.id),
+        item_id: contentId,
         item_name: product.name,
         item_category: product.category || 'Skincare',
         price,
@@ -176,7 +174,7 @@ export function trackViewContent(product: ProductViewParam) {
 
   // 2. Meta Pixel (ViewContent)
   trackMetaEvent('ViewContent', {
-    content_ids: contentIds,
+    content_ids: [contentId],
     content_name: product.name,
     content_type: 'product',
     value: price,
@@ -189,6 +187,7 @@ export function trackViewContent(product: ProductViewParam) {
  */
 export interface CartProductParam {
   id: string | number;
+  slug?: string;
   name: string;
   price_ars: number;
   quantity?: number;
@@ -198,6 +197,7 @@ export interface CartProductParam {
 export function trackAddToCart(product: CartProductParam) {
   const qty = product.quantity || 1;
   const value = product.price_ars * qty;
+  const contentId = product.slug || String(product.id);
 
   // GA4
   trackGA4Event('add_to_cart', {
@@ -205,7 +205,7 @@ export function trackAddToCart(product: CartProductParam) {
     value,
     items: [
       {
-        item_id: String(product.id),
+        item_id: contentId,
         item_name: product.name,
         item_category: product.category || 'Skincare',
         price: product.price_ars,
@@ -216,7 +216,7 @@ export function trackAddToCart(product: CartProductParam) {
 
   // Meta Pixel
   trackMetaEvent('AddToCart', {
-    content_ids: [String(product.id)],
+    content_ids: [contentId],
     content_name: product.name,
     content_type: 'product',
     value,
@@ -228,15 +228,17 @@ export function trackAddToCart(product: CartProductParam) {
  * 4. Inicio de Checkout (Carrito o Gift Card)
  */
 export function trackBeginCheckout(
-  items: Array<{ id: string | number; name: string; price_ars: number; quantity: number }>,
+  items: Array<{ id: string | number; slug?: string; name: string; price_ars: number; quantity: number }>,
   totalARS: number
 ) {
+  const contentIds = items.map((i) => i.slug || String(i.id));
+
   // GA4
   trackGA4Event('begin_checkout', {
     currency: 'ARS',
     value: totalARS,
     items: items.map((item) => ({
-      item_id: String(item.id),
+      item_id: item.slug || String(item.id),
       item_name: item.name,
       price: item.price_ars,
       quantity: item.quantity,
@@ -245,7 +247,7 @@ export function trackBeginCheckout(
 
   // Meta Pixel
   trackMetaEvent('InitiateCheckout', {
-    content_ids: items.map((i) => String(i.id)),
+    content_ids: contentIds,
     num_items: items.reduce((sum, i) => sum + i.quantity, 0),
     value: totalARS,
     currency: 'ARS',
@@ -290,15 +292,17 @@ export function trackContactLead(treatment?: string) {
 export function trackPurchase(data: {
   id: string;
   value: number;
-  items?: Array<{ id: string | number; name: string; price_ars: number; quantity: number }>;
+  items?: Array<{ id: string | number; slug?: string; name: string; price_ars: number; quantity: number }>;
 }) {
+  const contentIds = (data.items || []).map((i) => i.slug || String(i.id));
+
   // GA4
   trackGA4Event('purchase', {
     transaction_id: data.id,
     currency: 'ARS',
     value: data.value,
     items: (data.items || []).map((i) => ({
-      item_id: String(i.id),
+      item_id: i.slug || String(i.id),
       item_name: i.name,
       price: i.price_ars,
       quantity: i.quantity,
@@ -307,6 +311,7 @@ export function trackPurchase(data: {
 
   // Meta Pixel
   trackMetaEvent('Purchase', {
+    content_ids: contentIds,
     value: data.value,
     currency: 'ARS',
     content_type: 'product',

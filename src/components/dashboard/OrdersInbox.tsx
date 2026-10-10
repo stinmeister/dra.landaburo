@@ -27,6 +27,9 @@ export interface OrderRecord {
   buyer_email_error: string | null;
   staff_email_sent: boolean;
   staff_email_error: string | null;
+  meta_capi_sent?: boolean;
+  meta_capi_error?: string | null;
+  meta_capi_attempted_at?: string | null;
   oversell_alerts?: Array<{
     product_name: string;
     missing_units: number;
@@ -204,6 +207,23 @@ export default function OrdersInbox({ orders }: { orders: OrderRecord[] }) {
                       >
                         Error en envío ⚠️
                       </span>
+                    )}
+                  </div>
+
+                  {/* Estado de Meta CAPI (2.2) */}
+                  <div className={styles.emailStatusRow}>
+                    <span>Meta CAPI:</span>
+                    {order.meta_capi_sent ? (
+                      <span className={styles.emailOk}>Enviado ✓</span>
+                    ) : order.meta_capi_error ? (
+                      <span
+                        className={styles.emailError}
+                        title={`Error CAPI: ${order.meta_capi_error}`}
+                      >
+                        Error en CAPI ⚠️
+                      </span>
+                    ) : (
+                      <span className={styles.authorshipText}>No enviado / Pendiente</span>
                     )}
                   </div>
                 </div>

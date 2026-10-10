@@ -222,7 +222,7 @@ async function processPaymentNotification(paymentId: string, mpAccessToken: stri
     try {
       const { data: orderItems, error: itemsErr } = await supabase
         .from('order_items')
-        .select('product_id, quantity, unit_price_ars, products(name)')
+        .select('product_id, quantity, unit_price_ars, products(name, slug)')
         .eq('order_id', externalRef);
 
       if (itemsErr) {
@@ -350,7 +350,8 @@ async function processPaymentNotification(paymentId: string, mpAccessToken: stri
         // 4. Despachar evento Purchase a Meta Conversions API (CAPI) (3.2)
         try {
           const capiItems = (orderItems || []).map((fi: any) => ({
-            product_id: fi.product_id,
+            product_id: fi.products?.slug || fi.product_id,
+            product_slug: fi.products?.slug,
             product_name: fi.products?.name || 'Producto',
             quantity: fi.quantity,
             unit_price_ars: Number(fi.unit_price_ars || 0),

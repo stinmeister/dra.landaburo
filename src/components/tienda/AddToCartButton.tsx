@@ -23,6 +23,7 @@ export default function AddToCartButton({ product }: { product: Product }) {
     });
     trackAddToCart({
       id: product.id,
+      slug: product.slug,
       name: product.name,
       price_ars: product.price_ars,
       category: product.category,
