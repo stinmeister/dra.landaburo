@@ -36,6 +36,7 @@ type Payment = {
   amount_usd: number | null;
   currency: string;
   payment_method: string;
+  professional_profile_id?: string | null;
   commission_amount_ars: number;
   payment_date: string;
   notes: string | null;
@@ -314,18 +315,22 @@ export default async function EjecutivoPage({
   );
   const totalUSD = usdRows.reduce((sum, p) => sum + Number(p.amount_usd ?? 0), 0);
 
-  // Comisiones de Cosmetología / Mechi Pasquet
+  // Comisiones de Cosmetología / Mechi Pasquet (FIX-056)
   // El 70% le corresponde a la profesional y el 30% al consultorio. Se liquida sobre lo cobrado.
-  const { data: cosmetologaProfiles } = await adminClient
+  // La atribución es por professional_profile_id explícito (con fallback histórico si no tuviera profile_id).
+  const { data: mechiProfile } = await adminClient
     .from('profiles')
     .select('id, full_name')
-    .or('role.eq.cosmetologa,full_name.ilike.%pasquet%');
+    .or('id.eq.11123745-1a5a-428c-9bed-29de4355d59c,full_name.ilike.%mercedes pasquet%')
+    .limit(1)
+    .maybeSingle();
 
-  const mechiProfileIds = new Set((cosmetologaProfiles || []).map((p) => p.id));
+  const mechiProfileId = mechiProfile?.id || '11123745-1a5a-428c-9bed-29de4355d59c';
+
   const mechiTreatmentRows = treatmentRows.filter(
     (p: any) =>
-      (p.professional_profile_id && mechiProfileIds.has(p.professional_profile_id)) ||
-      p.notes?.toLowerCase().includes('pasquet')
+      p.professional_profile_id === mechiProfileId ||
+      (!p.professional_profile_id && p.notes?.toLowerCase().includes('pasquet'))
   );
 
   const totalCobradoMechi = mechiTreatmentRows.reduce(
@@ -337,6 +342,7 @@ export default async function EjecutivoPage({
   const retencionConsultorio = Math.round(totalCobradoMechi * 0.30);
 
   // Facturación neta del consultorio (facturación total menos honorarios pagados a Mechi)
+  // Dra. Paula no comisiona: sus tratamientos y las ventas de productos ingresan al 100%.
   const facturacionNetaConsultorio = totalARS - honorariosMercedes;
 
   // 2. Consulta de cobros del mes para la tabla detallada (sin límite artificial, solo vigentes)
@@ -348,6 +354,7 @@ export default async function EjecutivoPage({
       amount_usd,
       currency,
       payment_method,
+      professional_profile_id,
       commission_amount_ars,
       payment_date,
       notes,
@@ -604,8 +611,8 @@ export default async function EjecutivoPage({
                           : '—'}
                       </td>
                       <td className={`${styles.td} ${styles.tdRight}`}>
-                        {payment.profiles?.full_name?.toLowerCase().includes('pasquet') ||
-                        payment.notes?.toLowerCase().includes('pasquet')
+                        {payment.professional_profile_id === mechiProfileId ||
+                        (!payment.professional_profile_id && (payment.profiles?.full_name?.toLowerCase().includes('pasquet') || payment.notes?.toLowerCase().includes('pasquet')))
                           ? formatARS(Math.round(Number(payment.amount_ars || 0) * 0.70))
                           : '—'}
                       </td>

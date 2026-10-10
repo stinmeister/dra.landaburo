@@ -2,6 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { MapPin, Clock, Phone, Mail } from 'lucide-react';
+import { siteContent } from '@/data/site-content';
 import styles from './Footer.module.css';
 
 function InstagramIcon({ size = 20 }: { size?: number }) {
@@ -63,8 +64,8 @@ export default function Footer() {
           <div className={styles.infoItem}>
             <Clock size={20} />
             <span>
-              Lun-Vier: 9:00 – 17:00 hs<br />
-              Sáb: Con cita previa
+              {siteContent.contact.hours}<br />
+              {siteContent.contact.hoursSat}
             </span>
           </div>
         </div>
@@ -74,14 +75,14 @@ export default function Footer() {
           <h3 className={styles.title}>Contacto</h3>
           <div className={styles.infoItem}>
             <Phone size={20} />
-            <a href="tel:+5491169684062" className={styles.link}>
-              +54 9 11 6968-4062
+            <a href={`tel:${siteContent.contact.phone.replace(/[^0-9+]/g, '')}`} className={styles.link}>
+              {siteContent.contact.phoneDisplay}
             </a>
           </div>
           <div className={styles.infoItem}>
             <Mail size={20} />
-            <a href="mailto:Paula@dralandaburo.com" className={styles.link}>
-              Paula@dralandaburo.com
+            <a href={`mailto:${siteContent.contact.email}`} className={styles.link}>
+              {siteContent.contact.email}
             </a>
           </div>
           
