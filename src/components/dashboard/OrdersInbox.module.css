@@ -286,3 +286,29 @@
   opacity: 0.5;
   cursor: wait;
 }
+
+.oversellAlertBox {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  background-color: #fffbeb;
+  border: 1px solid #fde68a;
+  border-left: 4px solid #d97706;
+  border-radius: 4px;
+  padding: 0.75rem 1rem;
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  color: #92400e;
+  line-height: 1.45;
+}
+
+.oversellIcon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.oversellText {
+  margin-top: 0.25rem;
+  font-weight: 500;
+}
+

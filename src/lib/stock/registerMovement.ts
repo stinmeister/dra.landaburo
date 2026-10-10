@@ -18,6 +18,7 @@ export interface RegisterMovementParams {
   referenceType?: string;
   referenceId?: string;
   userId?: string; // Opcional, si no se pasa se obtiene de la sesión activa
+  allowOversellOnline?: boolean; // Flag explícito para sobreventa online (Opción 1), false por defecto
 }
 
 export interface RegisterMovementResult {
@@ -195,27 +196,35 @@ export async function registerStockMovement(
     stockAfter = stockBefore + finalDelta;
 
     // =========================================================================
-    // DECISIÓN ARQUITECTÓNICA: MANEJO DE SOBREVENTA ONLINE (OPCIÓN 1)
-    // Confirmada el 01/10/2026: Si una venta online fue cobrada y aprobada por Mercado Pago
-    // pero el stock físico resulta insuficiente (por ejemplo, compra simultánea o desfasaje),
-    // el sistema PRIORIZA LA REALIDAD CONTABLE: asienta la venta en el libro mayor y permite
-    // que el stock quede temporalmente negativo (ej. -1).
-    //
-    // Alternativas evaluadas y descartadas:
-    // - Opción 2 (Encolar en revisión sin mover stock): Descartada porque desalinea el saldo cobrado
-    //   del libro mayor y requiere operador manual permanente para no dejar órdenes en el limbo.
-    // - Opción 3 (Reserva / Hold temporal en checkout con TTL): Descartada para esta etapa por su
-    //   alta complejidad de concurrencia y necesidad de cronjobs de desbloqueo de carritos abandonados.
-    //
-    // Consecuencia operativa: se dispara inmediatamente una alerta prioritaria en staff_tasks
-    // para que el personal reponga el producto o contacte a la paciente para coordinar la entrega.
+    // MANEJO DE SOBREVENTA ONLINE (OPCIÓN 1 CONDICIONADA DETRÁS DE FLAG)
+    // - allow_oversell_online desactivado por defecto (false).
+    // - Si allow_oversell_online es true: se prioriza la realidad contable de la
+    //   venta online cobrada en MP, permitiendo saldo negativo transitorio y
+    //   creando una tarea urgente en staff_tasks para el rol 'operativo'.
+    // - Si allow_oversell_online es false: el stock negativo es estrictamente rechazado.
+    // - Ni el mostrador ni los ajustes manuales permiten stock negativo.
     // =========================================================================
-    if (stockAfter < 0 && type !== 'ajuste' && type !== 'venta_online') {
-      const cantSolicitada = Math.abs(finalDelta);
-      return {
-        ok: false,
-        error: `No podés descontar ${cantSolicitada} ${cantSolicitada === 1 ? 'unidad' : 'unidades'}: hay ${stockBefore} en stock de "${product.name}".`,
-      };
+    const isOversellAllowed = Boolean(
+      params.allowOversellOnline ??
+      (process.env.ALLOW_OVERSELL_ONLINE === 'true')
+    );
+
+    if (stockAfter < 0) {
+      if (type === 'venta_online') {
+        if (!isOversellAllowed) {
+          const cantSolicitada = Math.abs(finalDelta);
+          return {
+            ok: false,
+            error: `Sobreventa online bloqueada: stock insuficiente para "${product.name}" (disponible: ${stockBefore}, solicitado: ${cantSolicitada}). El flag allow_oversell_online está desactivado.`,
+          };
+        }
+      } else if (type !== 'ajuste') {
+        const cantSolicitada = Math.abs(finalDelta);
+        return {
+          ok: false,
+          error: `No podés descontar ${cantSolicitada} ${cantSolicitada === 1 ? 'unidad' : 'unidades'}: hay ${stockBefore} en stock de "${product.name}".`,
+        };
+      }
     }
   }
 
@@ -288,33 +297,26 @@ export async function registerStockMovement(
     };
   }
 
-  // Si una venta online genera stock negativo (sobreventa por venta simultánea), alertar al staff
+  // Si una venta online genera stock negativo (sobreventa permitida por flag), alertar al staff operativo
   if (type === 'venta_online' && stockAfter < 0) {
-    console.warn(`[ALERTA SOBREVENTA] Producto "${product.name}" quedó en stock negativo (${stockAfter} ud.) tras venta online orden #${referenceId}.`);
+    const missingUnits = Math.abs(stockAfter);
+    console.warn(`[ALERTA SOBREVENTA] Producto "${product.name}" quedó en stock negativo (${stockAfter} ud., faltan ${missingUnits} ud.) tras venta online orden #${referenceId}.`);
     try {
-      const { data: adminProfile } = await admin
-        .from('profiles')
-        .select('id')
-        .eq('role', 'admin')
-        .limit(1)
-        .maybeSingle();
+      const todayAR = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Argentina/Buenos_Aires',
+      }).format(new Date());
 
-      if (adminProfile) {
-        const todayAR = new Intl.DateTimeFormat('en-CA', {
-          timeZone: 'America/Argentina/Buenos_Aires',
-        }).format(new Date());
-
-        await admin.from('staff_tasks').insert({
-          assigned_profile_id: adminProfile.id,
-          task_type: 'stock_alert',
-          title: `Sobreventa online: ${product.name}`,
-          description: `Se vendieron ${Math.abs(finalDelta)} ud. de "${product.name}" por la web pero el stock quedó en ${stockAfter} ud. Reponer o contactar a la paciente. Orden #${referenceId || 'web'}.`,
-          due_date: todayAR,
-          related_entity_type: 'product',
-          related_entity_id: product.id,
-          status: 'pendiente',
-        });
-      }
+      await admin.from('staff_tasks').insert({
+        target_role: 'operativo',
+        assigned_profile_id: null,
+        task_type: 'stock_alert',
+        title: `URGENTE: Sobreventa de ${product.name} (Faltan ${missingUnits} ud.)`,
+        description: `Se vendieron ${Math.abs(finalDelta)} ud. de "${product.name}" por la web pero el stock físico quedó en ${stockAfter} ud. Faltan ${missingUnits} unidad(es) para cumplir con el pedido #${referenceId || 'web'}. Reponer inventario o contactar a la paciente para coordinar entrega.`,
+        due_date: todayAR,
+        related_entity_type: 'product',
+        related_entity_id: product.id,
+        status: 'pendiente',
+      });
     } catch (taskErr) {
       console.error('[registerStockMovement] Error creando tarea de alerta de sobreventa:', taskErr);
     }

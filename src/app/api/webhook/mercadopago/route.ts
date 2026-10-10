@@ -228,6 +228,8 @@ async function processPaymentNotification(paymentId: string, mpAccessToken: stri
       if (itemsErr) {
         console.error('[Webhook/MP Async] Error obteniendo items de la orden:', externalRef, itemsErr);
       } else if (orderItems && orderItems.length > 0) {
+        const allowOversellOnline = process.env.ALLOW_OVERSELL_ONLINE === 'true';
+
         for (const item of orderItems) {
           if (item.product_id && item.quantity > 0) {
             const movementRes = await registerStockMovement({
@@ -237,10 +239,28 @@ async function processPaymentNotification(paymentId: string, mpAccessToken: stri
               referenceType: 'order',
               referenceId: externalRef,
               notes: `Venta online orden #${externalRef.slice(0, 8)}`,
+              allowOversellOnline,
             });
 
             if (!movementRes.ok) {
               console.error(`[Webhook/MP Async] Error registrando venta_online para producto ${item.product_id}:`, movementRes.error);
+              try {
+                const todayAR = new Intl.DateTimeFormat('en-CA', {
+                  timeZone: 'America/Argentina/Buenos_Aires',
+                }).format(new Date());
+
+                await supabase.from('staff_tasks').insert({
+                  target_role: 'operativo',
+                  assigned_profile_id: null,
+                  task_type: 'stock_alert',
+                  title: `ALERTA: Stock insuficiente para pedido #${externalRef.slice(0, 8)}`,
+                  description: `El pago fue aprobado por Mercado Pago pero falló el descuento de stock para "${(item as any).products?.name || item.product_id}" (${movementRes.error}). Intervenir manualmente.`,
+                  due_date: todayAR,
+                  status: 'pendiente',
+                });
+              } catch (alertErr) {
+                console.error('[Webhook/MP Async] Error creando alerta de stock insuficiente:', alertErr);
+              }
             }
           }
         }

@@ -175,6 +175,34 @@ export default async function OperativoDashboard() {
     if (ordersErr) {
       console.error('[Dashboard/Operativo] Error consultando órdenes:', ordersErr);
     } else if (ordersRaw) {
+      const orderIds = ordersRaw.map((o: any) => o.id);
+      const oversellMap: Record<string, Array<{ product_name: string; missing_units: number }>> = {};
+
+      if (orderIds.length > 0) {
+        try {
+          const { data: oversellMovs } = await supabase
+            .from('stock_movements')
+            .select('reference_id, stock_after, products(name)')
+            .in('reference_id', orderIds)
+            .eq('reference_type', 'order')
+            .lt('stock_after', 0);
+
+          if (oversellMovs) {
+            for (const m of oversellMovs) {
+              const refId = m.reference_id;
+              if (!refId) continue;
+              if (!oversellMap[refId]) oversellMap[refId] = [];
+              oversellMap[refId].push({
+                product_name: (m as any).products?.name || 'Producto',
+                missing_units: Math.abs(m.stock_after),
+              });
+            }
+          }
+        } catch (movErr) {
+          console.error('[Dashboard/Operativo] Error consultando movimientos de sobreventa:', movErr);
+        }
+      }
+
       paidOrders = ordersRaw.map((o: any) => ({
         id: o.id,
         order_number: o.order_number || `ORD-${o.id.slice(0, 8)}`,
@@ -197,6 +225,7 @@ export default async function OperativoDashboard() {
         buyer_email_error: o.buyer_email_error,
         staff_email_sent: Boolean(o.staff_email_sent),
         staff_email_error: o.staff_email_error,
+        oversell_alerts: oversellMap[o.id] || [],
         items: (o.order_items || []).map((it: any) => ({
           id: it.id,
           product_name: it.products?.name || 'Producto',

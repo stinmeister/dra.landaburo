@@ -27,6 +27,10 @@ export interface OrderRecord {
   buyer_email_error: string | null;
   staff_email_sent: boolean;
   staff_email_error: string | null;
+  oversell_alerts?: Array<{
+    product_name: string;
+    missing_units: number;
+  }>;
   items: Array<{
     id: string;
     product_name: string;
@@ -139,6 +143,20 @@ export default function OrdersInbox({ orders }: { orders: OrderRecord[] }) {
                   )}
                 </div>
               </div>
+
+              {order.oversell_alerts && order.oversell_alerts.length > 0 && (
+                <div className={styles.oversellAlertBox}>
+                  <span className={styles.oversellIcon}>⚠️</span>
+                  <div>
+                    <strong>Alerta de Sobreventa (Inventario insuficiente):</strong>
+                    {order.oversell_alerts.map((al, idx) => (
+                      <div key={idx} className={styles.oversellText}>
+                        Faltan {al.missing_units} unidad(es) de &ldquo;{al.product_name}&rdquo; para completar este pedido.
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className={styles.cardBody}>
                 {/* Compradora & Entrega */}
