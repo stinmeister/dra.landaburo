@@ -2,16 +2,20 @@
  * scripts/verify-produccion.mjs
  * Script de verificación automatizada contra la URL pública de producción: https://dralandaburo.com
  *
- * Chequeos ejecutados:
+ * Chequeos ejecutados (Ronda del 12/10):
  * 1. Checkout online desactivado (status API: checkoutEnabled === false)
  * 2. Guard del servidor de checkout activo (POST /api/checkout/mercadopago devuelve 403 prohibido)
- * 3. Footer: sin sedes ajenas (única sede: Leandro N. Alem 45, Gualeguaychú)
- * 4. Footer: sin matrícula médica de maqueta inválida (sin M.P. 11.439)
- * 5. Footer: especialidad canónica restaurada ("Dermatóloga")
- * 6. Footer: horarios de atención en consultorio (10:00 – 19:00 hs)
- * 7. Tienda / Ficha de producto: título canónico e hidratado (sin duplicaciones)
- * 8. Botón flotante de WhatsApp activo y visible en el sitio
+ * 3. /consentimientos: sin matrícula 11.439 y con meta robots noindex
+ * 4. Barrido de credenciales: cero matrículas médicas no confirmadas en rutas públicas clave
+ * 5. Títulos canónicos: ausencia de nombres duplicados ("| Dra. Landaburo | Dra. Landaburo")
+ * 6. Footer: única sede Leandro N. Alem 45, Gualeguaychú (sin sedes ajenas)
+ * 7. Footer: especialidad canónica restaurada ("Dermatóloga")
+ * 8. Footer: horarios de atención en consultorio (10:00 – 19:00 hs desde store_config)
+ * 9. Ficha de producto: título canónico e hidratado (sin duplicaciones)
+ * 10. Botón flotante de WhatsApp activo y visible en el sitio
  */
+
+import { createClient } from '@supabase/supabase-js';
 
 const BASE_URL = process.env.VERIFY_BASE_URL || 'https://dralandaburo.com';
 
@@ -19,7 +23,7 @@ async function fetchText(path) {
   const url = `${BASE_URL}${path}`;
   const res = await fetch(url, {
     headers: {
-      'User-Agent': 'AntigravityProductionVerifier/1.0',
+      'User-Agent': 'AntigravityProductionVerifier/2.0',
       'Accept': 'text/html,application/json',
     },
     cache: 'no-store',
@@ -32,7 +36,7 @@ async function fetchJson(path, options = {}) {
   const url = `${BASE_URL}${path}`;
   const res = await fetch(url, {
     headers: {
-      'User-Agent': 'AntigravityProductionVerifier/1.0',
+      'User-Agent': 'AntigravityProductionVerifier/2.0',
       'Accept': 'application/json',
       'Content-Type': 'application/json',
       ...(options.headers || {}),
@@ -47,7 +51,7 @@ async function fetchJson(path, options = {}) {
 
 async function runVerification() {
   console.log(`\n=============================================================================`);
-  console.log(`🔍 VERIFICACIÓN DE PRODUCCIÓN — ${BASE_URL}`);
+  console.log(`🔍 VERIFICACIÓN DE PRODUCCIÓN (RONDA 12/10) — ${BASE_URL}`);
   console.log(`Fecha: ${new Date().toISOString()}`);
   console.log(`=============================================================================\n`);
 
@@ -70,12 +74,12 @@ async function runVerification() {
     const statusRes = await fetchJson('/api/checkout/mercadopago/status');
     const isCheckoutDisabled = statusRes.ok && statusRes.json?.checkoutEnabled === false;
     report(
-      'Checkout online desactivado (API status)',
+      'Checkout online desactivado estrictamente (checkout_enabled === false)',
       isCheckoutDisabled,
       `HTTP ${statusRes.status} — checkoutEnabled: ${statusRes.json?.checkoutEnabled}`
     );
   } catch (err) {
-    report('Checkout online desactivado (API status)', false, `Error: ${err.message}`);
+    report('Checkout online desactivado estrictamente', false, `Error: ${err.message}`);
   }
 
   // ── 2. Guard del servidor de checkout (POST protegido) ─────────────────────
@@ -97,7 +101,87 @@ async function runVerification() {
     report('Guard del servidor de checkout activo', false, `Error: ${err.message}`);
   }
 
-  // ── 3. Footer: Sede única y sin sedes ajenas (Home) ──────────────────────────
+  // ── 3. /consentimientos: sin 11.439 y con noindex ───────────────────────────
+  try {
+    const consentRes = await fetchText('/consentimientos');
+    const html = consentRes.text;
+    const has11439 = html.includes('11.439') || html.includes('11439');
+    const hasNoIndex = html.includes('noindex');
+    const hasPresencial = html.includes('presencial') || html.includes('consultorio');
+
+    report(
+      '/consentimientos sin matrícula no confirmada (11.439 eliminada)',
+      !has11439,
+      has11439 ? 'Se encontró mención a 11.439 en /consentimientos' : 'Cero referencias a 11.439 en la página'
+    );
+
+    report(
+      '/consentimientos configurado con robots noindex',
+      hasNoIndex,
+      hasNoIndex ? 'Directiva noindex confirmada en metadata' : 'Falta directiva noindex'
+    );
+
+    report(
+      '/consentimientos aclara firma y explicación presencial',
+      hasPresencial,
+      'Se informa que el consentimiento es presencial en consultorio'
+    );
+  } catch (err) {
+    report('/consentimientos: validaciones de contenido y metadata', false, `Error: ${err.message}`);
+  }
+
+  // ── 4. Barrido de credenciales: cero matrículas no confirmadas ─────────────
+  try {
+    const routesToCheck = ['/', '/sobre-mi', '/contacto', '/consentimientos'];
+    let foundMatricula = false;
+    let foundRoute = '';
+
+    for (const route of routesToCheck) {
+      const res = await fetchText(route);
+      if (res.text.includes('11.439') || res.text.includes('11439')) {
+        foundMatricula = true;
+        foundRoute = route;
+        break;
+      }
+    }
+
+    report(
+      'Barrido de rutas clave: Ninguna matrícula no confirmada publicada',
+      !foundMatricula,
+      foundMatricula ? `Se detectó matrícula en ${foundRoute}` : 'Rutas /, /sobre-mi, /contacto, /consentimientos limpias'
+    );
+  } catch (err) {
+    report('Barrido de rutas clave', false, `Error: ${err.message}`);
+  }
+
+  // ── 5. Títulos sin el nombre duplicado ("| Dra. Landaburo | Dra. Landaburo") ─
+  try {
+    const testPages = ['/', '/sobre-mi', '/contacto', '/consentimientos', '/tratamientos'];
+    let hasDuplicateTitle = false;
+    let dupDetails = '';
+
+    for (const path of testPages) {
+      const pageRes = await fetchText(path);
+      const titleMatch = pageRes.text.match(/<title>([^<]+)<\/title>/i);
+      const titleText = titleMatch ? titleMatch[1].trim() : '';
+
+      if (titleText.includes('Dra. Landaburo | Dra. Landaburo') || titleText.includes('Dra. Paula Landaburo | Dra. Paula Landaburo')) {
+        hasDuplicateTitle = true;
+        dupDetails = `${path} -> "${titleText}"`;
+        break;
+      }
+    }
+
+    report(
+      'Títulos de páginas públicas sin nombres duplicados de plantilla',
+      !hasDuplicateTitle,
+      hasDuplicateTitle ? `Duplicación detectada en ${dupDetails}` : 'Plantilla de metadata limpia en todas las páginas probadas'
+    );
+  } catch (err) {
+    report('Títulos de páginas públicas', false, `Error: ${err.message}`);
+  }
+
+  // ── 6. Footer: Sede única y sin sedes ajenas (Home) ──────────────────────────
   let homeHtml = '';
   try {
     const homeRes = await fetchText('/');
@@ -114,17 +198,7 @@ async function runVerification() {
     report('Footer: Sede exclusiva en Gualeguaychú', false, `Error: ${err.message}`);
   }
 
-  // ── 4. Footer: Sin matrícula médica inválida ───────────────────────────────
-  if (homeHtml) {
-    const has11439 = homeHtml.includes('11.439') || homeHtml.includes('11439');
-    report(
-      'Footer: Sin matrícula de maqueta inválida (M.P. 11.439 retirada)',
-      !has11439,
-      has11439 ? 'Se detectó 11.439 en el HTML' : 'Verificado: Cero referencias a M.P. 11.439'
-    );
-  }
-
-  // ── 5. Footer: Especialidad canónica "Dermatóloga" ─────────────────────────
+  // ── 7. Footer: Especialidad canónica "Dermatóloga" ─────────────────────────
   if (homeHtml) {
     const hasDermatologa = homeHtml.includes('Dermatóloga');
     report(
@@ -134,7 +208,7 @@ async function runVerification() {
     );
   }
 
-  // ── 6. Footer: Horarios de atención en consultorio ─────────────────────────
+  // ── 8. Footer: Horarios de atención en consultorio ─────────────────────────
   if (homeHtml) {
     const hasAttentionHours = homeHtml.includes('10:00 – 19:00') || homeHtml.includes('10:00 - 19:00');
     report(
@@ -144,7 +218,7 @@ async function runVerification() {
     );
   }
 
-  // ── 7. Ficha de producto: Título canónico e hidratado ──────────────────────
+  // ── 9. Ficha de producto: Título canónico e hidratado ──────────────────────
   try {
     const productSlug = 'acneplur-foam';
     const prodRes = await fetchText(`/tienda/${productSlug}`);
@@ -165,7 +239,7 @@ async function runVerification() {
     report('Ficha de producto: Título canónico', false, `Error: ${err.message}`);
   }
 
-  // ── 8. Botón flotante de WhatsApp ──────────────────────────────────────────
+  // ── 10. Botón flotante de WhatsApp ─────────────────────────────────────────
   if (homeHtml) {
     const hasWaLink = homeHtml.includes('wa.me/5491169684062') || homeHtml.includes('whatsapp.com');
     report(
