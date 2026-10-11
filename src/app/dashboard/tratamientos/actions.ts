@@ -194,8 +194,7 @@ export async function deleteTreatment(
     const { count: taskCount } = await admin
       .from('staff_tasks')
       .select('*', { count: 'exact', head: true })
-      .eq('related_entity_id', id)
-      .in('related_entity_type', ['tratamiento', 'treatment']);
+      .eq('related_entity_id', id);
 
     if ((linkCount && linkCount > 0) || (taskCount && taskCount > 0)) {
       const parts: string[] = [];
@@ -293,15 +292,11 @@ export async function archiveTreatment(
     });
 
     if (auditError) {
-      if (auditError.code === 'PGRST205') {
-        console.warn('[AUDIT NOTICE] deletion_audit aún no existe en BD. Procediendo con archivado reversible.');
-      } else {
-        console.error('[AUDIT ERROR PRE-ARCHIVE]', auditError);
-        return {
-          success: false,
-          error: `No se puede archivar el tratamiento: fallo en el registro obligatorio de auditoría (${auditError.message}). Operación abortada por seguridad.`,
-        };
-      }
+      console.error('[AUDIT ERROR PRE-ARCHIVE]', auditError);
+      return {
+        success: false,
+        error: `No se puede archivar el tratamiento: fallo en el registro obligatorio de auditoría (${auditError.message}). Operación abortada por seguridad.`,
+      };
     }
 
     // 2. Desactivar tratamiento en catálogo

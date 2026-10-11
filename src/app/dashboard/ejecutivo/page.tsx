@@ -21,7 +21,7 @@ import styles from './page.module.css';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Dashboard Ejecutivo | Dra. Landaburo',
+  title: 'Dashboard Ejecutivo',
 };
 
 // Types matching the DB schema exactly — avoids using `any`
@@ -315,21 +315,31 @@ export default async function EjecutivoPage({
   );
   const totalUSD = usdRows.reduce((sum, p) => sum + Number(p.amount_usd ?? 0), 0);
 
-  // Comisiones de Cosmetología / Mechi Pasquet (FIX-056)
-  // El 70% le corresponde a la profesional y el 30% al consultorio. Se liquida sobre lo cobrado.
-  // La atribución es por professional_profile_id explícito (con fallback histórico si no tuviera profile_id).
+  // Comisiones de Cosmetología (FIX-056)
+  // Dinámico: se resuelve desde la configuración en commission_rates y el perfil de la profesional.
+  const { data: commRate } = await adminClient
+    .from('commission_rates')
+    .select('professional_name, rate_percentage, role')
+    .eq('is_active', true)
+    .gt('rate_percentage', 0)
+    .maybeSingle();
+
+  const cosmetologaRole = commRate?.role || 'cosmetologa';
+  const consultorioPct = commRate ? Number(commRate.rate_percentage) / 100 : 0.30;
+  const profesionalPct = 1 - consultorioPct;
+
   const { data: mechiProfile } = await adminClient
     .from('profiles')
     .select('id, full_name')
-    .or('id.eq.11123745-1a5a-428c-9bed-29de4355d59c,full_name.ilike.%mercedes pasquet%')
+    .or(`role.eq.${cosmetologaRole},full_name.ilike.%${commRate?.professional_name || 'mercedes pasquet'}%`)
     .limit(1)
     .maybeSingle();
 
-  const mechiProfileId = mechiProfile?.id || '11123745-1a5a-428c-9bed-29de4355d59c';
+  const mechiProfileId = mechiProfile?.id || null;
 
   const mechiTreatmentRows = treatmentRows.filter(
     (p: any) =>
-      p.professional_profile_id === mechiProfileId ||
+      (mechiProfileId && p.professional_profile_id === mechiProfileId) ||
       (!p.professional_profile_id && p.notes?.toLowerCase().includes('pasquet'))
   );
 
@@ -338,8 +348,8 @@ export default async function EjecutivoPage({
     0
   );
 
-  const honorariosMercedes = Math.round(totalCobradoMechi * 0.70);
-  const retencionConsultorio = Math.round(totalCobradoMechi * 0.30);
+  const honorariosMercedes = Math.round(totalCobradoMechi * profesionalPct);
+  const retencionConsultorio = Math.round(totalCobradoMechi * consultorioPct);
 
   // Facturación neta del consultorio (facturación total menos honorarios pagados a Mechi)
   // Dra. Paula no comisiona: sus tratamientos y las ventas de productos ingresan al 100%.
