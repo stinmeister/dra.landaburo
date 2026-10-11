@@ -8,7 +8,7 @@ import { deletePost } from "./actions";
 import BlogDeleteButton from "@/components/dashboard/BlogDeleteButton";
 import styles from "./page.module.css";
 
-export const metadata: Metadata = { title: "Blog CMS | Panel Dra. Landaburo" };
+export const metadata: Metadata = { title: "Blog CMS | Panel" };
 
 const STATUS_LABELS: Record<string, string> = {
   publicado: "Publicado",

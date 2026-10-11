@@ -7,7 +7,7 @@ import StatsCounter from '@/components/home/StatsCounter';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
-  title: 'Sobre Mí | Dra. Paula Landaburo',
+  title: 'Sobre Mí',
   description: 'Conocé a la Dra. Paula Landaburo, médica especialista en dermatología y medicina estética.',
 };
 

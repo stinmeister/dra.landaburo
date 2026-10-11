@@ -12,7 +12,7 @@ import type { UserPermRow } from "./PermissionsMatrix";
 import UserActionsDropdown from "@/components/dashboard/UserActionsDropdown";
 import styles from "./page.module.css";
 
-export const metadata: Metadata = { title: "Usuarios | Panel Dra. Landaburo" };
+export const metadata: Metadata = { title: "Usuarios | Panel" };
 
 const ROLE_LABELS: Record<string, string> = {
   admin:       "Administrador",

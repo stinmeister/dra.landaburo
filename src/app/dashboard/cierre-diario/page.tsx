@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
-  title: 'Cierre Diario | Panel Dra. Landaburo',
+  title: 'Cierre Diario | Panel',
 };
 
 export default async function CierreDiarioPage({

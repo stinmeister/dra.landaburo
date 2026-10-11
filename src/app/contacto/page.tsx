@@ -7,7 +7,7 @@ import ContactForm from '@/components/contacto/ContactForm';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
-  title: 'Contactanos | Dra. Paula Landaburo',
+  title: 'Contactanos',
   description: 'Agendá tu consulta o hacenos una pregunta. Estamos en Gualeguaychú, Entre Ríos.',
 };
 

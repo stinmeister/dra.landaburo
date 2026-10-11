@@ -5,7 +5,7 @@ import Link from 'next/link';
 import styles from '../pago.module.css';
 
 export const metadata: Metadata = {
-  title: 'Pago pendiente | Tienda Dra. Landaburo',
+  title: 'Pago pendiente | Tienda',
   robots: { index: false },
 };
 

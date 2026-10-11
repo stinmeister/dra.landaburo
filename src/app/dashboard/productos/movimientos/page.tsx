@@ -7,7 +7,7 @@ import MovimientosClient from './MovimientosClient';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
-  title: 'Auditoría de Movimientos de Stock | Panel Dra. Landaburo',
+  title: 'Auditoría de Movimientos de Stock | Panel',
   description: 'Reporte de movimientos, balance contable y auditoría de inventario',
 };
 

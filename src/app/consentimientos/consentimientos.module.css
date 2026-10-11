@@ -161,23 +161,21 @@
   font-weight: 600;
   color: var(--color-gris);
 }
-.cardActions { display: flex; gap: 0.75rem; }
-.btnPrimary, .btnSecondary {
-  display: inline-flex;
+.procedureNote {
+  display: flex;
   align-items: center;
-  gap: 0.4rem;
-  font-family: var(--font-sans);
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
-  border: none;
-  padding: 0.6rem 1rem;
-  transition: all 0.2s ease;
 }
-.btnPrimary { background: var(--color-negro); color: var(--color-champagne); }
-.btnPrimary:hover { background: var(--color-champagne); color: var(--color-negro); }
-.btnSecondary { background: transparent; color: var(--color-negro); border: 1px solid var(--color-border); }
-.btnSecondary:hover { border-color: var(--color-champagne); color: var(--color-champagne); }
+.procedureBadge {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-champagne-dark);
+  background: rgba(197, 164, 126, 0.08);
+  border: 1px solid rgba(197, 164, 126, 0.25);
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+  text-align: center;
+}
 
 .legalSection { padding: 3rem 0; background-color: var(--color-bg); border-top: 1px solid var(--color-border); }
 .legalBox {

@@ -8,7 +8,7 @@ import { treatments } from '@/data/treatments';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
-  title: 'Tratamientos | Dra. Paula Landaburo',
+  title: 'Tratamientos',
   description: 'Conocé nuestros tratamientos de medicina estética: toxina botulínica, ácido hialurónico, Nordlys, y más.',
 };
 

@@ -7,7 +7,7 @@ import { getDeletionAuditLogs } from '../actions';
 import AuditoriaClient from './AuditoriaClient';
 
 export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { title: 'Auditoría de Bajas y Archivados | Panel Dra. Landaburo' };
+export const metadata: Metadata = { title: 'Auditoría de Bajas y Archivados | Panel' };
 
 export default async function AuditoriaPage() {
   const supabase = await createClient();

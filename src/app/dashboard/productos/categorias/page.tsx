@@ -7,7 +7,7 @@ import { getProductCategories } from '../actions';
 import CategoriasClient from './CategoriasClient';
 
 export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { title: 'Categorías | Panel Dra. Landaburo' };
+export const metadata: Metadata = { title: 'Categorías | Panel' };
 
 export default async function CategoriasPage() {
   const supabase = await createClient();

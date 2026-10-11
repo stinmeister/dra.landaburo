@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { savePost } from '../actions';
 import PostForm from '@/components/dashboard/PostForm';
 
-export const metadata: Metadata = { title: 'Editar artículo | Panel Dra. Landaburo' };
+export const metadata: Metadata = { title: 'Editar artículo | Panel' };
 
 interface Props { params: Promise<{ id: string }> }
 

@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Kiosco de Recepción | Dra. Landaburo',
+  title: {
+    absolute: 'Kiosco de Recepción',
+  },
   robots: { index: false, follow: false },
 };
 

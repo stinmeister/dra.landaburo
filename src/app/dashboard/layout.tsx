@@ -11,7 +11,7 @@ import { getUserSections, serializePermissions, ALL_SECTIONS } from "@/lib/permi
 import styles from "./layout.module.css";
 
 export const metadata: Metadata = {
-  title: "Panel | Dra. Landaburo",
+  title: "Panel",
   robots: { index: false },
 };
 

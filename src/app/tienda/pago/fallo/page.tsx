@@ -5,7 +5,7 @@ import Link from 'next/link';
 import styles from '../pago.module.css';
 
 export const metadata: Metadata = {
-  title: 'Pago no procesado | Tienda Dra. Landaburo',
+  title: 'Pago no procesado | Tienda',
   robots: { index: false },
 };
 

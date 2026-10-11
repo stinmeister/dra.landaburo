@@ -9,7 +9,7 @@ import Footer from '@/components/layout/Footer';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
-  title: 'Mi Portal | Dra. Landaburo',
+  title: 'Mi Portal',
 };
 
 type PatientProfile = {

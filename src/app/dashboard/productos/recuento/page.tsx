@@ -7,7 +7,7 @@ import RecuentoClient from './RecuentoClient';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
-  title: 'Recuento Mensual de Stock | Panel Dra. Landaburo',
+  title: 'Recuento Mensual de Stock | Panel',
   description: 'Relevamiento físico mensual y conciliación de inventario',
 };
 

@@ -7,7 +7,7 @@ import LoginForm from '@/components/auth/LoginForm';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
-  title: 'Ingresar | Dra. Landaburo',
+  title: 'Ingresar',
   robots: { index: false },
 };
 

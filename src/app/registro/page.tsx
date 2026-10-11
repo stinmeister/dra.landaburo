@@ -4,7 +4,7 @@ import RegisterForm from '@/components/auth/RegisterForm';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
-  title: 'Crear cuenta | Dra. Landaburo',
+  title: 'Crear cuenta',
   robots: { index: false },
 };
 

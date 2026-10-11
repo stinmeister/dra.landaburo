@@ -6,7 +6,7 @@ import WhatsAppButton from '@/components/layout/WhatsAppButton';
 import { createClient } from '@/lib/supabase/server';
 
 export const metadata: Metadata = {
-  title: 'Gift Cards | Dra. Landaburo',
+  title: 'Gift Cards',
   description: 'Regalá una experiencia de cuidado. Gift Cards combinables para tratamientos, productos dermocosméticos y saldo libre en Consultorio Dra. Paula Landaburo.',
 };
 

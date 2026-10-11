@@ -4,7 +4,7 @@ import RecuperarPasswordForm from '@/components/auth/RecuperarPasswordForm';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
-  title: 'Recuperar Contraseña | Dra. Landaburo',
+  title: 'Recuperar Contraseña',
   robots: { index: false },
 };
 

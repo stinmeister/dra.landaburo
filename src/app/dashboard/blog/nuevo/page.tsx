@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { savePost } from '../actions';
 import PostForm from '@/components/dashboard/PostForm';
 
-export const metadata: Metadata = { title: 'Nuevo artículo | Panel Dra. Landaburo' };
+export const metadata: Metadata = { title: 'Nuevo artículo | Panel' };
 
 export default async function NuevoPostPage() {
   const supabase = await createClient();

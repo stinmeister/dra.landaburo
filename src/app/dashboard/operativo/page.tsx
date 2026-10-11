@@ -17,7 +17,7 @@ import StoreConfigSwitch from '@/components/dashboard/StoreConfigSwitch';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
-  title: 'Dashboard Operativo | Dra. Landaburo',
+  title: 'Dashboard Operativo',
 };
 
 // Guías de personal — Doris eliminada, solo Ceci y Laura

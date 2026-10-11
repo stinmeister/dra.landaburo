@@ -4,7 +4,7 @@ import ActualizarPasswordForm from '@/components/auth/ActualizarPasswordForm';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
-  title: 'Establecer Nueva Contraseña | Dra. Landaburo',
+  title: 'Establecer Nueva Contraseña',
   robots: { index: false },
 };
 

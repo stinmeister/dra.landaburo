@@ -3,7 +3,7 @@ import Link from 'next/link';
 import styles from './sin-acceso.module.css';
 
 export const metadata: Metadata = {
-  title: 'Sin Secciones Asignadas | Panel Dra. Landaburo',
+  title: 'Sin Secciones Asignadas | Panel',
 };
 
 export default function SinAccesoPage() {

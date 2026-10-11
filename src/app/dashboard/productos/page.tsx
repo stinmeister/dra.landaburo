@@ -11,7 +11,7 @@ import NewProductForm from './NewProductForm';
 import styles from './page.module.css';
 
 export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { title: 'Productos | Panel Dra. Landaburo' };
+export const metadata: Metadata = { title: 'Productos | Panel' };
 
 const CATEGORIES = [
   'Limpieza',

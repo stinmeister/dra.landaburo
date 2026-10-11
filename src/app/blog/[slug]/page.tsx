@@ -22,9 +22,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .eq('slug', slug)
     .eq('is_published', true)
     .single();
-  if (!post) return { title: 'Artículo no encontrado | Dra. Landaburo' };
+  if (!post) return { title: 'Artículo no encontrado' };
   return {
-    title: `${post.title} | Dra. Paula Landaburo`,
+    title: post.title,
     description: post.excerpt,
   };
 }

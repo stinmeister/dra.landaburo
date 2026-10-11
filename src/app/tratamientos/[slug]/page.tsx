@@ -29,9 +29,9 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const treatment = getTreatmentBySlug(slug);
-  if (!treatment) return { title: 'Tratamiento no encontrado | Dra. Paula Landaburo' };
+  if (!treatment) return { title: 'Tratamiento no encontrado' };
   return {
-    title: `${treatment.title} | Dra. Paula Landaburo`,
+    title: treatment.title,
     description: treatment.description,
   };
 }

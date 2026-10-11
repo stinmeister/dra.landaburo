@@ -10,7 +10,7 @@ import { createClient } from '@/lib/supabase/server';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
-  title: 'Blog | Dra. Paula Landaburo',
+  title: 'Blog',
   description: 'Novedades y artículos sobre dermatología y medicina estética por la Dra. Paula Landaburo.',
 };
 

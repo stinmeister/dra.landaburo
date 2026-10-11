@@ -8,7 +8,7 @@ import { createTreatment } from './actions';
 import styles from './page.module.css';
 
 export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { title: 'Tratamientos | Panel Dra. Landaburo' };
+export const metadata: Metadata = { title: 'Tratamientos | Panel' };
 
 const CATEGORIES = [
   'Facial',

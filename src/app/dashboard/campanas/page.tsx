@@ -6,7 +6,7 @@ import CampanasClient from './CampanasClient';
 import type { Campaign } from './CampanasClient';
 
 export const metadata: Metadata = {
-  title: 'Campañas Publicitarias | Panel Dra. Landaburo',
+  title: 'Campañas Publicitarias | Panel',
 };
 
 export default async function CampanasPage() {

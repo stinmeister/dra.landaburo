@@ -14,7 +14,9 @@ import TestimonialsCarousel from '@/components/home/TestimonialsCarousel';
 import GiftCardsCTA from '@/components/home/GiftCardsCTA';
 
 export const metadata: Metadata = {
-  title: 'Dra. Paula Landaburo | Medicina Estética',
+  title: {
+    absolute: 'Dra. Paula Landaburo — Medicina Estética',
+  },
   description: 'Descubrí tu mejor versión con tratamientos de medicina estética de vanguardia en Gualeguaychú.',
 };
 
