@@ -44,7 +44,7 @@ interface ValidatedItem {
 
 export async function POST(req: NextRequest) {
   const clientIp = getClientIp(req.headers);
-  if (isRateLimited(clientIp, 'checkout-giftcard', { windowMs: 60 * 1000, max: 10 })) {
+  if (await isRateLimited(clientIp, 'checkout-giftcard', { windowMs: 60 * 1000, max: 10 })) {
     return NextResponse.json(
       { error: 'Demasiadas solicitudes de compra de gift cards. Por favor aguarde un momento.' },
       { status: 429 }

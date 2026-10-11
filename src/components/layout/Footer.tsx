@@ -3,7 +3,30 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { MapPin, Clock, Phone, Mail } from 'lucide-react';
 import { siteContent } from '@/data/site-content';
+import { createClient } from '@supabase/supabase-js';
 import styles from './Footer.module.css';
+
+async function getAttentionHours(): Promise<string> {
+  const defaultHours = 'Lun-Vier: 10:00 – 19:00 hs, Sáb: Solo con cita previa';
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    const { data, error } = await supabase
+      .from('store_config')
+      .select('attention_hours')
+      .eq('id', 1)
+      .maybeSingle();
+
+    if (!error && data?.attention_hours) {
+      return data.attention_hours;
+    }
+  } catch {
+    // fallback seguro si la columna no existe o hay error de red
+  }
+  return defaultHours;
+}
 
 function InstagramIcon({ size = 20 }: { size?: number }) {
   return (
@@ -15,7 +38,8 @@ function InstagramIcon({ size = 20 }: { size?: number }) {
   );
 }
 
-export default function Footer() {
+export default async function Footer({ attentionHours: propHours }: { attentionHours?: string } = {}) {
+  const hoursText = propHours || (await getAttentionHours());
   return (
     <footer className={styles.footer}>
       <div className={styles.waveDivider}>
@@ -64,8 +88,16 @@ export default function Footer() {
           <div className={styles.infoItem}>
             <Clock size={20} />
             <span>
-              {siteContent.contact.hours}<br />
-              {siteContent.contact.hoursSat}
+              {hoursText.includes(',') ? (
+                hoursText.split(',').map((part, i) => (
+                  <React.Fragment key={i}>
+                    {part.trim()}
+                    {i < hoursText.split(',').length - 1 && <br />}
+                  </React.Fragment>
+                ))
+              ) : (
+                hoursText
+              )}
             </span>
           </div>
         </div>

@@ -320,7 +320,10 @@ export async function deliverOrder(orderId: string) {
   return { success: true };
 }
 
-export async function toggleStoreConfig(field: 'checkout_enabled' | 'shipping_enabled', value: boolean) {
+export async function toggleStoreConfig(
+  field: 'checkout_enabled' | 'shipping_enabled' | 'allow_oversell_online',
+  value: boolean
+) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
@@ -348,6 +351,37 @@ export async function toggleStoreConfig(field: 'checkout_enabled' | 'shipping_en
 
   revalidatePath('/dashboard/operativo');
   revalidatePath('/tienda/carrito');
+  return { success: true };
+}
+
+export async function updateAttentionHours(attentionHours: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, id')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile || profile.role !== 'admin') {
+    throw new Error('Solo administradores pueden modificar el horario de atención.');
+  }
+
+  const { error } = await supabase
+    .from('store_config')
+    .update({
+      attention_hours: attentionHours.trim(),
+      updated_at: new Date().toISOString(),
+      updated_by: profile.id,
+    })
+    .eq('id', 1);
+
+  if (error) throw new Error(`Error actualizando attention_hours: ${error.message}`);
+
+  revalidatePath('/dashboard/operativo');
+  revalidatePath('/');
   return { success: true };
 }
 

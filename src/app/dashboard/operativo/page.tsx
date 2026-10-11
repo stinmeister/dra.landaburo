@@ -168,7 +168,9 @@ export default async function OperativoDashboard() {
         buyer_email_error,
         staff_email_sent,
         staff_email_error,
-        meta_capi_sent,
+        meta_capi_status,
+        meta_capi_event_id,
+        meta_capi_sent_at,
         meta_capi_error,
         prepared_by_user:profiles!orders_prepared_by_fkey(full_name),
         delivered_by_user:profiles!orders_delivered_by_fkey(full_name),
@@ -271,7 +273,9 @@ export default async function OperativoDashboard() {
         buyer_email_error: o.buyer_email_error,
         staff_email_sent: Boolean(o.staff_email_sent),
         staff_email_error: o.staff_email_error,
-        meta_capi_sent: o.meta_capi_sent !== undefined ? Boolean(o.meta_capi_sent) : undefined,
+        meta_capi_status: o.meta_capi_status || null,
+        meta_capi_event_id: o.meta_capi_event_id || null,
+        meta_capi_sent_at: o.meta_capi_sent_at || null,
         meta_capi_error: o.meta_capi_error || null,
         oversell_alerts: oversellMap[o.id] || [],
         items: (o.order_items || []).map((it: any) => ({
@@ -291,18 +295,34 @@ export default async function OperativoDashboard() {
   let storeConfig = {
     checkout_enabled: false,
     shipping_enabled: false,
+    attention_hours: 'Lun-Vier: 10:00 – 19:00 hs, Sáb: Solo con cita previa',
+    allow_oversell_online: false,
   };
   try {
-    const { data: scData } = await supabase
+    const { data: scData, error: scErr } = await supabase
       .from('store_config')
-      .select('checkout_enabled, shipping_enabled')
+      .select('checkout_enabled, shipping_enabled, attention_hours, allow_oversell_online')
       .eq('id', 1)
       .maybeSingle();
-    if (scData) {
+
+    if (!scErr && scData) {
       storeConfig = {
         checkout_enabled: Boolean(scData.checkout_enabled),
         shipping_enabled: Boolean(scData.shipping_enabled),
+        attention_hours: scData.attention_hours || 'Lun-Vier: 10:00 – 19:00 hs, Sáb: Solo con cita previa',
+        allow_oversell_online: Boolean(scData.allow_oversell_online),
       };
+    } else {
+      // Fallback si attention_hours / allow_oversell_online aún no existen en DB
+      const { data: scFallback } = await supabase
+        .from('store_config')
+        .select('checkout_enabled, shipping_enabled')
+        .eq('id', 1)
+        .maybeSingle();
+      if (scFallback) {
+        storeConfig.checkout_enabled = Boolean(scFallback.checkout_enabled);
+        storeConfig.shipping_enabled = Boolean(scFallback.shipping_enabled);
+      }
     }
   } catch (err) {
     console.error('[Dashboard/Operativo] Error consultando store_config:', err);
@@ -477,6 +497,8 @@ export default async function OperativoDashboard() {
               <StoreConfigSwitch
                 checkoutEnabled={storeConfig.checkout_enabled}
                 shippingEnabled={storeConfig.shipping_enabled}
+                attentionHours={storeConfig.attention_hours}
+                allowOversellOnline={storeConfig.allow_oversell_online}
               />
               <ConfiguracionOperativa
                 profiles={staffProfiles}

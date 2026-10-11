@@ -105,3 +105,48 @@
 .toggleKnobOff {
   transform: translateX(0);
 }
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #f3f4f6;
+}
+
+.textInput {
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 4px;
+  outline: none;
+  color: var(--color-negro);
+}
+
+.textInput:focus {
+  border-color: var(--color-champagne, #C5A47E);
+}
+
+.saveBtn {
+  align-self: flex-start;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.4rem 0.8rem;
+  background-color: var(--color-negro);
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.saveBtn:hover:not(:disabled) {
+  background-color: var(--color-champagne-dark, #A8875F);
+}
+
+.saveBtn:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}

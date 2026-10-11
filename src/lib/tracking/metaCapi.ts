@@ -80,8 +80,9 @@ function normalizeCity(city: string | null | undefined): string | null {
  */
 async function recordCapiStatus(
   orderId: string,
-  sent: boolean,
-  error: string | null
+  status: 'sent' | 'failed' | 'skipped',
+  error: string | null,
+  eventId?: string
 ): Promise<void> {
   try {
     const supabase = createClient(
@@ -89,20 +90,22 @@ async function recordCapiStatus(
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
+    const updatePayload: Record<string, any> = {
+      meta_capi_status: status,
+      meta_capi_event_id: eventId || null,
+      meta_capi_sent_at: status === 'sent' ? new Date().toISOString() : null,
+      meta_capi_error: error || null,
+    };
+
     const { error: updErr } = await supabase
       .from('orders')
-      .update({
-        meta_capi_sent: sent,
-        meta_capi_error: error,
-        meta_capi_attempted_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq('id', orderId);
 
     if (updErr) {
-      // Si las columnas aún no existen en el esquema SQL de Supabase (esperando DDL)
-      if (updErr.code === 'PGRST204' || updErr.message.includes('column')) {
+      if (updErr.code === '42703' || updErr.code === 'PGRST204' || updErr.message.includes('column')) {
         console.warn(
-          `[Meta CAPI] Nota: Columnas meta_capi_* pendientes de DDL en tabla orders. Estado en memoria: sent=${sent}, error=${error}`
+          `[Meta CAPI] Nota: Columnas meta_capi_* pendientes de DDL en tabla orders. Estado en memoria: status=${status}, eventId=${eventId}, error=${error}`
         );
       } else {
         console.error('[Meta CAPI] Error actualizando estado de CAPI en orders:', updErr.message);
@@ -137,7 +140,7 @@ export async function sendMetaPurchaseCapi({
     const warning =
       'META_CONVERSIONS_API_TOKEN no está configurado en las variables de entorno del servidor.';
     console.warn(`[Meta CAPI] ${warning} Omitiendo despacho para orden ${order.order_number || order.id}.`);
-    await recordCapiStatus(order.id, false, warning);
+    await recordCapiStatus(order.id, 'failed', warning, externalRef || order.id);
     return { success: false, error: warning };
   }
 
@@ -208,7 +211,7 @@ export async function sendMetaPurchaseCapi({
     if (!res.ok) {
       const errText = await res.text();
       console.error(`[Meta CAPI] Error en Meta Graph API (${res.status}):`, errText);
-      await recordCapiStatus(order.id, false, `HTTP ${res.status}: ${errText}`);
+      await recordCapiStatus(order.id, 'failed', `HTTP ${res.status}: ${errText}`, eventId);
       return { success: false, error: errText };
     }
 
@@ -219,12 +222,12 @@ export async function sendMetaPurchaseCapi({
       }`
     );
 
-    await recordCapiStatus(order.id, true, null);
+    await recordCapiStatus(order.id, 'sent', null, eventId);
     return { success: true };
   } catch (err: any) {
     const errorMsg = err?.message || 'Error desconocido despachando Meta CAPI';
     console.error('[Meta CAPI] Excepción de red despachando Purchase:', errorMsg);
-    await recordCapiStatus(order.id, false, errorMsg);
+    await recordCapiStatus(order.id, 'failed', errorMsg, externalRef || order.id);
     return { success: false, error: errorMsg };
   }
 }

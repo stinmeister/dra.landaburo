@@ -27,9 +27,10 @@ export interface OrderRecord {
   buyer_email_error: string | null;
   staff_email_sent: boolean;
   staff_email_error: string | null;
-  meta_capi_sent?: boolean;
+  meta_capi_status?: 'sent' | 'failed' | 'skipped' | 'pending' | string | null;
+  meta_capi_event_id?: string | null;
+  meta_capi_sent_at?: string | null;
   meta_capi_error?: string | null;
-  meta_capi_attempted_at?: string | null;
   oversell_alerts?: Array<{
     product_name: string;
     missing_units: number;
@@ -210,20 +211,24 @@ export default function OrdersInbox({ orders }: { orders: OrderRecord[] }) {
                     )}
                   </div>
 
-                  {/* Estado de Meta CAPI (2.2) */}
+                  {/* Estado de Meta CAPI (2.1) */}
                   <div className={styles.emailStatusRow}>
                     <span>Meta CAPI:</span>
-                    {order.meta_capi_sent ? (
+                    {order.meta_capi_status === 'sent' ? (
                       <span className={styles.emailOk}>Enviado ✓</span>
-                    ) : order.meta_capi_error ? (
+                    ) : order.meta_capi_status === 'failed' || order.meta_capi_error ? (
                       <span
                         className={styles.emailError}
-                        title={`Error CAPI: ${order.meta_capi_error}`}
+                        title={`Error CAPI: ${order.meta_capi_error || 'Error al despachar a Meta'}`}
                       >
                         Error en CAPI ⚠️
                       </span>
                     ) : (
-                      <span className={styles.authorshipText}>No enviado / Pendiente</span>
+                      <span className={styles.authorshipText}>
+                        {order.meta_capi_status === 'skipped'
+                          ? 'Omitido'
+                          : 'Pendiente'}
+                      </span>
                     )}
                   </div>
                 </div>

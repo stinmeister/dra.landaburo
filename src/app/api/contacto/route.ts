@@ -6,7 +6,7 @@ import { isRateLimited, getClientIp } from '@/lib/rateLimit';
 export async function POST(req: NextRequest) {
   try {
     const clientIp = getClientIp(req.headers);
-    if (isRateLimited(clientIp, 'contacto', { windowMs: 10 * 60 * 1000, max: 5 })) {
+    if (await isRateLimited(clientIp, 'contacto', { windowMs: 10 * 60 * 1000, max: 5 })) {
       return NextResponse.json(
         { error: 'Demasiadas solicitudes desde esta conexión. Por favor intentá nuevamente en unos minutos.' },
         { status: 429 }

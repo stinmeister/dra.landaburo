@@ -42,7 +42,7 @@ function isValidEmail(email: string): boolean {
 
 export async function POST(req: NextRequest) {
   const clientIp = getClientIp(req.headers);
-  if (isRateLimited(clientIp, 'checkout-mp', { windowMs: 60 * 1000, max: 10 })) {
+  if (await isRateLimited(clientIp, 'checkout-mp', { windowMs: 60 * 1000, max: 10 })) {
     return NextResponse.json(
       { error: 'Demasiadas solicitudes de compra. Por favor aguarde un momento.' },
       { status: 429 }

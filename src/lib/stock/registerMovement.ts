@@ -204,10 +204,7 @@ export async function registerStockMovement(
     // - Si allow_oversell_online es false: el stock negativo es estrictamente rechazado.
     // - Ni el mostrador ni los ajustes manuales permiten stock negativo.
     // =========================================================================
-    const isOversellAllowed = Boolean(
-      params.allowOversellOnline ??
-      (process.env.ALLOW_OVERSELL_ONLINE === 'true')
-    );
+    const isOversellAllowed = Boolean(params.allowOversellOnline);
 
     if (stockAfter < 0) {
       if (type === 'venta_online') {

@@ -228,7 +228,19 @@ async function processPaymentNotification(paymentId: string, mpAccessToken: stri
       if (itemsErr) {
         console.error('[Webhook/MP Async] Error obteniendo items de la orden:', externalRef, itemsErr);
       } else if (orderItems && orderItems.length > 0) {
-        const allowOversellOnline = process.env.ALLOW_OVERSELL_ONLINE === 'true';
+        let allowOversellOnline = false;
+        try {
+          const { data: scRow } = await supabase
+            .from('store_config')
+            .select('allow_oversell_online')
+            .eq('id', 1)
+            .maybeSingle();
+          if (scRow?.allow_oversell_online) {
+            allowOversellOnline = Boolean(scRow.allow_oversell_online);
+          }
+        } catch {
+          allowOversellOnline = false;
+        }
 
         for (const item of orderItems) {
           if (item.product_id && item.quantity > 0) {
@@ -462,7 +474,41 @@ export async function POST(req: NextRequest) {
     }, { status: 401 });
   }
 
-  // 5. VALIDACIÓN OK -> Responder HTTP 200 INMEDIATO a Mercado Pago (2.1 c)
+  // 5. Idempotencia real con tabla mp_webhook_events (Bloque 2.2)
+  const eventId = `${paymentId}_${notification.topic || notification.type || 'payment'}`;
+  try {
+    const supabaseAdmin = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { cookies: { getAll: () => [], setAll: () => {} } }
+    );
+    const { error: eventErr } = await supabaseAdmin
+      .from('mp_webhook_events')
+      .insert({
+        event_id: eventId,
+        payment_id: String(paymentId),
+        status: 'received',
+        payload: notification,
+      });
+
+    if (eventErr) {
+      if (eventErr.code === '23505') {
+        // Evento duplicado: responder 200 sin reprocesar
+        console.log(`[Webhook/MP] Notificación duplicada detectada en mp_webhook_events (${eventId}). Respondiendo 200 sin reprocesar.`);
+        return NextResponse.json({ ok: true, duplicate: true });
+      } else if (eventErr.code === '42P01' || eventErr.code === 'PGRST204' || eventErr.message.includes('mp_webhook_events')) {
+        console.warn(`[Webhook/MP] Tabla mp_webhook_events aún no existe en DB (pendiente DDL). Continuando con procesamiento.`);
+      } else {
+        console.error('[Webhook/MP] Error registrando evento en mp_webhook_events:', eventErr.message);
+      }
+    } else {
+      console.log(`[Webhook/MP] Evento registrado en mp_webhook_events (${eventId}).`);
+    }
+  } catch (auditErr: any) {
+    console.warn('[Webhook/MP] Excepción al registrar en mp_webhook_events:', auditErr?.message);
+  }
+
+  // 6. VALIDACIÓN OK -> Responder HTTP 200 INMEDIATO a Mercado Pago (2.1 c)
   // Desacoplamos la consulta a la API de MP y descuento de stock en segundo plano
   if (!mpAccessToken) {
     console.error('[Webhook/MP] Advertencia: MP_ACCESS_TOKEN no configurado en servidor; no se puede procesar pago.');
