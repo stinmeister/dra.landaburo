@@ -1,54 +1,57 @@
-# Base de Conocimiento y Documentación Técnica Integral — dralandaburo.com
+# Base de Conocimiento y Documentación Técnica Oficial — dralandaburo.com
 
-**Versión del Sistema:** 1.0.0 (Next.js 16.2.11 + Turbopack + Supabase PostgreSQL)  
-**Fecha de Publicación:** 14 de Septiembre de 2026  
-**Auditoría y Validación:** 100% Verificado contra el código fuente, base de datos de producción e infraestructura real.
-
----
-
-## 📖 Mapa de la Documentación (24 Documentos)
-
-La documentación se organiza en 24 volúmenes estructurados para ofrecer cobertura exhaustiva a desarrolladores, arquitectos, administradores y dirección médica:
-
-### 🏛️ Visión General, Arquitectura y Rutas
-1. [**01. Visión General del Sistema**](./01_SYSTEM_OVERVIEW.md): Resumen ejecutivo, propósito médico-comercial, capacidades clave y stack tecnológico.
-2. [**02. Arquitectura Técnica**](./02_TECHNICAL_ARCHITECTURE.md): Diagramas de capas (Frontend, Backend, Servicios Externos), flujo de datos y renderizado RSC.
-3. [**03. Rutas y Arquitectura de Información**](./03_ROUTES_AND_INFORMATION_ARCHITECTURE.md): Mapa completo de las 49 rutas públicas, protegidas, kiosco y API endpoints.
-4. [**04. Inventario Funcional**](./04_FUNCTIONAL_INVENTORY.md): Desglose de las 7 áreas funcionales (Web, Tienda, Gift Cards, Kiosco, Dashboard, Blog, Tracking).
-5. [**05. Matriz de Estados de Funcionalidades**](./05_FEATURE_STATE_MATRIX.md): Tabla de estado de madurez operativa de cada funcionalidad del sistema.
-
-### 🗄️ Datos, API, Seguridad y Experiencia de Usuario
-6. [**06. Base de Datos y Modelado**](./06_DATABASE.md): Auditoría de 23 tablas en Supabase, conteos exactos de registros, llaves foráneas y tipos ENUM.
-7. [**07. Documentación de API**](./07_API_DOCUMENTATION.md): Especificación técnica de los 13 Route Handlers de Next.js, payloads, auth y webhooks.
-8. [**08. Seguridad, Autenticación y RBAC**](./08_SECURITY.md): Modelo de permisos de dos niveles, políticas RLS, validación HMAC y auditoría de cookies.
-9. [**09. Recorridos de Usuario (User Journeys)**](./09_USER_JOURNEYS.md): Diagramas de secuencia y flujos paso a paso para pacientes, staff y administradores.
-10. [**10. Sistema de Diseño UX/UI**](./10_UX_UI.md): Paleta de colores champagne/monocromática, tipografía Playfair/IBM Plex, CSS Modules y responsive design.
-
-### 🧩 Componentes, Comercio, Integraciones e Infraestructura
-11. [**11. Inventario de Componentes**](./11_COMPONENT_INVENTORY.md): Catálogo exhaustivo de los 39 componentes de React, props, estado e interactividad.
-12. [**12. Pagos, Comercio y Gift Cards**](./12_PAYMENTS_AND_COMMERCE.md): Flujo de checkout con Mercado Pago, carrito, emisión de códigos `DL-XXXX-XXXX` y canjes.
-13. [**13. Integraciones y Servicios Externos**](./13_INTEGRATIONS.md): Supabase, Mercado Pago, Resend, n8n, Meta Pixel, Google Analytics 4 y Google Maps.
-14. [**14. Infraestructura y Despliegue**](./14_INFRASTRUCTURE.md): Servidor AWS EC2 (Bitnami Linux), Apache 2.4 reverse proxy, PM2 y pipeline PowerShell.
-15. [**15. Configuración y Variables de Entorno**](./15_CONFIGURATION.md): Matriz de 14 variables de entorno públicas/privadas y parámetros dinámicos en base de datos.
-
-### ⚙️ Estados, Contenido, SEO, Rendimiento y Deuda Técnica
-16. [**16. Modelo de Estados y Manejo de Errores**](./16_ERROR_AND_STATE_MODEL.md): Máquinas de estado de órdenes, gift cards, tareas y admisiones, códigos HTTP y fallbacks.
-17. [**17. Modelo de Contenido y Copybook**](./17_CONTENT_MODEL.md): Catálogo de tratamientos médicos, línea Skincare Sulderm y reglas lingüísticas oficiales.
-18. [**18. SEO, Metadatos y Accesibilidad**](./18_SEO_ACCESSIBILITY.md): Schemas JSON-LD (MedicalBusiness, Physician), metadatos dinámicos, sitemap y WCAG AA.
-19. [**19. Rendimiento y Métricas Web**](./19_PERFORMANCE.md): Optimización Turbopack, Standalone container, WebP/AVIF y zero-runtime CSS.
-20. [**20. Deuda Técnica y Plan de Remediación**](./20_TECHNICAL_DEBT.md): Priorización de discrepancias encontradas, sincronización de BD y testing.
-
-### 📸 Estado Actual, Glosario y Cobertura
-21. [**21. Estado Actual del Sistema**](./21_CURRENT_STATE.md): Fotografía en tiempo real de producción, versiones y métricas de registros en base de datos.
-22. [**22. Glosario Técnico y Clínico**](./22_GLOSSARY.md): Definiciones precisas de términos de ingeniería web y conceptos de medicina estética.
-23. [**23. Índice Maestro (Este Archivo)**](./README.md): Guía de lectura y punto de entrada central.
-24. [**24. Matriz de Cobertura de Documentación**](./DOCUMENTATION_COVERAGE.md): Mapeo 1:1 entre elementos físicos del código y su documentación correspondiente.
+**Versión del Sistema:** 2.0.0 (Next.js 16 App Router + Supabase PostgreSQL 15 + AWS EC2)  
+**Fecha de Publicación Oficial:** 14 de Octubre de 2026  
+**Último Commit Desplegado:** `5ca414d`  
+**Host de Producción:** AWS EC2 Bitnami (`54.94.94.20`) · Dominio: `https://dralandaburo.com`  
+**Auditoría y Validación:** ✅ 100% Verificado contra el código fuente, base de datos viva e infraestructura en producción.
 
 ---
 
-## 🧭 Guías de Lectura por Rol
+> [!IMPORTANT]
+> **Nueva Documentación Oficial (14/10/2026):**
+> Este repositorio cuenta con un nuevo cuerpo documental consolidado de **16 volúmenes numerados (`00_INDICE.md` a `15_ESTADO_Y_DEUDA.md`)**, verificado minuciosamente contra la realidad de la base de datos (34 tablas, 5 RPCs, 10 usuarios) y el código de Next.js 16. Los documentos antiguos (fechados el 14/09/2026) se conservan exclusivamente con fines de archivo histórico y han sido formalmente superados.
+>
+> 🧭 **Para comenzar a leer, dirigirse a:** [**00_INDICE.md — Índice Maestro y Guía de Navegación**](./00_INDICE.md)
 
-- **👨‍💻 Desarrollador Frontend:** Iniciar por [11. Componentes](./11_COMPONENT_INVENTORY.md), [10. UX/UI](./10_UX_UI.md), [03. Rutas](./03_ROUTES_AND_INFORMATION_ARCHITECTURE.md) y [12. Comercio](./12_PAYMENTS_AND_COMMERCE.md).
-- **🔧 Desarrollador Backend & Datos:** Iniciar por [06. Base de Datos](./06_DATABASE.md), [07. API](./07_API_DOCUMENTATION.md), [08. Seguridad](./08_SECURITY.md) y [13. Integraciones](./13_INTEGRATIONS.md).
-- **🚀 DevOps & SysAdmin:** Iniciar por [14. Infraestructura](./14_INFRASTRUCTURE.md), [15. Configuración](./15_CONFIGURATION.md) y [21. Estado Actual](./21_CURRENT_STATE.md).
-- **👩‍⚕️ Dirección Médica & Producto:** Iniciar por [01. Visión General](./01_SYSTEM_OVERVIEW.md), [04. Inventario Funcional](./04_FUNCTIONAL_INVENTORY.md) y [17. Contenido & Copybook](./17_CONTENT_MODEL.md).
+---
+
+## 📚 Cuerpo Documental Oficial (16 Volúmenes)
+
+### 🏛️ Fundamentos, Arquitectura y Datos
+* [**00. Índice Maestro y Guía de Navegación**](./00_INDICE.md): Mapas de lectura según objetivo (entender, QA, operar, desarrollar) y tabla de absorción histórica.
+* [**01. Visión General, Propósito y Alcance**](./01_VISION_Y_ALCANCE.md): Propósito clínico-comercial, audiencias, qué resuelve y qué deliberadamente NO hace el sistema.
+* [**02. Arquitectura Técnica y de Despliegue**](./02_ARQUITECTURA.md): Diagramas de despliegue y componentes, trampa del standalone con doble `.env.local`, cache de PostgREST y ADRs.
+* [**03. Modelo de Datos y Esquema Relacional**](./03_MODELO_DE_DATOS.md): Diagramas ER por dominio, auditoría de las 34 tablas, columnas, índices, RLS, triggers y 5 RPCs.
+
+### ⚙️ Funcionalidad, Roles y Dinámica de Estados
+* [**04. Mapa Funcional y Matriz de Capacidades**](./04_MAPA_FUNCIONAL.md): Mindmap jerárquico, catálogo de 39 rutas y matriz de los 5 estados de capacidad.
+* [**05. Roles, Permisos y Control de Acceso (RBAC)**](./05_ROLES_Y_PERMISOS.md): RBAC de dos niveles (`role_section_defaults` + `user_section_overrides`) y 4 líneas defensivas de guards.
+* [**06. Recorridos de Usuario (User Journeys) y Personas**](./06_USER_JOURNEYS.md): Los 8 perfiles del consultorio, puntos de dolor y recorridos ciegos nunca ocurridos.
+* [**07. Procesos Operativos de Consultorio**](./07_PROCESOS_OPERATIVOS.md): Diagramas de actividad de apertura, atención, cobro, cierre diario de caja y arqueo de inventario.
+* [**08. Flujos Críticos del Sistema (Sequence Diagrams)**](./08_FLUJOS_CRITICOS.md): Diagramas de secuencia de compra online, movimientos de stock, auth/RBAC, n8n, borrado y contacto.
+* [**09. Máquinas de Estado y Ciclos de Vida**](./09_MAQUINAS_DE_ESTADO.md): State diagrams con CHECKs reales para pedidos, tareas, gift cards, leads, stock y Meta CAPI.
+
+### 🎨 Diseño, Servicios Externos, Seguridad y Operación
+* [**10. Sistema de Diseño UX/UI, Componentes y Patrones**](./10_UX_UI_Y_PATRONES.md): Tokens champagne, tipografías, CSS Modules, catálogo de 46 componentes y accesibilidad (a11y).
+* [**11. Integraciones y Servicios Externos**](./11_INTEGRACIONES.md): Mercado Pago, Resend Mail, n8n Automation, Meta Conversions API (CAPI), Google Analytics 4 y Storage.
+* [**12. Modelo de Seguridad, Políticas RLS y Protección**](./12_SEGURIDAD.md): Modelo STRIDE, RLS tabla por tabla, aislamiento de secretos y corrección de fugas históricas.
+* [**13. Manual de Operación, Despliegue y Mantenimiento**](./13_OPERACION_Y_DESPLIEGUE.md): Manual paso a paso en EC2, PM2 zero-downtime, verificación anti-fallbacks y regla de oro DDL.
+* [**14. Glosario Integral de Términos**](./14_GLOSARIO.md): Definiciones rigurosas de términos médicos/clínicos, operativos/comerciales y técnicos de software.
+* [**15. Estado de Situación, Deuda Técnica y Backlog**](./15_ESTADO_Y_DEUDA.md): Fotografía de producción al 14/10, tareas del backlog Notion (`FIX-0XX`), bloqueos y deuda técnica.
+
+---
+
+## 🧭 Guías Rápidas de Lectura por Rol
+
+- **👨‍💻 Desarrollador Nuevo / Agente IA:** Iniciar por [01. Visión y Alcance](./01_VISION_Y_ALCANCE.md), [02. Arquitectura](./02_ARQUITECTURA.md), [04. Mapa Funcional](./04_MAPA_FUNCIONAL.md) y [14. Glosario](./14_GLOSARIO.md).
+- **🧪 QA & Auditoría Técnica:** Iniciar por [04. Mapa Funcional](./04_MAPA_FUNCIONAL.md), [08. Flujos Críticos](./08_FLUJOS_CRITICOS.md), [09. Máquinas de Estado](./09_MAQUINAS_DE_ESTADO.md) y [15. Estado y Deuda](./15_ESTADO_Y_DEUDA.md).
+- **🏥 Operación de Consultorio y Mostrador:** Iniciar por [05. Roles y Permisos](./05_ROLES_Y_PERMISOS.md), [06. User Journeys](./06_USER_JOURNEYS.md) y [07. Procesos Operativos](./07_PROCESOS_OPERATIVOS.md).
+- **🚀 DevOps & Despliegues:** Iniciar por [02. Arquitectura](./02_ARQUITECTURA.md), [03. Modelo de Datos](./03_MODELO_DE_DATOS.md), [12. Seguridad](./12_SEGURIDAD.md) y [13. Operación y Despliegue](./13_OPERACION_Y_DESPLIEGUE.md).
+
+---
+
+## 📜 Archivos Históricos Conservados (Superados)
+
+Para consultar el estado de la documentación previa a la ronda del 14/10/2026, los archivos originales se encuentran disponibles con encabezados de advertencia histórica:
+- `01_SYSTEM_OVERVIEW.md` · `02_TECHNICAL_ARCHITECTURE.md` · `03_ROUTES_AND_INFORMATION_ARCHITECTURE.md` · `04_FUNCTIONAL_INVENTORY.md` · `05_FEATURE_STATE_MATRIX.md` · `06_DATABASE.md` · `07_API_DOCUMENTATION.md` · `08_SECURITY.md` · `09_USER_JOURNEYS.md` · `10_UX_UI.md` · `11_COMPONENT_INVENTORY.md` · `12_PAYMENTS_AND_COMMERCE.md` · `13_INTEGRATIONS.md` · `14_INFRASTRUCTURE.md` · `15_CONFIGURATION.md` · `16_ERROR_AND_STATE_MODEL.md` · `17_CONTENT_MODEL.md` · `18_SEO_ACCESSIBILITY.md` · `19_PERFORMANCE.md` · `20_TECHNICAL_DEBT.md` · `21_CURRENT_STATE.md` · `22_GLOSSARY.md` · `DOCUMENTATION_COVERAGE.md` · `RESPUESTAS_QA_03SEP_OLA5.md`.

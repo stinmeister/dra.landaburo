@@ -1,3 +1,10 @@
+> [!WARNING]
+> **DOCUMENTO HISTÓRICO SUPERADO (14/09/2026):**  
+> Este documento ha sido reemplazado y consolidado en el nuevo cuerpo documental oficial del 14/10/2026.  
+> Para consultar la documentación vigente y verificada contra el código vivo y la base de datos de producción (34 tablas, 5 RPCs, 10 usuarios), dirigirse a [**00_INDICE.md**](./00_INDICE.md).
+
+---
+
 # Estado Actual del Sistema y Fotografía de Producción
 
 Estado de Verificación: [VERIFICADO]
