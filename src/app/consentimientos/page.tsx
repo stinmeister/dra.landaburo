@@ -11,11 +11,13 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+export const dynamic = 'force-dynamic';
+
 const consents = [
   {
     code: 'CI-01',
     title: 'Toxina Botulínica (Botox)',
-    responsible: 'Dra. Paula Landaburo — Especialista en Dermatología',
+    responsible: 'Dra. Paula Landaburo — Dirección Médica',
     icon: '💉',
     description: 'Procedimiento de relajación muscular mediante toxina botulínica tipo A. Incluye zonas de aplicación, tiempo de latencia y contraindicaciones.',
     keyPoints: [
@@ -28,7 +30,7 @@ const consents = [
   {
     code: 'CI-02',
     title: 'Ácido Hialurónico & Rellenos',
-    responsible: 'Dra. Paula Landaburo — Especialista en Dermatología',
+    responsible: 'Dra. Paula Landaburo — Dirección Médica',
     icon: '✨',
     description: 'Tratamiento de relleno y voluminización con ácido hialurónico reticulado de uso médico. Cuidados post-inyección y protocolo de corrección con hialuronidasa.',
     keyPoints: [
@@ -41,7 +43,7 @@ const consents = [
   {
     code: 'CI-03',
     title: 'Bioestimuladores (Radiesse / Sculptra)',
-    responsible: 'Dra. Paula Landaburo — Especialista en Dermatología',
+    responsible: 'Dra. Paula Landaburo — Dirección Médica',
     icon: '🔬',
     description: 'Tratamiento de estimulación de colágeno mediante bioestimuladores inyectables. Neocolagénesis progresiva con curva de resultados a 3 meses.',
     keyPoints: [
@@ -54,7 +56,7 @@ const consents = [
   {
     code: 'CI-04',
     title: 'PRP / PRF & Tratamiento Capilar',
-    responsible: 'Dra. Paula Landaburo — Especialista en Dermatología',
+    responsible: 'Dra. Paula Landaburo — Dirección Médica',
     icon: '🩸',
     description: 'Tratamiento de bioestimulación con plasma rico en plaquetas o fibrina autóloga. Extracción sanguínea, centrifugación estéril cerrada y aplicación capilar o facial.',
     keyPoints: [

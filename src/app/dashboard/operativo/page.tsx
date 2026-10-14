@@ -180,45 +180,8 @@ export default async function OperativoDashboard() {
       .order('created_at', { ascending: false })
       .limit(25);
 
-    if (resWithCapi.error && (resWithCapi.error.code === '42703' || resWithCapi.error.message.includes('meta_capi'))) {
-      const resFallback = await supabase
-        .from('orders')
-        .select(`
-          id,
-          order_number,
-          created_at,
-          buyer_name,
-          buyer_email,
-          buyer_phone,
-          customer_name,
-          customer_email,
-          customer_phone,
-          total_ars,
-          delivery_method,
-          delivery_address,
-          delivery_city,
-          delivery_postal_code,
-          delivery_notes,
-          fulfillment_status,
-          prepared_at,
-          delivered_at,
-          buyer_email_sent,
-          buyer_email_error,
-          staff_email_sent,
-          staff_email_error,
-          prepared_by_user:profiles!orders_prepared_by_fkey(full_name),
-          delivered_by_user:profiles!orders_delivered_by_fkey(full_name),
-          order_items(id, quantity, unit_price_ars, products(name))
-        `)
-        .in('payment_status', ['approved', 'paid'])
-        .order('created_at', { ascending: false })
-        .limit(25);
-      ordersRaw = resFallback.data;
-      ordersErr = resFallback.error;
-    } else {
-      ordersRaw = resWithCapi.data;
-      ordersErr = resWithCapi.error;
-    }
+    ordersRaw = resWithCapi.data;
+    ordersErr = resWithCapi.error;
 
     if (ordersErr) {
       console.error('[Dashboard/Operativo] Error consultando órdenes:', ordersErr);
@@ -312,17 +275,6 @@ export default async function OperativoDashboard() {
         attention_hours: scData.attention_hours || 'Lun-Vier: 10:00 – 19:00 hs, Sáb: Solo con cita previa',
         allow_oversell_online: Boolean(scData.allow_oversell_online),
       };
-    } else {
-      // Fallback si attention_hours / allow_oversell_online aún no existen en DB
-      const { data: scFallback } = await supabase
-        .from('store_config')
-        .select('checkout_enabled, shipping_enabled')
-        .eq('id', 1)
-        .maybeSingle();
-      if (scFallback) {
-        storeConfig.checkout_enabled = Boolean(scFallback.checkout_enabled);
-        storeConfig.shipping_enabled = Boolean(scFallback.shipping_enabled);
-      }
     }
   } catch (err) {
     console.error('[Dashboard/Operativo] Error consultando store_config:', err);

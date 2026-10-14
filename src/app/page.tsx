@@ -20,6 +20,8 @@ export const metadata: Metadata = {
   description: 'Descubrí tu mejor versión con tratamientos de medicina estética de vanguardia en Gualeguaychú.',
 };
 
+export const dynamic = 'force-dynamic';
+
 export default function HomePage() {
   return (
     <>

@@ -18,7 +18,7 @@ export const teamMembers: TeamMember[] = [
   {
     id: 'dra-paula-landaburo',
     name: 'Dra. Paula Landaburo',
-    role: 'Directora Médica & Especialista en Dermatología',
+    role: 'Directora Médica & Medicina Estética',
     category: 'medica',
     badge: 'DIRECCIÓN MÉDICA',
     bio: 'Médica especialista en medicina estética de precisión y armonización facial natural. Formada en las técnicas más avanzadas de toxina botulínica, rellenos, bioestimulación y tecnología láser. Su filosofía combina seguridad anatómica con elegancia y resultados naturales.',

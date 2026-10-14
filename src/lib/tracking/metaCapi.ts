@@ -103,13 +103,7 @@ async function recordCapiStatus(
       .eq('id', orderId);
 
     if (updErr) {
-      if (updErr.code === '42703' || updErr.code === 'PGRST204' || updErr.message.includes('column')) {
-        console.warn(
-          `[Meta CAPI] Nota: Columnas meta_capi_* pendientes de DDL en tabla orders. Estado en memoria: status=${status}, eventId=${eventId}, error=${error}`
-        );
-      } else {
-        console.error('[Meta CAPI] Error actualizando estado de CAPI en orders:', updErr.message);
-      }
+      console.error('[Meta CAPI] Error actualizando estado de CAPI en orders:', updErr.message);
     }
   } catch (err: any) {
     console.error('[Meta CAPI] Excepción al actualizar estado en orders:', err?.message);
@@ -140,7 +134,7 @@ export async function sendMetaPurchaseCapi({
     const warning =
       'META_CONVERSIONS_API_TOKEN no está configurado en las variables de entorno del servidor.';
     console.warn(`[Meta CAPI] ${warning} Omitiendo despacho para orden ${order.order_number || order.id}.`);
-    await recordCapiStatus(order.id, 'failed', warning, externalRef || order.id);
+    await recordCapiStatus(order.id, 'skipped', warning, externalRef || order.id);
     return { success: false, error: warning };
   }
 

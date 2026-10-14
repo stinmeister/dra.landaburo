@@ -1,9 +1,11 @@
+import React from 'react';
 import { Metadata } from 'next';
 import { MapPin, Phone, Mail, Clock } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import WhatsAppButton from '@/components/layout/WhatsAppButton';
 import ContactForm from '@/components/contacto/ContactForm';
+import { getStoreConfig } from '@/lib/storeConfig';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
@@ -11,7 +13,11 @@ export const metadata: Metadata = {
   description: 'Agendá tu consulta o hacenos una pregunta. Estamos en Gualeguaychú, Entre Ríos.',
 };
 
-export default function ContactoPage() {
+export const dynamic = 'force-dynamic';
+
+export default async function ContactoPage() {
+  const storeConfig = await getStoreConfig();
+  const hoursText = storeConfig.attention_hours || 'Lun-Vier: 10:00 – 19:00 hs, Sáb: Solo con cita previa';
   return (
     <>
       <Header />
@@ -71,8 +77,16 @@ export default function ContactoPage() {
                     <div>
                       <h3>Horarios</h3>
                       <p>
-                        Lun - Vier: 10:00 – 19:00 hs<br />
-                        Sáb: Solo con cita previa
+                        {hoursText.includes(',') ? (
+                          hoursText.split(',').map((part, i) => (
+                            <React.Fragment key={i}>
+                              {part.trim()}
+                              {i < hoursText.split(',').length - 1 && <br />}
+                            </React.Fragment>
+                          ))
+                        ) : (
+                          hoursText
+                        )}
                       </p>
                     </div>
                   </div>
