@@ -1,23 +1,23 @@
 /**
  * scripts/verify-produccion.mjs
- * Script de verificación automatizada contra la URL pública de producción: https://dralandaburo.com
+ * Script de verificación automatizada anti-fallbacks contra la URL pública de producción y Supabase.
  *
- * Chequeos ejecutados (Ronda del 12/10):
- * 1. Checkout online desactivado (status API: checkoutEnabled === false)
- * 2. Guard del servidor de checkout activo (POST /api/checkout/mercadopago devuelve 403 prohibido)
- * 3. /consentimientos: sin matrícula 11.439 y con meta robots noindex
- * 4. Barrido de credenciales: cero matrículas médicas no confirmadas en rutas públicas clave
- * 5. Títulos canónicos: ausencia de nombres duplicados ("| Dra. Landaburo | Dra. Landaburo")
- * 6. Footer: única sede Leandro N. Alem 45, Gualeguaychú (sin sedes ajenas)
- * 7. Footer: especialidad canónica restaurada ("Dermatóloga")
- * 8. Footer: horarios de atención en consultorio (10:00 – 19:00 hs desde store_config)
- * 9. Ficha de producto: título canónico e hidratado (sin duplicaciones)
- * 10. Botón flotante de WhatsApp activo y visible en el sitio
+ * Principio rector:
+ * Un chequeo que no distingue "funciona" de "cayó al fallback" no está verificando nada.
+ * Donde haya un valor configurable, el chequeo confirma que el sitio refleja el valor real
+ * almacenado en la base de datos (PostgreSQL), nunca una constante estática hardcodeada.
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { createHmac } from 'crypto';
 
 const BASE_URL = process.env.VERIFY_BASE_URL || 'https://dralandaburo.com';
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+const sbAdmin = (SUPABASE_URL && SERVICE_KEY) ? createClient(SUPABASE_URL, SERVICE_KEY) : null;
+const sbAnon = (SUPABASE_URL && ANON_KEY) ? createClient(SUPABASE_URL, ANON_KEY) : null;
 
 async function fetchText(path) {
   const url = `${BASE_URL}${path}`;
@@ -51,7 +51,7 @@ async function fetchJson(path, options = {}) {
 
 async function runVerification() {
   console.log(`\n=============================================================================`);
-  console.log(`🔍 VERIFICACIÓN DE PRODUCCIÓN (RONDA 12/10) — ${BASE_URL}`);
+  console.log(`🔍 VERIFICACIÓN DE PRODUCCIÓN ANTI-FALLBACKS — ${BASE_URL}`);
   console.log(`Fecha: ${new Date().toISOString()}`);
   console.log(`=============================================================================\n`);
 
@@ -208,14 +208,37 @@ async function runVerification() {
     );
   }
 
-  // ── 8. Footer: Horarios de atención en consultorio ─────────────────────────
-  if (homeHtml) {
-    const hasAttentionHours = homeHtml.includes('10:00 – 19:00') || homeHtml.includes('10:00 - 19:00');
-    report(
-      'Footer: Horarios de atención médica en consultorio (10:00 – 19:00 hs)',
-      hasAttentionHours,
-      hasAttentionHours ? 'Horario de consultorio verificado' : 'No se encontró horario 10:00 – 19:00 en footer'
-    );
+  // ── 8. Footer: Horarios dinámicos contrastados contra store_config (DB) ────
+  if (sbAdmin) {
+    try {
+      const { data: dbConfig, error: scErr } = await sbAdmin
+        .from('store_config')
+        .select('attention_hours')
+        .eq('id', 1)
+        .single();
+
+      if (scErr || !dbConfig?.attention_hours) {
+        report('Footer: Horarios dinámicos contrastados contra DB', false, `Error consultando store_config: ${scErr?.message}`);
+      } else {
+        const expectedHours = dbConfig.attention_hours.trim();
+        // Normalizamos espacios y guiones para robustez de comparación
+        const normExpected = expectedHours.replace(/[\s\u2013\u2014-]+/g, ' ').toLowerCase();
+        const normHtml = homeHtml.replace(/[\s\u2013\u2014-]+/g, ' ').toLowerCase();
+
+        const matchesDb = normHtml.includes(normExpected) || homeHtml.includes(expectedHours);
+        report(
+          'Footer: Horarios de atención reflejan dinámicamente store_config (DB)',
+          matchesDb,
+          matchesDb
+            ? `HTML público coincide exactamente con el valor en PostgreSQL: "${expectedHours}"`
+            : `El HTML no contiene el valor configurado en base de datos ("${expectedHours}")`
+        );
+      }
+    } catch (err) {
+      report('Footer: Horarios dinámicos contrastados contra DB', false, `Error: ${err.message}`);
+    }
+  } else {
+    report('Footer: Horarios dinámicos contrastados contra DB', false, 'Faltan credenciales de Supabase para contrastar contra DB');
   }
 
   // ── 9. Ficha de producto: Título canónico e hidratado ──────────────────────
@@ -247,6 +270,149 @@ async function runVerification() {
       hasWaLink,
       'Enlace a wa.me/5491169684062 presente en el DOM'
     );
+  }
+
+  // ── 11. Rate Limits persistente en PostgreSQL (FIX-029) ────────────────────
+  if (sbAdmin) {
+    try {
+      const testKey = 'verify-check-rate-limit';
+      const now = new Date();
+      const resetAt = new Date(now.getTime() + 60000);
+
+      // Inserción directa en tabla
+      const { error: insErr } = await sbAdmin.from('rate_limits').upsert({
+        key: testKey,
+        count: 1,
+        reset_at: resetAt.toISOString(),
+        updated_at: now.toISOString(),
+      });
+
+      if (insErr) {
+        report('Rate limits persistente en PostgreSQL (public.rate_limits)', false, `Error al escribir en tabla: ${insErr.message}`);
+      } else {
+        const { data: readRow, error: readErr } = await sbAdmin
+          .from('rate_limits')
+          .select('key, count')
+          .eq('key', testKey)
+          .single();
+
+        const isOk = !readErr && readRow?.count === 1;
+        report(
+          'Rate limits persistente en PostgreSQL (public.rate_limits)',
+          isOk,
+          isOk ? 'Tabla public.rate_limits operativa con inserción y lectura' : `Error en lectura: ${readErr?.message}`
+        );
+
+        // Limpiar registro de test
+        await sbAdmin.from('rate_limits').delete().eq('key', testKey);
+      }
+    } catch (err) {
+      report('Rate limits persistente en PostgreSQL', false, `Excepción: ${err.message}`);
+    }
+  }
+
+  // ── 12. Idempotencia real con tabla mp_webhook_events ──────────────────────
+  if (sbAdmin) {
+    try {
+      const testEventId = 'verify-test-event-idempotency';
+      await sbAdmin.from('mp_webhook_events').delete().eq('event_id', testEventId);
+
+      // 1er insert
+      const { error: insErr1 } = await sbAdmin.from('mp_webhook_events').insert({
+        event_id: testEventId,
+        payment_id: 'verify-payment-1',
+        status: 'received',
+        payload: { test: true },
+      });
+
+      // 2do insert (debe chocar por UNIQUE constraint 23505)
+      const { error: insErr2 } = await sbAdmin.from('mp_webhook_events').insert({
+        event_id: testEventId,
+        payment_id: 'verify-payment-1',
+        status: 'received',
+        payload: { test: true },
+      });
+
+      const uniqueEnforced = !insErr1 && insErr2 && insErr2.code === '23505';
+      report(
+        'Idempotencia estricta en mp_webhook_events (rechazo de duplicados por UNIQUE)',
+        Boolean(uniqueEnforced),
+        uniqueEnforced
+          ? 'Evento duplicado rechazado por restricción UNIQUE de PostgreSQL (código 23505)'
+          : `Fallo de unicidad: insErr1=${insErr1?.message}, insErr2=${insErr2?.message}`
+      );
+
+      await sbAdmin.from('mp_webhook_events').delete().eq('event_id', testEventId);
+    } catch (err) {
+      report('Idempotencia estricta en mp_webhook_events', false, `Excepción: ${err.message}`);
+    }
+  }
+
+  // ── 13. Formulario de contacto: inserción anónima sin service_role ─────────
+  if (sbAnon && sbAdmin) {
+    try {
+      const testAnonEmail = 'qa.verify.script.anon@dralandaburo.local';
+      await sbAdmin.from('leads').delete().eq('email', testAnonEmail);
+
+      const testPayload = {
+        full_name: 'QA Verifier Script Anon',
+        email: testAnonEmail,
+        phone: '+5493446000000',
+        notes: '[QA VERIFIER SCRIPT] Prueba de inserción anónima con RLS activa',
+        status: 'nuevo',
+      };
+
+      // Inserción con cliente anónimo (sin .select())
+      const { error: anonInsErr } = await sbAnon.from('leads').insert([testPayload]);
+
+      if (anonInsErr) {
+        report(
+          'Formulario de contacto: Inserción anónima con RLS activa (leads_anon_insert)',
+          false,
+          `Error RLS: ${anonInsErr.message} (código ${anonInsErr.code})`
+        );
+      } else {
+        // Verificar existencia con admin
+        const { data: leadRow } = await sbAdmin
+          .from('leads')
+          .select('id, status')
+          .eq('email', testAnonEmail)
+          .maybeSingle();
+
+        const success = Boolean(leadRow && leadRow.status === 'nuevo');
+        report(
+          'Formulario de contacto: Inserción anónima con RLS activa (leads_anon_insert)',
+          success,
+          success
+            ? `Lead registrado correctamente en DB con rol anon (id: ${leadRow.id})`
+            : 'Fila no encontrada tras inserción anónima'
+        );
+
+        if (leadRow) {
+          await sbAdmin.from('leads').delete().eq('id', leadRow.id);
+        }
+      }
+    } catch (err) {
+      report('Formulario de contacto: Inserción anónima con RLS activa', false, `Excepción: ${err.message}`);
+    }
+  }
+
+  // ── 14. Columnas Meta CAPI confirmadas en orders ───────────────────────────
+  if (sbAdmin) {
+    try {
+      const { error: capiErr } = await sbAdmin
+        .from('orders')
+        .select('meta_capi_status, meta_capi_event_id, meta_capi_sent_at, meta_capi_error')
+        .limit(1);
+
+      report(
+        'Columnas de Meta CAPI activas en tabla orders (sin modo defensivo)',
+        !capiErr,
+        capiErr ? `Error en esquema: ${capiErr.message}` : 'Columnas meta_capi_status/event_id/sent_at/error verificadas'
+      );
+    } catch (err) {
+      report('Columnas de Meta CAPI activas en tabla orders', false, `Excepción: ${err.message}`);
+    }
   }
 
   console.log(`\n-----------------------------------------------------------------------------`);
