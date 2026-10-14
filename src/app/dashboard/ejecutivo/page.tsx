@@ -355,6 +355,35 @@ export default async function EjecutivoPage({
   // Dra. Paula no comisiona: sus tratamientos y las ventas de productos ingresan al 100%.
   const facturacionNetaConsultorio = totalARS - honorariosMercedes;
 
+  // Consulta de métricas agregadas por RPC con guard de rol RBAC (FIX-011 / FIX-057)
+  let rpcMetricas: {
+    total_ars: number;
+    total_usd: number;
+    total_count: number;
+    by_method: Record<string, number>;
+    cosmetologa_total_ars: number;
+  } | null = null;
+
+  try {
+    const { data: rpcData, error: rpcErr } = await supabase.rpc('obtener_metricas_ejecutivas', {
+      p_start_date: monthStart,
+      p_end_date: monthEnd,
+      p_cosmetologa_profile_id: mechiProfileId,
+    });
+    if (!rpcErr && rpcData) {
+      rpcMetricas = rpcData;
+      if (Number(rpcData.total_ars) !== totalARS) {
+        console.warn(
+          `[Dashboard/Ejecutivo Contabilidad] Diferencia detectada: RPC total_ars=${rpcData.total_ars} vs page totalARS=${totalARS}`
+        );
+      }
+    } else if (rpcErr) {
+      console.warn('[Dashboard/Ejecutivo] Aviso consultando RPC obtener_metricas_ejecutivas:', rpcErr.message);
+    }
+  } catch (err) {
+    console.warn('[Dashboard/Ejecutivo] Excepción en RPC obtener_metricas_ejecutivas:', err);
+  }
+
   // 2. Consulta de cobros del mes para la tabla detallada (sin límite artificial, solo vigentes)
   const { data: paymentsRaw, error: paymentsError } = await adminClient
     .from('payments')
