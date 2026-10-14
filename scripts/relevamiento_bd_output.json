@@ -1,0 +1,3226 @@
+{
+  "timestamp": "2026-10-14T15:58:25.532Z",
+  "supabaseUrl": "https://mdletvbgwzbpenzevurr.supabase.co",
+  "totalTables": 34,
+  "rowCounts": {
+    "ad_campaigns": 2,
+    "appointments": 0,
+    "clinic_closed_days": 0,
+    "commission_rates": 2,
+    "cookie_consents": 62,
+    "deletion_audit": 3,
+    "gift_cards": 0,
+    "ingest_review": 344,
+    "ingest_review_backup_20260916": 320,
+    "inventory_items": 0,
+    "kiosk_admissions": 0,
+    "leads": 16,
+    "mp_webhook_events": 0,
+    "order_items": 0,
+    "orders": 0,
+    "patients": 924,
+    "payments": 775,
+    "payments_backup_20260916": 1072,
+    "posts": 5,
+    "practice_material_links": 1,
+    "practice_materials": 1,
+    "product_batches": 0,
+    "product_categories": 13,
+    "products": 39,
+    "profiles": 10,
+    "rate_limits": 2,
+    "recurring_task_rules": 3,
+    "role_section_defaults": 32,
+    "staff_guides": 2,
+    "staff_tasks": 15,
+    "stock_movements": 111,
+    "store_config": 1,
+    "treatments": 120,
+    "user_section_overrides": 2
+  },
+  "tableDetails": {
+    "ad_campaigns": {
+      "description": "",
+      "columnCount": 15,
+      "rowCount": 2,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": "gen_random_uuid()",
+          "required": true
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "platform",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": "Meta Ads",
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": "activa",
+          "required": true
+        },
+        {
+          "name": "ad_copy",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "target_treatment",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "promo_details",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "suggested_response",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "start_date",
+          "type": "string",
+          "format": "date",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "end_date",
+          "type": "string",
+          "format": "date",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "utm_campaign",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "notes",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "created_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "timezone('utc'::text, now())",
+          "required": true
+        },
+        {
+          "name": "updated_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "timezone('utc'::text, now())",
+          "required": true
+        },
+        {
+          "name": "notion_id",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        }
+      ]
+    },
+    "appointments": {
+      "description": "",
+      "columnCount": 8,
+      "rowCount": 0,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": "gen_random_uuid()",
+          "required": true
+        },
+        {
+          "name": "patient_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `patients.id`.<fk table='patients' column='id'/>",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "treatment_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `treatments.id`.<fk table='treatments' column='id'/>",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "professional_profile_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `profiles.id`.<fk table='profiles' column='id'/>",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "appointment_date",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": "scheduled",
+          "required": true
+        },
+        {
+          "name": "notes",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "created_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        }
+      ]
+    },
+    "clinic_closed_days": {
+      "description": "",
+      "columnCount": 4,
+      "rowCount": 0,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": "gen_random_uuid()",
+          "required": true
+        },
+        {
+          "name": "closed_date",
+          "type": "string",
+          "format": "date",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "motivo",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "created_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        }
+      ]
+    },
+    "commission_rates": {
+      "description": "",
+      "columnCount": 8,
+      "rowCount": 2,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": "gen_random_uuid()",
+          "required": true
+        },
+        {
+          "name": "professional_name",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "role",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "rate_percentage",
+          "type": "number",
+          "format": "numeric",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "applicable_category",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "format": "boolean",
+          "description": "",
+          "default": true,
+          "required": true
+        },
+        {
+          "name": "created_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "timezone('utc'::text, now())",
+          "required": true
+        },
+        {
+          "name": "updated_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "timezone('utc'::text, now())",
+          "required": true
+        }
+      ]
+    },
+    "cookie_consents": {
+      "description": "",
+      "columnCount": 5,
+      "rowCount": 62,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": "gen_random_uuid()",
+          "required": true
+        },
+        {
+          "name": "ip_hash",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "analytics_accepted",
+          "type": "boolean",
+          "format": "boolean",
+          "description": "",
+          "default": false,
+          "required": true
+        },
+        {
+          "name": "marketing_accepted",
+          "type": "boolean",
+          "format": "boolean",
+          "description": "",
+          "default": false,
+          "required": true
+        },
+        {
+          "name": "created_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        }
+      ]
+    },
+    "deletion_audit": {
+      "description": "Registro inmutable de eliminaciones y archivados. No se edita ni se borra.",
+      "columnCount": 10,
+      "rowCount": 3,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": "gen_random_uuid()",
+          "required": true
+        },
+        {
+          "name": "occurred_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        },
+        {
+          "name": "actor_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `profiles.id`.<fk table='profiles' column='id'/>",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "actor_name",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "action",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "entity_type",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "entity_id",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "entity_name",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "reason",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "snapshot",
+          "type": "unknown",
+          "format": "jsonb",
+          "description": "",
+          "default": null,
+          "required": true
+        }
+      ]
+    },
+    "gift_cards": {
+      "description": "",
+      "columnCount": 21,
+      "rowCount": 0,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": "gen_random_uuid()",
+          "required": true
+        },
+        {
+          "name": "code",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "purchaser_patient_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `patients.id`.<fk table='patients' column='id'/>",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "amount_ars",
+          "type": "number",
+          "format": "numeric",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "remaining_balance_ars",
+          "type": "number",
+          "format": "numeric",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": "active",
+          "required": true
+        },
+        {
+          "name": "expiration_date",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "created_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        },
+        {
+          "name": "sender_name",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "sender_email",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "recipient_name",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "dedication",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "mp_payment_id",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "redeemed_by",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `profiles.id`.<fk table='profiles' column='id'/>",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "redeemed_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "redemption_notes",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "treatment_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `treatments.id`.<fk table='treatments' column='id'/>",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "product_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `products.id`.<fk table='products' column='id'/>",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "delivery_method",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": "digital",
+          "required": true
+        },
+        {
+          "name": "physical_prepared_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "physical_prepared_by",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `profiles.id`.<fk table='profiles' column='id'/>",
+          "default": null,
+          "required": false
+        }
+      ]
+    },
+    "ingest_review": {
+      "description": "",
+      "columnCount": 10,
+      "rowCount": 344,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": "gen_random_uuid()",
+          "required": true
+        },
+        {
+          "name": "source",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "record_identifier",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "reason",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "payload",
+          "type": "unknown",
+          "format": "jsonb",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": "pending",
+          "required": true
+        },
+        {
+          "name": "resolution_notes",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "resolved_by",
+          "type": "string",
+          "format": "uuid",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "resolved_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "created_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        }
+      ]
+    },
+    "ingest_review_backup_20260916": {
+      "description": "",
+      "columnCount": 10,
+      "rowCount": 320,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "source",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "record_identifier",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "reason",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "payload",
+          "type": "unknown",
+          "format": "jsonb",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "resolution_notes",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "resolved_by",
+          "type": "string",
+          "format": "uuid",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "resolved_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "created_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": null,
+          "required": false
+        }
+      ]
+    },
+    "inventory_items": {
+      "description": "",
+      "columnCount": 8,
+      "rowCount": 0,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": "gen_random_uuid()",
+          "required": true
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "category",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "quantity",
+          "type": "number",
+          "format": "numeric",
+          "description": "",
+          "default": 0,
+          "required": true
+        },
+        {
+          "name": "unit",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": "unidad",
+          "required": true
+        },
+        {
+          "name": "min_threshold",
+          "type": "number",
+          "format": "numeric",
+          "description": "",
+          "default": 0,
+          "required": true
+        },
+        {
+          "name": "updated_by",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `profiles.id`.<fk table='profiles' column='id'/>",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "updated_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        }
+      ]
+    },
+    "kiosk_admissions": {
+      "description": "",
+      "columnCount": 14,
+      "rowCount": 0,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": "gen_random_uuid()",
+          "required": true
+        },
+        {
+          "name": "created_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        },
+        {
+          "name": "full_name",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "dni",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "email",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "phone",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "birth_date",
+          "type": "string",
+          "format": "date",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "city",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": "Gualeguaychú",
+          "required": false
+        },
+        {
+          "name": "attribution_channel",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "referral_name",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "interests",
+          "type": "array",
+          "format": "text[]",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "medical_notes",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "device_info",
+          "type": "unknown",
+          "format": "jsonb",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": "nuevo",
+          "required": false
+        }
+      ]
+    },
+    "leads": {
+      "description": "",
+      "columnCount": 7,
+      "rowCount": 16,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": "gen_random_uuid()",
+          "required": true
+        },
+        {
+          "name": "full_name",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "email",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "phone",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "notes",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": "nuevo",
+          "required": true
+        },
+        {
+          "name": "created_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        }
+      ]
+    },
+    "mp_webhook_events": {
+      "description": "",
+      "columnCount": 6,
+      "rowCount": 0,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": "gen_random_uuid()",
+          "required": true
+        },
+        {
+          "name": "event_id",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "payment_id",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "processed_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        },
+        {
+          "name": "payload",
+          "type": "unknown",
+          "format": "jsonb",
+          "description": "",
+          "default": null,
+          "required": false
+        }
+      ]
+    },
+    "order_items": {
+      "description": "",
+      "columnCount": 7,
+      "rowCount": 0,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": "gen_random_uuid()",
+          "required": true
+        },
+        {
+          "name": "order_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `orders.id`.<fk table='orders' column='id'/>",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "product_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `products.id`.<fk table='products' column='id'/>",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "quantity",
+          "type": "integer",
+          "format": "integer",
+          "description": "",
+          "default": 1,
+          "required": true
+        },
+        {
+          "name": "unit_price_ars",
+          "type": "number",
+          "format": "numeric",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "product_name",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "subtotal_ars",
+          "type": "number",
+          "format": "numeric",
+          "description": "",
+          "default": null,
+          "required": false
+        }
+      ]
+    },
+    "orders": {
+      "description": "",
+      "columnCount": 36,
+      "rowCount": 0,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": "gen_random_uuid()",
+          "required": true
+        },
+        {
+          "name": "order_number",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": "((('ORD-'::text || to_char(now(), 'YYYYMMDD'::text)) || '-'::text) || substr((gen_random_uuid())::text, 1, 8))",
+          "required": true
+        },
+        {
+          "name": "customer_name",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "customer_email",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "customer_phone",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "customer_address",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "patient_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `patients.id`.<fk table='patients' column='id'/>",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "total_ars",
+          "type": "number",
+          "format": "numeric",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "payment_status",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": "pending",
+          "required": true
+        },
+        {
+          "name": "mp_payment_id",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "mp_preference_id",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "created_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        },
+        {
+          "name": "buyer_name",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "buyer_email",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "buyer_phone",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "payment_method",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "updated_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        },
+        {
+          "name": "delivery_method",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": "retiro",
+          "required": true
+        },
+        {
+          "name": "delivery_address",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "delivery_city",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "delivery_postal_code",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "delivery_notes",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "fulfillment_status",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": "pendiente",
+          "required": true
+        },
+        {
+          "name": "prepared_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "prepared_by",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `profiles.id`.<fk table='profiles' column='id'/>",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "delivered_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "delivered_by",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `profiles.id`.<fk table='profiles' column='id'/>",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "buyer_email_sent",
+          "type": "boolean",
+          "format": "boolean",
+          "description": "",
+          "default": false,
+          "required": true
+        },
+        {
+          "name": "buyer_email_error",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "staff_email_sent",
+          "type": "boolean",
+          "format": "boolean",
+          "description": "",
+          "default": false,
+          "required": true
+        },
+        {
+          "name": "staff_email_error",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "emails_attempted_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "meta_capi_status",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": "pending",
+          "required": false
+        },
+        {
+          "name": "meta_capi_event_id",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "meta_capi_sent_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "meta_capi_error",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        }
+      ]
+    },
+    "patients": {
+      "description": "",
+      "columnCount": 11,
+      "rowCount": 924,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": "gen_random_uuid()",
+          "required": true
+        },
+        {
+          "name": "full_name",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "phone",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "email",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "dni",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "rfm_segment",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": "Nuevo",
+          "required": false
+        },
+        {
+          "name": "synced_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "created_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        },
+        {
+          "name": "profile_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `profiles.id`.<fk table='profiles' column='id'/>",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "notes",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "birthdate",
+          "type": "string",
+          "format": "date",
+          "description": "",
+          "default": null,
+          "required": false
+        }
+      ]
+    },
+    "payments": {
+      "description": "",
+      "columnCount": 16,
+      "rowCount": 775,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": "gen_random_uuid()",
+          "required": true
+        },
+        {
+          "name": "appointment_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `appointments.id`.<fk table='appointments' column='id'/>",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "order_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `orders.id`.<fk table='orders' column='id'/>",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "patient_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `patients.id`.<fk table='patients' column='id'/>",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "amount_ars",
+          "type": "number",
+          "format": "numeric",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "amount_usd",
+          "type": "number",
+          "format": "numeric",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": "ARS",
+          "required": true
+        },
+        {
+          "name": "payment_method",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "professional_profile_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `profiles.id`.<fk table='profiles' column='id'/>",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "commission_amount_ars",
+          "type": "number",
+          "format": "numeric",
+          "description": "",
+          "default": 0,
+          "required": true
+        },
+        {
+          "name": "payment_date",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        },
+        {
+          "name": "external_id",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "notes",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "superseded_by",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `payments.id`.<fk table='payments' column='id'/>",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "superseded_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "superseded_reason",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        }
+      ]
+    },
+    "payments_backup_20260916": {
+      "description": "",
+      "columnCount": 13,
+      "rowCount": 1072,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "appointment_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "order_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "patient_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "amount_ars",
+          "type": "number",
+          "format": "numeric",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "amount_usd",
+          "type": "number",
+          "format": "numeric",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "payment_method",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "professional_profile_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "commission_amount_ars",
+          "type": "number",
+          "format": "numeric",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "payment_date",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "external_id",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "notes",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        }
+      ]
+    },
+    "posts": {
+      "description": "",
+      "columnCount": 13,
+      "rowCount": 5,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": "gen_random_uuid()",
+          "required": true
+        },
+        {
+          "name": "slug",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "excerpt",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "content",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "cover_image_url",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "category",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": "General",
+          "required": true
+        },
+        {
+          "name": "is_published",
+          "type": "boolean",
+          "format": "boolean",
+          "description": "",
+          "default": false,
+          "required": true
+        },
+        {
+          "name": "published_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "author_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `profiles.id`.<fk table='profiles' column='id'/>",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "created_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        },
+        {
+          "name": "updated_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": "borrador",
+          "required": false
+        }
+      ]
+    },
+    "practice_material_links": {
+      "description": "",
+      "columnCount": 5,
+      "rowCount": 1,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": "gen_random_uuid()",
+          "required": true
+        },
+        {
+          "name": "material_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `practice_materials.id`.<fk table='practice_materials' column='id'/>",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "entity_type",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "entity_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "created_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        }
+      ]
+    },
+    "practice_materials": {
+      "description": "",
+      "columnCount": 13,
+      "rowCount": 1,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": "gen_random_uuid()",
+          "required": true
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "category",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "storage_path",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "file_name",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "file_size_bytes",
+          "type": "integer",
+          "format": "bigint",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "mime_type",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "version",
+          "type": "integer",
+          "format": "integer",
+          "description": "",
+          "default": 1,
+          "required": true
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "format": "boolean",
+          "description": "",
+          "default": true,
+          "required": true
+        },
+        {
+          "name": "created_by",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `profiles.id`.<fk table='profiles' column='id'/>",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "created_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        },
+        {
+          "name": "updated_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        }
+      ]
+    },
+    "product_batches": {
+      "description": "",
+      "columnCount": 6,
+      "rowCount": 0,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": "gen_random_uuid()",
+          "required": true
+        },
+        {
+          "name": "product_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `products.id`.<fk table='products' column='id'/>",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "batch_number",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "expiration_date",
+          "type": "string",
+          "format": "date",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "quantity",
+          "type": "integer",
+          "format": "integer",
+          "description": "",
+          "default": 0,
+          "required": true
+        },
+        {
+          "name": "created_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        }
+      ]
+    },
+    "product_categories": {
+      "description": "",
+      "columnCount": 7,
+      "rowCount": 13,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": "gen_random_uuid()",
+          "required": true
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "slug",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "display_order",
+          "type": "integer",
+          "format": "integer",
+          "description": "",
+          "default": 100,
+          "required": true
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "format": "boolean",
+          "description": "",
+          "default": true,
+          "required": true
+        },
+        {
+          "name": "created_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        }
+      ]
+    },
+    "products": {
+      "description": "",
+      "columnCount": 16,
+      "rowCount": 39,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": "gen_random_uuid()",
+          "required": true
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "slug",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "brand_type",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "price_ars",
+          "type": "number",
+          "format": "numeric",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "compare_price_ars",
+          "type": "number",
+          "format": "numeric",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "image_url",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "images",
+          "type": "array",
+          "format": "text[]",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "category",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "stock_quantity",
+          "type": "integer",
+          "format": "integer",
+          "description": "",
+          "default": 0,
+          "required": true
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "format": "boolean",
+          "description": "",
+          "default": true,
+          "required": true
+        },
+        {
+          "name": "created_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        },
+        {
+          "name": "min_stock_alert",
+          "type": "integer",
+          "format": "integer",
+          "description": "Umbral mínimo de unidades antes de disparar alerta de reposición",
+          "default": 5,
+          "required": false
+        },
+        {
+          "name": "category_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `product_categories.id`.<fk table='product_categories' column='id'/>",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "is_public",
+          "type": "boolean",
+          "format": "boolean",
+          "description": "false = se administra el stock pero no aparece en la tienda pública (ej: medicamentos de venta bajo receta)",
+          "default": true,
+          "required": true
+        }
+      ]
+    },
+    "profiles": {
+      "description": "",
+      "columnCount": 8,
+      "rowCount": 10,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "email",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "full_name",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "role",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": "operativo",
+          "required": true
+        },
+        {
+          "name": "phone",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "created_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        },
+        {
+          "name": "updated_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        },
+        {
+          "name": "avatar_url",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        }
+      ]
+    },
+    "rate_limits": {
+      "description": "",
+      "columnCount": 4,
+      "rowCount": 2,
+      "columns": [
+        {
+          "name": "key",
+          "type": "string",
+          "format": "text",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "count",
+          "type": "integer",
+          "format": "integer",
+          "description": "",
+          "default": 1,
+          "required": true
+        },
+        {
+          "name": "reset_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "updated_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        }
+      ]
+    },
+    "recurring_task_rules": {
+      "description": "",
+      "columnCount": 8,
+      "rowCount": 3,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": "gen_random_uuid()",
+          "required": true
+        },
+        {
+          "name": "assigned_profile_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `profiles.id`.<fk table='profiles' column='id'/>",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "recurrence_type",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "format": "boolean",
+          "description": "",
+          "default": true,
+          "required": true
+        },
+        {
+          "name": "created_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        },
+        {
+          "name": "target_role",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        }
+      ]
+    },
+    "role_section_defaults": {
+      "description": "",
+      "columnCount": 3,
+      "rowCount": 32,
+      "columns": [
+        {
+          "name": "role",
+          "type": "string",
+          "format": "text",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "section",
+          "type": "string",
+          "format": "text",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "allowed",
+          "type": "boolean",
+          "format": "boolean",
+          "description": "",
+          "default": true,
+          "required": true
+        }
+      ]
+    },
+    "staff_guides": {
+      "description": "",
+      "columnCount": 9,
+      "rowCount": 2,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": "gen_random_uuid()",
+          "required": true
+        },
+        {
+          "name": "profile_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `profiles.id`.<fk table='profiles' column='id'/>",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "role_label",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "items",
+          "type": "unknown",
+          "format": "jsonb",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "sort_order",
+          "type": "integer",
+          "format": "integer",
+          "description": "",
+          "default": 0,
+          "required": true
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "format": "boolean",
+          "description": "",
+          "default": true,
+          "required": true
+        },
+        {
+          "name": "created_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        },
+        {
+          "name": "updated_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        }
+      ]
+    },
+    "staff_tasks": {
+      "description": "",
+      "columnCount": 16,
+      "rowCount": 15,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": "gen_random_uuid()",
+          "required": true
+        },
+        {
+          "name": "rule_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `recurring_task_rules.id`.<fk table='recurring_task_rules' column='id'/>",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "assigned_profile_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `profiles.id`.<fk table='profiles' column='id'/>",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "task_type",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "due_date",
+          "type": "string",
+          "format": "date",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "related_entity_type",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "related_entity_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": "pendiente",
+          "required": true
+        },
+        {
+          "name": "completed_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "created_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        },
+        {
+          "name": "target_role",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "claimed_by",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `profiles.id`.<fk table='profiles' column='id'/>",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "claimed_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "completed_by",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `profiles.id`.<fk table='profiles' column='id'/>",
+          "default": null,
+          "required": false
+        }
+      ]
+    },
+    "stock_movements": {
+      "description": "",
+      "columnCount": 13,
+      "rowCount": 111,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": "gen_random_uuid()",
+          "required": true
+        },
+        {
+          "name": "product_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `products.id`.<fk table='products' column='id'/>",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "movement_type",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "quantity_delta",
+          "type": "integer",
+          "format": "integer",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "stock_before",
+          "type": "integer",
+          "format": "integer",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "stock_after",
+          "type": "integer",
+          "format": "integer",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "counted_qty",
+          "type": "integer",
+          "format": "integer",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "expected_qty",
+          "type": "integer",
+          "format": "integer",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "created_by",
+          "type": "string",
+          "format": "uuid",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "created_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        },
+        {
+          "name": "reference_type",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "reference_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "notes",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": false
+        }
+      ]
+    },
+    "store_config": {
+      "description": "",
+      "columnCount": 10,
+      "rowCount": 1,
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "format": "integer",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": 1,
+          "required": true
+        },
+        {
+          "name": "shipping_enabled",
+          "type": "boolean",
+          "format": "boolean",
+          "description": "",
+          "default": false,
+          "required": true
+        },
+        {
+          "name": "shipping_cost_ars",
+          "type": "number",
+          "format": "numeric",
+          "description": "",
+          "default": 0,
+          "required": true
+        },
+        {
+          "name": "pickup_address",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": "Leandro N. Alem 45, Gualeguaychú, Entre Ríos",
+          "required": true
+        },
+        {
+          "name": "pickup_hours",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": "Lunes a Viernes de 9:00 a 17:00 hs",
+          "required": true
+        },
+        {
+          "name": "checkout_enabled",
+          "type": "boolean",
+          "format": "boolean",
+          "description": "",
+          "default": false,
+          "required": true
+        },
+        {
+          "name": "updated_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        },
+        {
+          "name": "updated_by",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Foreign Key to `profiles.id`.<fk table='profiles' column='id'/>",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "attention_hours",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": "Lun-Vier: 10:00 – 19:00 hs, Sáb: Solo con cita previa",
+          "required": false
+        },
+        {
+          "name": "allow_oversell_online",
+          "type": "boolean",
+          "format": "boolean",
+          "description": "",
+          "default": false,
+          "required": false
+        }
+      ]
+    },
+    "treatments": {
+      "description": "",
+      "columnCount": 12,
+      "rowCount": 120,
+      "columns": [
+        {
+          "name": "id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": "gen_random_uuid()",
+          "required": true
+        },
+        {
+          "name": "slug",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "category",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": "",
+          "required": true
+        },
+        {
+          "name": "price_ars",
+          "type": "number",
+          "format": "numeric",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "price_usd",
+          "type": "number",
+          "format": "numeric",
+          "description": "",
+          "default": null,
+          "required": false
+        },
+        {
+          "name": "duration_minutes",
+          "type": "integer",
+          "format": "integer",
+          "description": "",
+          "default": 30,
+          "required": true
+        },
+        {
+          "name": "professional_role",
+          "type": "string",
+          "format": "text",
+          "description": "",
+          "default": "medico",
+          "required": true
+        },
+        {
+          "name": "commission_rate",
+          "type": "number",
+          "format": "numeric",
+          "description": "",
+          "default": 0,
+          "required": true
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "format": "boolean",
+          "description": "",
+          "default": true,
+          "required": true
+        },
+        {
+          "name": "created_at",
+          "type": "string",
+          "format": "timestamp with time zone",
+          "description": "",
+          "default": "now()",
+          "required": true
+        }
+      ]
+    },
+    "user_section_overrides": {
+      "description": "",
+      "columnCount": 3,
+      "rowCount": 2,
+      "columns": [
+        {
+          "name": "profile_id",
+          "type": "string",
+          "format": "uuid",
+          "description": "Note:\nThis is a Primary Key.<pk/>\nThis is a Foreign Key to `profiles.id`.<fk table='profiles' column='id'/>",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "section",
+          "type": "string",
+          "format": "text",
+          "description": "Note:\nThis is a Primary Key.<pk/>",
+          "default": null,
+          "required": true
+        },
+        {
+          "name": "allowed",
+          "type": "boolean",
+          "format": "boolean",
+          "description": "",
+          "default": null,
+          "required": true
+        }
+      ]
+    }
+  },
+  "rpcs": [
+    {
+      "name": "obtener_metricas_ejecutivas",
+      "description": "",
+      "parameters": [
+        {
+          "in": "body",
+          "name": "args",
+          "required": true,
+          "schema": {
+            "properties": {
+              "p_cosmetologa_profile_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "p_end_date": {
+                "format": "timestamp with time zone",
+                "type": "string"
+              },
+              "p_start_date": {
+                "format": "timestamp with time zone",
+                "type": "string"
+              }
+            },
+            "required": [
+              "p_start_date",
+              "p_end_date"
+            ],
+            "type": "object"
+          }
+        },
+        {
+          "$ref": "#/parameters/preferParams"
+        }
+      ]
+    },
+    {
+      "name": "is_staff",
+      "description": "",
+      "parameters": [
+        {
+          "in": "body",
+          "name": "args",
+          "required": true,
+          "schema": {
+            "type": "object"
+          }
+        },
+        {
+          "$ref": "#/parameters/preferParams"
+        }
+      ]
+    },
+    {
+      "name": "rls_auto_enable",
+      "description": "",
+      "parameters": [
+        {
+          "in": "body",
+          "name": "args",
+          "required": true,
+          "schema": {
+            "type": "object"
+          }
+        },
+        {
+          "$ref": "#/parameters/preferParams"
+        }
+      ]
+    },
+    {
+      "name": "is_internal_staff",
+      "description": "",
+      "parameters": [
+        {
+          "in": "body",
+          "name": "args",
+          "required": true,
+          "schema": {
+            "type": "object"
+          }
+        },
+        {
+          "$ref": "#/parameters/preferParams"
+        }
+      ]
+    },
+    {
+      "name": "is_admin",
+      "description": "",
+      "parameters": [
+        {
+          "in": "body",
+          "name": "args",
+          "required": true,
+          "schema": {
+            "type": "object"
+          }
+        },
+        {
+          "$ref": "#/parameters/preferParams"
+        }
+      ]
+    }
+  ]
+}
