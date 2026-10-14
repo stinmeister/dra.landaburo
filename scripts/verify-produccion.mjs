@@ -221,11 +221,12 @@ async function runVerification() {
         report('Footer: Horarios dinámicos contrastados contra DB', false, `Error consultando store_config: ${scErr?.message}`);
       } else {
         const expectedHours = dbConfig.attention_hours.trim();
-        // Normalizamos espacios y guiones para robustez de comparación
-        const normExpected = expectedHours.replace(/[\s\u2013\u2014-]+/g, ' ').toLowerCase();
-        const normHtml = homeHtml.replace(/[\s\u2013\u2014-]+/g, ' ').toLowerCase();
+        const parts = expectedHours.split(',').map((p) => p.trim());
+        const htmlWithNormalizedBreaks = homeHtml.replace(/<br\s*\/?>/gi, ', ');
+        const matchesDb =
+          parts.every((part) => homeHtml.includes(part)) ||
+          htmlWithNormalizedBreaks.includes(expectedHours);
 
-        const matchesDb = normHtml.includes(normExpected) || homeHtml.includes(expectedHours);
         report(
           'Footer: Horarios de atención reflejan dinámicamente store_config (DB)',
           matchesDb,
