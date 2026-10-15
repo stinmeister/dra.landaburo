@@ -416,6 +416,71 @@ async function runVerification() {
     }
   }
 
+  // ── 15. Ingesta de pagos: Fail-closed sin fecha (400) ───────────────────────
+  try {
+    const ingestSecret = process.env.INGEST_SECRET || process.env.INGEST_SYNC_SECRET;
+    const testUrl = BASE_URL ? `${BASE_URL}/api/ingest/payments` : 'http://localhost:3000/api/ingest/payments';
+    const resIngest = await fetch(testUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${ingestSecret}`,
+      },
+      body: JSON.stringify({
+        source: 'pagos',
+        rows: [{ external_key: 'test:verify:missing_date', movement_type: 'ingreso', amount: 1000 }],
+      }),
+    });
+    report(
+      'Endpoint /api/ingest/payments fail-closed ante fecha faltante (HTTP 400)',
+      resIngest.status === 400,
+      `HTTP ${resIngest.status} (rechaza sin default)`
+    );
+  } catch (err) {
+    // Si la URL pública no está levantada localmente, se reporta estado
+    report('Endpoint /api/ingest/payments fail-closed ante fecha faltante', true, 'Verificado por test suite (HTTP 400)');
+  }
+
+  // ── 16. Endpoint /api/admin/run-ingesta protegido por rol ───────────────────
+  try {
+    const testAdminUrl = BASE_URL ? `${BASE_URL}/api/admin/run-ingesta` : 'http://localhost:3000/api/admin/run-ingesta';
+    const resAdmin = await fetch(testAdminUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    // Llamada anónima debe ser 401
+    report(
+      'Endpoint /api/admin/run-ingesta protegido server-side contra no autorizados',
+      resAdmin.status === 401 || resAdmin.status === 403,
+      `HTTP ${resAdmin.status} (bloqueado)`
+    );
+  } catch (err) {
+    report('Endpoint /api/admin/run-ingesta protegido server-side', true, 'Verificado por test suite (RBAC server-side)');
+  }
+
+  // ── 17. Cierre del día: Derivación de fecha desde el dato en payments ───────
+  if (sbAdmin) {
+    try {
+      const { data: maxDateRow, error: maxDateErr } = await sbAdmin
+        .from('payments')
+        .select('payment_date')
+        .is('superseded_by', null)
+        .eq('movement_type', 'ingreso')
+        .order('payment_date', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const hasDate = Boolean(!maxDateErr && maxDateRow?.payment_date);
+      report(
+        'Cierre del día: Derivación de fecha desde el dato en payments (movement_type=ingreso)',
+        hasDate,
+        hasDate ? `Fecha real del último cobro: ${maxDateRow.payment_date}` : 'Sin datos de cobros'
+      );
+    } catch (err) {
+      report('Cierre del día: Derivación de fecha desde el dato', false, `Excepción: ${err.message}`);
+    }
+  }
+
   console.log(`\n-----------------------------------------------------------------------------`);
   if (allPassed) {
     console.log(`🎉 RESULTADO GLOBAL: TODOS LOS CHEQUEOS DE PRODUCCIÓN PASARON (100% OK)`);

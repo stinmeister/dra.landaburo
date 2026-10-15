@@ -52,6 +52,9 @@ interface Props {
   currentDate: string;
   todayDate: string;
   formattedDisplayDate: string;
+  fechaDelDato?: string | null;
+  dateStatusLabel?: string;
+  isUpdatedToday?: boolean;
   totalArs: number;
   totalUsd: number;
   paidPayments: PaymentItem[];
@@ -86,6 +89,9 @@ export default function CierreDiarioClient({
   currentDate,
   todayDate,
   formattedDisplayDate,
+  fechaDelDato,
+  dateStatusLabel,
+  isUpdatedToday,
   totalArs,
   totalUsd,
   paidPayments,
@@ -194,7 +200,28 @@ export default function CierreDiarioClient({
       {/* ── Tarjeta Hero: Total Facturado del Día ── */}
       <div className={styles.heroGrid}>
         <div className={styles.totalHeroCard}>
-          <span className={styles.heroLabel}>Total Cobrado en el Día</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.25rem' }}>
+            <span className={styles.heroLabel}>Total Cobrado en el Día</span>
+            {dateStatusLabel && (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  padding: '0.2rem 0.65rem',
+                  borderRadius: '9999px',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  backgroundColor: isUpdatedToday ? 'rgba(16, 185, 129, 0.12)' : 'rgba(197, 164, 126, 0.15)',
+                  color: isUpdatedToday ? '#047857' : 'var(--color-champagne-dark, #a8875f)',
+                  border: `1px solid ${isUpdatedToday ? 'rgba(16, 185, 129, 0.3)' : 'rgba(197, 164, 126, 0.35)'}`,
+                }}
+              >
+                <Clock size={12} />
+                <span>{dateStatusLabel}</span>
+              </span>
+            )}
+          </div>
           <div className={styles.heroAmountRow}>
             <span className={styles.heroTotal}>{formatARS(totalArs)}</span>
             {totalUsd > 0 && (

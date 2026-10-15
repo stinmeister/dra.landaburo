@@ -12,6 +12,7 @@ import { getUserSections } from '@/lib/permissions';
 import { getPendingReviewCount, getActionableReviewCount, getReviewItems } from '@/lib/ingest-review';
 import PeriodSelector from '@/components/dashboard/PeriodSelector';
 import type { PeriodOption } from '@/components/dashboard/PeriodSelector';
+import BotonIngesta from '@/components/dashboard/BotonIngesta';
 import EjecutivoTabs, { TabItem } from './EjecutivoTabs';
 import CierreDiarioClient from '../cierre-diario/CierreDiarioClient';
 import { getCierreDiarioData } from '../cierre-diario/getCierreDiarioData';
@@ -164,10 +165,14 @@ export default async function EjecutivoPage({
     return (
       <div className={styles.page}>
         <EjecutivoTabs tabs={availableTabs} activeTab={activeTab} />
+        {role === 'admin' && <BotonIngesta />}
         <CierreDiarioClient
           currentDate={cierreData.currentDate}
           todayDate={cierreData.todayDate}
           formattedDisplayDate={cierreData.formattedDisplayDate}
+          fechaDelDato={cierreData.fechaDelDato}
+          dateStatusLabel={cierreData.dateStatusLabel}
+          isUpdatedToday={cierreData.isUpdatedToday}
           totalArs={cierreData.totalArs}
           totalUsd={cierreData.totalUsd}
           paidPayments={cierreData.paidPayments}
@@ -209,7 +214,8 @@ export default async function EjecutivoPage({
   const { count: totalPaymentsCount } = await adminClient
     .from('payments')
     .select('id', { count: 'exact', head: true })
-    .is('superseded_by', null);
+    .is('superseded_by', null)
+    .eq('movement_type', 'ingreso');
   const totalInDb = totalPaymentsCount ?? 0;
 
   // 2. Último cobro para mes por defecto (vigente)
@@ -217,6 +223,7 @@ export default async function EjecutivoPage({
     .from('payments')
     .select('payment_date')
     .is('superseded_by', null)
+    .eq('movement_type', 'ingreso')
     .order('payment_date', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -225,7 +232,8 @@ export default async function EjecutivoPage({
   const { data: dateRows } = await adminClient
     .from('payments')
     .select('payment_date')
-    .is('superseded_by', null);
+    .is('superseded_by', null)
+    .eq('movement_type', 'ingreso');
 
   const monthsWithData = new Set<string>();
   (dateRows ?? []).forEach((r) => {
@@ -291,6 +299,7 @@ export default async function EjecutivoPage({
     .from('payments')
     .select('id, amount_ars, amount_usd, currency, commission_amount_ars, notes, professional_profile_id, patients ( full_name )')
     .is('superseded_by', null)
+    .eq('movement_type', 'ingreso')
     .gte('payment_date', monthStart)
     .lte('payment_date', monthEnd);
 
@@ -401,6 +410,7 @@ export default async function EjecutivoPage({
       profiles ( full_name )
     `)
     .is('superseded_by', null)
+    .eq('movement_type', 'ingreso')
     .gte('payment_date', monthStart)
     .lte('payment_date', monthEnd)
     .order('payment_date', { ascending: false });
@@ -412,6 +422,7 @@ export default async function EjecutivoPage({
   return (
     <div className={styles.page}>
       <EjecutivoTabs tabs={availableTabs} activeTab={activeTab} />
+      {role === 'admin' && <BotonIngesta />}
 
       <div className={styles.pageHeader}>
         <div>

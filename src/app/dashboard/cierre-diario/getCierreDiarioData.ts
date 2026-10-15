@@ -38,6 +38,9 @@ export interface CierreDiarioData {
   currentDate: string;
   todayDate: string;
   formattedDisplayDate: string;
+  fechaDelDato: string | null;
+  dateStatusLabel: string;
+  isUpdatedToday: boolean;
   totalArs: number;
   totalUsd: number;
   paidPayments: PaymentItem[];
@@ -46,14 +49,71 @@ export interface CierreDiarioData {
   pendingReviews: ReviewItem[];
 }
 
+export function formatShortDate(dateIso: string): string {
+  try {
+    const [y, m, d] = dateIso.split('-').map(Number);
+    const dateObj = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+    return new Intl.DateTimeFormat('es-AR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      timeZone: 'America/Argentina/Buenos_Aires',
+    }).format(dateObj);
+  } catch {
+    return dateIso;
+  }
+}
+
 export async function getCierreDiarioData(rawDate?: string): Promise<CierreDiarioData> {
   const todayDate = getLocalTodayDate();
-  const currentDate = rawDate && /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : todayDate;
+  const admin = createAdminClient();
+
+  // Pieza 3: Derivar la fecha del dato desde la base:
+  // select max(payment_date) as fecha_del_dato from payments where superseded_by is null and movement_type = 'ingreso';
+  const { data: maxPaymentRow } = await admin
+    .from('payments')
+    .select('payment_date')
+    .is('superseded_by', null)
+    .eq('movement_type', 'ingreso')
+    .order('payment_date', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  let fechaDelDato: string | null = null;
+  if (maxPaymentRow?.payment_date) {
+    const pDate = new Date(maxPaymentRow.payment_date);
+    const tzOffset = -3 * 60;
+    const localP = new Date(pDate.getTime() + (pDate.getTimezoneOffset() + tzOffset) * 60000);
+    fechaDelDato = localP.toISOString().slice(0, 10);
+  }
+
+  // Si no se pasó una fecha explícita, se usa la fecha del dato si existe; si no, la fecha de hoy
+  const currentDate = rawDate && /^\d{4}-\d{2}-\d{2}$/.test(rawDate)
+    ? rawDate
+    : (fechaDelDato || todayDate);
+
+  // Etiqueta del dato según la regla:
+  // fecha_del_dato < current_date -> "Último dato: <fecha>" (nunca un 0 pelado)
+  // fecha_del_dato = current_date -> "Actualizado hoy"
+  let dateStatusLabel = '';
+  let isUpdatedToday = false;
+
+  if (fechaDelDato) {
+    if (fechaDelDato < todayDate) {
+      dateStatusLabel = `Último dato: ${formatShortDate(fechaDelDato)}`;
+      isUpdatedToday = false;
+    } else {
+      dateStatusLabel = 'Actualizado hoy';
+      isUpdatedToday = true;
+    }
+  } else {
+    dateStatusLabel = 'Sin datos registrados';
+    isUpdatedToday = false;
+  }
 
   const startIso = `${currentDate}T00:00:00-03:00`;
   const endIso = `${currentDate}T23:59:59.999-03:00`;
 
-  const admin = createAdminClient();
   const [paymentsRes, reviewsRes] = await Promise.all([
     admin
       .from('payments')
@@ -70,6 +130,7 @@ export async function getCierreDiarioData(rawDate?: string): Promise<CierreDiari
         profiles ( full_name )
       `)
       .is('superseded_by', null)
+      .eq('movement_type', 'ingreso')
       .gte('payment_date', startIso)
       .lte('payment_date', endIso)
       .order('payment_date', { ascending: true }),
@@ -153,6 +214,9 @@ export async function getCierreDiarioData(rawDate?: string): Promise<CierreDiari
     currentDate,
     todayDate,
     formattedDisplayDate,
+    fechaDelDato,
+    dateStatusLabel,
+    isUpdatedToday,
     totalArs,
     totalUsd,
     paidPayments,
