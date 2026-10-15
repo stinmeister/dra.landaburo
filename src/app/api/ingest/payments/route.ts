@@ -1,987 +1,317 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { persistReviewItems } from "@/lib/ingest-review";
+import { persistReviewItems, type IngestReviewInput } from "@/lib/ingest-review";
 import { loadProfessionals } from "@/lib/professionals";
 
-/**
- * Genera variantes del external_id para búsqueda tolerante de duplicados
- * (con hora vs sin hora / fecha pura YYYY-MM-DD).
- */
-function getExternalIdVariants(claveUnica: string): string[] {
-  const variants = new Set<string>();
-  const trimmed = (claveUnica || "").trim();
-  if (!trimmed) return [];
-  variants.add(trimmed);
+// ─── Constantes y Restricciones de Base de Datos ─────────────────────────────
 
-  if (trimmed.includes("|")) {
-    const parts = trimmed.split("|");
-    if (parts.length >= 2) {
-      const datePart = parts[1].trim();
-      const dateMatch = datePart.match(/^(\d{4}-\d{2}-\d{2})/);
-      if (dateMatch) {
-        const normalizedDate = dateMatch[1];
-        const dateOnlyClave = `${parts[0]}|${normalizedDate}|${parts.slice(2).join("|")}`;
-        variants.add(dateOnlyClave);
-      }
-    }
-  }
-
-  return Array.from(variants);
-}
-
-// POST /api/ingest/payments
-// Auth: Authorization: Bearer $INGEST_SECRET
-//
-// Acepta un array de registros de cobros exportados desde la hoja Citas_Raw
-// (Base Unificada v2) procesados por n8n.
-//
-// Reglas y Filtros Aplicados:
-//  1. Regla de corte: Ignora cobros anteriores a PAYMENTS_CUTOFF_DATE (default: 2026-08-01).
-//  2. Filtrado por Estado:
-//     - Facturable: 'Finalizado'.
-//     - Descarte silencioso: 'Cancelado', 'Ausente', 'Programado', 'Confirmado',
-//       'En sala de espera', 'En curso', 'Cita Eliminada por...'.
-//     - Estados desconocidos van a needs_review ('estado_desconocido').
-//  3. Deduplicación doble: exacta por clave_unica (external_id) y por ventana solapada.
-//  4. Detección de moneda por rango de monto (sin heurísticas por nombre de servicio):
-//     - < $2.000: Dólares (USD) -> needs_review ('moneda_usd') para conversión/confirmación.
-//     - $2.000 a $30.000: Rango ambiguo -> needs_review ('monto_rango_ambiguo').
-//     - >= $30.000: Pesos (ARS), incluso si medio_pago dice 'Efectivo USD'.
-//  5. Multi-servicio: Se detecta contra catálogo (no por comas en nombres compuestos como
-//     'Lp Rostro, Cuello Y Escote'). Los multi-servicios reales ingresan a payments normalmente
-//     y ya no generan registro de revisión.
-//  6. Medios de pago: Mapeo exhaustivo sincronizado con el constraint de Postgres.
-//  7. Normalización de DNI y Hashes alfanuméricos de Calu.
-//  8. Asignación de profesionales dinámico con respaldo estático.
-
-// ─── Supabase admin ───────────────────────────────────────────────────────────
-
-const supabaseAdmin = createAdminClient();
-
-// ─── Configuraciones y Umbrales ───────────────────────────────────────────────
-
-function getCutoffDate(): Date {
-  const envVal = process.env.PAYMENTS_CUTOFF_DATE || "2026-08-01T00:00:00-03:00";
-  const dt = new Date(envVal);
-  return isNaN(dt.getTime()) ? new Date("2026-08-01T00:00:00-03:00") : dt;
-}
-
-function getCurrencyThresholds() {
-  const usdMax = Number(process.env.INGEST_USD_MAX_THRESHOLD || 2000);
-  const arsMin = Number(process.env.INGEST_ARS_MIN_THRESHOLD || 30000);
-  return {
-    usdMax: isNaN(usdMax) ? 2000 : usdMax,
-    arsMin: isNaN(arsMin) ? 30000 : arsMin,
-  };
-}
-
-// ─── Constantes de estado ─────────────────────────────────────────────────────
-
-const ESTADOS_FACTURABLES = new Set(["finalizado"]);
-
-const ESTADOS_IGNORAR_BASE = new Set([
-  "programado",
-  "confirmado",
-  "cancelado",
-  "ausente",
-  "en sala de espera",
-  "en curso",
+// CHECK en tabla payments: payment_method in ('efectivo','transferencia','mercadopago','tarjeta_debito','efectivo_usd','cheque')
+const VALID_PAYMENT_METHODS = new Set([
+  "efectivo",
+  "transferencia",
+  "mercadopago",
+  "tarjeta_debito",
+  "efectivo_usd",
+  "cheque",
 ]);
 
-function shouldIgnoreEstado(rawEstado: string): boolean {
-  if (!rawEstado) return false;
-  const norm = rawEstado.toLowerCase().trim();
-  if (ESTADOS_IGNORAR_BASE.has(norm)) return true;
-  // C1: Cita eliminada por cualquier usuario se descarta en silencio
-  if (norm.startsWith("cita eliminada")) return true;
-  return false;
+// CHECK en tabla payments: movement_type in ('ingreso','egreso')
+const VALID_MOVEMENT_TYPES = new Set(["ingreso", "egreso"]);
+
+// ─── Normalización de Nombres de Pacientes ────────────────────────────────────
+
+function normalizeName(str: string | null | undefined): string {
+  if (!str) return "";
+  return str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-// ─── Mapa de medios de pago ───────────────────────────────────────────────────
-
-const PAYMENT_METHOD_MAP: Record<string, string> = {
-  efectivo: "efectivo",
-  transferencia: "transferencia",
-  mercadopago: "mercadopago",
-  "mercado pago": "mercadopago",
-  mp: "mercadopago",
-  "tarjeta de debito": "tarjeta_debito",
-  "tarjeta de débito": "tarjeta_debito",
-  debito: "tarjeta_debito",
-  débito: "tarjeta_debito",
-  tarjeta_debito: "tarjeta_debito",
-  "tarjeta de credito": "tarjeta_credito",
-  "tarjeta de crédito": "tarjeta_credito",
-  credito: "tarjeta_credito",
-  crédito: "tarjeta_credito",
-  tarjeta_credito: "tarjeta_credito",
-  "efectivo usd": "efectivo_usd",
-  usd: "efectivo_usd",
-  dolar: "efectivo_usd",
-  dólar: "efectivo_usd",
-  cheque: "cheque",
-};
-
-function normalizePaymentMethod(raw: string): string | null {
-  if (!raw) return null;
-  const key = raw.toLowerCase().trim();
-  return PAYMENT_METHOD_MAP[key] || null;
+interface RawPaymentRow {
+  external_key?: string;
+  movement_type?: string;
+  payment_date?: string;
+  payer_name_raw?: string;
+  description?: string;
+  payment_method_raw?: string;
+  payment_method?: string;
+  origin_raw?: string;
+  currency?: string;
+  amount?: number;
+  amount_ars?: number;
+  amount_usd?: number;
+  reclassified?: boolean;
+  [key: string]: unknown;
 }
 
-// ─── Catálogo de tratamientos únicos que contienen coma ───────────────────────
-
-const KNOWN_SINGLE_TREATMENTS_WITH_COMMAS = new Set([
-  "lp rostro, cuello y escote",
-  "lp rostro, cuello y escote, frax",
-  "limpieza + electroporación/radio/peeling/dermapen",
-  "limpieza + electroporacion/radio/peeling/dermapen",
-]);
-
-function isRealMultiService(servicioRaw: string): boolean {
-  if (!servicioRaw || !servicioRaw.includes(",")) return false;
-  const lower = servicioRaw.toLowerCase().trim();
-  if (KNOWN_SINGLE_TREATMENTS_WITH_COMMAS.has(lower)) return false;
-  return true;
+interface IngestPayload {
+  source?: string;
+  source_file?: string;
+  file_date?: string;
+  rows?: RawPaymentRow[];
 }
 
-// ─── Tipos ────────────────────────────────────────────────────────────────────
-
-interface PaymentRecord {
-  clave_unica: string;
-  dni: string;
-  fecha: string;
-  servicio: string;
-  estado: string;
-  monto_pagado_ars: number;
-  deuda_ars: number;
-  medio_pago: string;
-  profesional: string;
-  archivo_origen?: string;
-  telefono?: string;
-
-  patient_id?: string;
-  professional_profile_id?: string;
-  payment_id?: string;
-}
-
-interface NeedsReviewItem {
-  index: number;
-  reason: string;
-  record: PaymentRecord;
-}
-
-interface RejectedItem {
-  index: number;
-  reason: string;
-  record: PaymentRecord;
-}
-
-interface ParsedPaymentDate {
-  date: Date;
-  hasSpecificTime: boolean;
-}
-
-/**
- * Parsea fecha y hora completas.
- * Prioridad 1: Clave_Unica (DNI|YYYY-MM-DDTHH:mm:ss|Servicio o YYYYMMDD_HHmmss_DNI)
- * Prioridad 2: Columna fecha en formato D/M/YYYY HH:mm:ss o D/M/YYYY
- * Zona horaria Argentina (-03:00).
- */
-function parsePaymentDate(claveUnica: string | undefined, fechaRaw: string | undefined): ParsedPaymentDate | null {
-  if (claveUnica) {
-    if (claveUnica.includes("|")) {
-      const parts = claveUnica.split("|");
-      if (parts.length >= 2) {
-        const tsPart = parts[1].trim();
-        // Caso 1a: Solo fecha YYYY-MM-DD -> medianoche argentina (-03:00) = 03:00 UTC
-        if (/^\d{4}-\d{2}-\d{2}$/.test(tsPart)) {
-          const dt = new Date(`${tsPart}T00:00:00-03:00`);
-          if (!isNaN(dt.getTime())) {
-            return { date: dt, hasSpecificTime: false };
-          }
-        } else if (tsPart.includes("T")) {
-          const hasTz = tsPart.endsWith("Z") || tsPart.includes("+") || tsPart.slice(10).includes("-");
-          const withTz = hasTz ? tsPart : `${tsPart}-03:00`;
-          const dt = new Date(withTz);
-          if (!isNaN(dt.getTime())) {
-            const hasTime = !tsPart.includes("T00:00:00");
-            return { date: dt, hasSpecificTime: hasTime };
-          }
-        }
-      }
-    }
-
-    const underMatch = claveUnica.match(/^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/);
-    if (underMatch) {
-      const [, y, mo, d, h, min, s] = underMatch;
-      const dt = new Date(`${y}-${mo}-${d}T${h}:${min}:${s}-03:00`);
-      if (!isNaN(dt.getTime())) {
-        return { date: dt, hasSpecificTime: true };
-      }
-    }
-  }
-
-  if (fechaRaw) {
-    const rawTrimmed = fechaRaw.trim();
-    const parts = rawTrimmed.split(" ");
-    const dateParts = parts[0].split("/");
-    if (dateParts.length === 3) {
-      const [d, m, y] = dateParts;
-      if (parts[1]) {
-        const timeSub = parts[1].split(":");
-        const timePart = timeSub.length === 2 ? `${parts[1]}:00` : parts[1];
-        const dt = new Date(`${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}T${timePart}-03:00`);
-        if (!isNaN(dt.getTime())) return { date: dt, hasSpecificTime: true };
-      } else {
-        const dt = new Date(`${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}T00:00:00-03:00`);
-        if (!isNaN(dt.getTime())) return { date: dt, hasSpecificTime: false };
-      }
-    }
-  }
-
-  return null;
-}
-
-function normalizeDni(raw: string): string {
-  return raw.replace(/[^0-9]/g, "");
-}
-
-function isAlphanumericHash(raw: string): boolean {
-  const trimmed = (raw || "").trim();
-  return /[a-zA-Z]/.test(trimmed) && trimmed.length >= 7;
-}
-
-/**
- * Lookup de paciente por DNI, Hash o Teléfono.
- */
-async function resolvePatient(
-  rawDni: string,
-  rawPhone?: string
-): Promise<{ id: string } | "ambiguous" | null> {
-  const trimmed = (rawDni || "").trim();
-  if (!trimmed) return null;
-
-  if (isAlphanumericHash(trimmed)) {
-    // Buscar directamente por el hash exacto (sin eliminar letras)
-    const { data, error } = await supabaseAdmin
-      .from("patients")
-      .select("id")
-      .ilike("dni", trimmed);
-
-    if (!error && data && data.length === 1) return data[0];
-    if (data && data.length > 1) return "ambiguous";
-  } else {
-    // DNI numérico tradicional
-    const normDni = normalizeDni(trimmed);
-    if (normDni && normDni.length >= 6) {
-      const { data, error } = await supabaseAdmin
-        .from("patients")
-        .select("id")
-        .eq("dni", normDni);
-
-      if (!error && data && data.length === 1) return data[0];
-      if (data && data.length > 1) return "ambiguous";
-    }
-  }
-
-  // Búsqueda alternativa por teléfono si existe
-  if (rawPhone && rawPhone.trim().length >= 6) {
-    const cleanPhone = rawPhone.replace(/[^0-9+]/g, "");
-    const { data: phoneMatches } = await supabaseAdmin
-      .from("patients")
-      .select("id")
-      .ilike("phone", `%${cleanPhone.slice(-8)}%`);
-
-    if (phoneMatches && phoneMatches.length === 1) return phoneMatches[0];
-  }
-
-  return null;
-}
-
-// ─── Mapa de profesionales y tasas de comisión ────────────────────────────────
-
-interface ProfessionalInfo {
-  id: string;
-  fullName: string;
-  role: string;
-}
-
-async function getProfesionalData(): Promise<{
-  nameToIdMap: Map<string, string>;
-  idToInfoMap: Map<string, ProfessionalInfo>;
-  resolveProfFn: (input: string | null | undefined) => any;
-}> {
-  const nameToIdMap = new Map<string, string>();
-  const idToInfoMap = new Map<string, ProfessionalInfo>();
-  let resolveProfFn: (input: string | null | undefined) => any = () => null;
-
-  try {
-    const { professionals, resolveProfessional } = await loadProfessionals(supabaseAdmin);
-    resolveProfFn = resolveProfessional;
-
-    for (const p of professionals) {
-      const info: ProfessionalInfo = {
-        id: p.id,
-        fullName: p.fullName,
-        role: p.role ?? "",
-      };
-      idToInfoMap.set(p.id, info);
-
-      nameToIdMap.set(p.fullName, p.id);
-      nameToIdMap.set(p.fullName.toLowerCase(), p.id);
-      for (const alias of p.aliases) {
-        nameToIdMap.set(alias, p.id);
-      }
-    }
-  } catch (err) {
-    console.warn("[ingest_payments] Excepción al consultar profiles:", err);
-  }
-
-  return { nameToIdMap, idToInfoMap, resolveProfFn };
-}
-
-async function getCommissionRatesMap(): Promise<Map<string, number>> {
-  const map = new Map<string, number>();
-  // Defaults estáticos de seguridad
-  map.set("mercedes pasquet", 30);
-  map.set("pasquet, mercedes", 30);
-  map.set("paula natalia landaburo", 0);
-  map.set("landaburo, paula", 0);
-  map.set("landaburo, natalia", 0);
-  map.set("role:cosmetologa", 30);
-  map.set("role:admin", 0);
-
-  try {
-    const { data: rates, error } = await supabaseAdmin
-      .from("commission_rates")
-      .select("professional_name, role, rate_percentage, is_active")
-      .eq("is_active", true);
-
-    if (!error && rates) {
-      for (const r of rates) {
-        const rate = Number(r.rate_percentage ?? 0);
-        if (r.professional_name) {
-          map.set(r.professional_name.toLowerCase().trim(), rate);
-        }
-        if (r.role) {
-          map.set(`role:${r.role.toLowerCase().trim()}`, rate);
-        }
-      }
-    }
-  } catch (err) {
-    console.warn("[ingest_payments] Excepción al consultar commission_rates:", err);
-  }
-
-  return map;
-}
-
-function resolveCommissionRate(
-  rawProf?: string,
-  profileFullName?: string,
-  profileRole?: string,
-  rateMap?: Map<string, number>
-): number {
-  if (!rateMap) return 0;
-
-  const rawLower = (rawProf || "").toLowerCase().trim();
-  const nameLower = (profileFullName || "").toLowerCase().trim();
-  const roleKey = profileRole ? `role:${profileRole.toLowerCase().trim()}` : "";
-
-  if (nameLower && rateMap.has(nameLower)) return rateMap.get(nameLower)!;
-  if (rawLower && rateMap.has(rawLower)) return rateMap.get(rawLower)!;
-
-  // Substring match
-  if (rawLower.includes("pasquet") || nameLower.includes("pasquet")) return 30;
-  if (rawLower.includes("landaburo") || nameLower.includes("landaburo")) return 0;
-
-  if (roleKey && rateMap.has(roleKey)) return rateMap.get(roleKey)!;
-
-  return 0;
-}
-
-// ─── Handler ──────────────────────────────────────────────────────────────────
+// ─── POST Handler ────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  // ── 1. Autenticación ────────────────────────────────────────────────────────
-  const authHeader = req.headers.get("authorization");
-  const secret = process.env.INGEST_SECRET;
-  if (!secret || authHeader !== `Bearer ${secret}`) {
-    return NextResponse.json(
-      { success: false, message: "Unauthorized" },
-      { status: 401 }
-    );
+  // 1. Auth: Bearer token contra INGEST_SECRET o INGEST_SYNC_SECRET
+  const ingestSecret = process.env.INGEST_SECRET || process.env.INGEST_SYNC_SECRET;
+  if (!ingestSecret) {
+    return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
   }
 
-  // ── 2. Parseo del body ──────────────────────────────────────────────────────
-  let records: PaymentRecord[];
+  const authHeader = req.headers.get("authorization") ?? "";
+  if (authHeader !== `Bearer ${ingestSecret}`) {
+    return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+  }
+
+  // 2. Parseo de Body
+  let body: unknown;
   try {
-    const body = await req.json();
-    records = Array.isArray(body) ? body : body.records;
-    if (!Array.isArray(records)) {
-      throw new Error("Payload debe ser array o { records: [] }");
-    }
-  } catch (e: unknown) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: `JSON inválido: ${e instanceof Error ? e.message : String(e)}`,
-      },
-      { status: 400 }
-    );
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  // ── 3. Carga de mapa de profesionales, tasas de comisión y corte ──────────
-  const { nameToIdMap: profesionalMap, idToInfoMap, resolveProfFn } = await getProfesionalData();
-  const commissionRatesMap = await getCommissionRatesMap();
-  const cutoffDate = getCutoffDate();
-  const { usdMax, arsMin } = getCurrencyThresholds();
+  const payload = body as IngestPayload | RawPaymentRow[];
+  const rows: RawPaymentRow[] = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.rows)
+    ? payload.rows
+    : [];
 
-  // ── 4. Acumuladores ─────────────────────────────────────────────────────────
-  let inserted = 0;
-  let updated = 0;
-  let skipped_estado = 0;
-  let skipped_fuera_de_rango = 0;
-  let duplicates_exact = 0;
-  let duplicates_approx = 0;
-  let needs_review_uninserted = 0;
-  const needs_review: NeedsReviewItem[] = [];
-  const rejected: RejectedItem[] = [];
+  const source = (!Array.isArray(payload) && payload?.source) || "pagos";
 
-  // ── 5. Procesamiento por registro ───────────────────────────────────────────
-  for (let i = 0; i < records.length; i++) {
-    const rec = records[i];
+  if (!rows || rows.length === 0) {
+    return NextResponse.json({
+      rows_received: 0,
+      rows_inserted: 0,
+      rows_duplicated: 0,
+      rows_in_review: 0,
+      review_reasons: {},
+    });
+  }
 
-    // ── 5.1 Validación mínima de campos requeridos ────────────────────────────
-    if (!rec.clave_unica?.trim()) {
-      rejected.push({ index: i, reason: "clave_unica es requerida", record: rec });
-      continue;
-    }
-    if (!rec.dni?.trim()) {
-      rejected.push({ index: i, reason: "dni es requerido", record: rec });
-      continue;
-    }
-    if (!rec.fecha?.trim()) {
-      rejected.push({ index: i, reason: "fecha es requerida", record: rec });
-      continue;
-    }
-    if (rec.monto_pagado_ars == null) {
-      rejected.push({ index: i, reason: "monto_pagado_ars es requerido", record: rec });
-      continue;
-    }
-    if (!rec.estado?.trim()) {
-      rejected.push({ index: i, reason: "estado es requerido", record: rec });
-      continue;
+  // 3. Reglas Fail-Closed previas al procesamiento
+  // Regla 1: payment_date faltante o inválido rechaza la corrida completa con 400.
+  // Regla: movement_type faltante rechaza la corrida completa con 400.
+  // Regla: external_key faltante rechaza la corrida completa con 400.
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    const key = r.external_key ? String(r.external_key).trim() : "";
+
+    if (!key) {
+      return NextResponse.json(
+        { error: `Fila en índice ${i} sin external_key requerido` },
+        { status: 400 }
+      );
     }
 
-    // ── 5.2 Parseo y Filtro de Fecha de Corte (Regla A) ──────────────────────
-    const dateParseResult = parsePaymentDate(rec.clave_unica, rec.fecha);
-    if (!dateParseResult) {
-      rejected.push({
-        index: i,
-        reason: `fecha inválida: "${rec.fecha}" (o clave_unica "${rec.clave_unica}") — se espera formato D/M/YYYY o timestamp ISO`,
-        record: rec,
-      });
-      continue;
-    }
-    const { date: parsedDate, hasSpecificTime } = dateParseResult;
-
-    if (parsedDate < cutoffDate) {
-      skipped_fuera_de_rango++;
-      continue;
+    if (!r.movement_type || typeof r.movement_type !== "string" || !r.movement_type.trim()) {
+      return NextResponse.json(
+        { error: `Fila ${key} sin movement_type requerido (se rechaza con 400)` },
+        { status: 400 }
+      );
     }
 
-    // ── 5.3 Búsqueda Nivel 1 (por external_id / clave_unica) ─────────────────
-    let existingByExtId: {
-      id: string;
-      amount_ars: number | null;
-      amount_usd: number | null;
-      currency: string | null;
-      payment_method: string | null;
-      notes: string | null;
-    } | null = null;
+    if (!r.payment_date || typeof r.payment_date !== "string" || !r.payment_date.trim()) {
+      return NextResponse.json(
+        { error: `Fila ${key} sin payment_date requerido (se rechaza con 400, no default)` },
+        { status: 400 }
+      );
+    }
 
-    {
-      const extVariants = getExternalIdVariants(rec.clave_unica);
-      const { data: existingData, error: extIdError } = await supabaseAdmin
-        .from("payments")
-        .select("id, amount_ars, amount_usd, currency, payment_method, notes")
-        .in("external_id", extVariants)
-        .limit(1)
-        .maybeSingle();
+    const parsedDate = new Date(r.payment_date);
+    if (isNaN(parsedDate.getTime())) {
+      return NextResponse.json(
+        { error: `Fila ${key} con payment_date inválido '${r.payment_date}'` },
+        { status: 400 }
+      );
+    }
+  }
 
-      if (extIdError) {
-        const isDdlPending =
-          extIdError.message.includes("column") ||
-          extIdError.message.includes("does not exist") ||
-          extIdError.code === "42703";
+  const supabaseAdmin = createAdminClient();
 
-        if (!isDdlPending) {
-          rejected.push({
-            index: i,
-            reason: `Error al verificar external_id: ${extIdError.message}`,
-            record: rec,
-          });
-          continue;
-        }
-      } else if (existingData) {
-        existingByExtId = existingData;
+  // 4. Pre-carga de Identidades (Pacientes y Profesionales)
+  // Pacientes: mapeo de nombres normalizados
+  const { data: patientsData } = await supabaseAdmin
+    .from("patients")
+    .select("id, full_name");
+
+  const patientMap = new Map<string, string>();
+  for (const p of patientsData || []) {
+    if (!p.full_name) continue;
+    const norm = normalizeName(p.full_name);
+    patientMap.set(norm, p.id);
+
+    // Invertir si viene como "Apellido, Nombre"
+    if (p.full_name.includes(",")) {
+      const [last, first] = (p.full_name as string).split(",").map((s: string) => s.trim());
+      if (last && first) {
+        const inv = normalizeName(`${first} ${last}`);
+        if (!patientMap.has(inv)) patientMap.set(inv, p.id);
       }
     }
+  }
 
-    // ── 5.4 Filtrado por Estado (Reglas C1, C2 y Punto E) ────────────────────
-    const estadoRaw = rec.estado.trim();
-    const estadoLower = estadoRaw.toLowerCase();
+  // Profesionales: resolvedor flexible contra profiles
+  const { resolveProfessional } = await loadProfessionals(supabaseAdmin);
 
-    if (!ESTADOS_FACTURABLES.has(estadoLower)) {
-      // Regla Punto E: Citas eliminadas
-      if (estadoLower.startsWith("cita eliminada")) {
-        if (Number(rec.monto_pagado_ars ?? 0) > 0) {
-          needs_review_uninserted++;
-          needs_review.push({
-            index: i,
-            reason: `cita_eliminada_con_pago: Cita con estado "${estadoRaw}" pero registra un cobro de $${Number(rec.monto_pagado_ars).toLocaleString("es-AR")}. Requiere verificación manual.`,
-            record: rec,
-          });
-          continue;
-        } else {
-          // Eliminada con monto cero -> omitir en silencio
-          skipped_estado++;
-          continue;
-        }
-      }
+  // 5. Procesamiento y Clasificación de Filas
+  const paymentsToInsert: Record<string, unknown>[] = [];
+  const reviewItemsToPersist: IngestReviewInput[] = [];
+  const reviewReasons: Record<string, number> = {};
+  let rowsDivertedToReview = 0;
 
-      if (shouldIgnoreEstado(estadoRaw)) {
-        // Caso Inverso: ¿Estaba previamente registrado con dinero en DB?
-        if (
-          existingByExtId &&
-          (Number(existingByExtId.amount_ars ?? 0) > 0 || Number(existingByExtId.amount_usd ?? 0) > 0)
-        ) {
-          needs_review_uninserted++;
-          needs_review.push({
-            index: i,
-            reason: `posible_anulacion: Turno previamente registrado con $${Number(existingByExtId.amount_ars ?? 0).toLocaleString("es-AR")} ahora figura como "${estadoRaw}". Verificar si corresponde anular el cobro o si fue un error en Calu.`,
-            record: rec,
-          });
-          continue;
-        }
+  for (const row of rows) {
+    const extId = String(row.external_key).trim();
+    const movementType = String(row.movement_type).trim().toLowerCase();
+    const rawMethod = (row.payment_method || "").trim().toLowerCase();
+    const currency = (row.currency || "ARS").trim().toUpperCase();
+    const amountNum = Number(row.amount);
 
-        // Cita cancelada, ausente, en sala de espera o futura sin cobro -> silencio
-        skipped_estado++;
-        continue;
-      }
-
-      // Estado desconocido no contemplado -> a revisión
-      needs_review_uninserted++;
-      needs_review.push({
-        index: i,
-        reason: `estado_desconocido: Estado "${estadoRaw}" no es facturable ni ignorable`,
-        record: rec,
+    // 5.1 Validar movement_type contra CHECK
+    if (!VALID_MOVEMENT_TYPES.has(movementType)) {
+      reviewItemsToPersist.push({
+        source: "payments",
+        record_identifier: extId,
+        reason: "movement_type_desconocido",
+        payload: row as Record<string, unknown>,
       });
+      reviewReasons["movement_type_desconocido"] =
+        (reviewReasons["movement_type_desconocido"] || 0) + 1;
+      rowsDivertedToReview++;
       continue;
     }
 
-    // ── 5.5 Detección de Moneda (Guardarraíl Agustín 20/09/2026) ───────────────
-    const montoRaw = rec.monto_pagado_ars;
-    const medioPagoKey = (rec.medio_pago || "").toLowerCase().trim();
-    const isLabeledUSD =
-      medioPagoKey.includes("usd") ||
-      medioPagoKey.includes("dolar") ||
-      medioPagoKey.includes("dólar");
-
-    if (montoRaw < 0) {
-      needs_review_uninserted++;
-      needs_review.push({
-        index: i,
-        reason: `monto_negativo: Monto negativo (${montoRaw}) en registro de origen`,
-        record: rec,
+    // 5.2 Validar payment_method contra CHECK
+    if (!VALID_PAYMENT_METHODS.has(rawMethod)) {
+      reviewItemsToPersist.push({
+        source: "payments",
+        record_identifier: extId,
+        reason: "medio_de_pago_no_mapeado",
+        payload: row as Record<string, unknown>,
       });
+      reviewReasons["medio_de_pago_no_mapeado"] =
+        (reviewReasons["medio_de_pago_no_mapeado"] || 0) + 1;
+      rowsDivertedToReview++;
       continue;
     }
 
-    let detectedCurrency: "ARS" | "USD" = "ARS";
-    let effectiveMedioPago = normalizePaymentMethod(rec.medio_pago) || "efectivo";
+    // 5.3 Mapeo de Moneda y Montos (Regla 3)
+    let amountArs: number | null = null;
+    let amountUsd: number | null = null;
 
-    // ¿Es venta de productos?
-    const isProductSale = (rec.servicio ?? "").toLowerCase().trim().startsWith("venta de producto");
-    let montoAmbiguoReason: string | null = null;
-    let isMontoFusionado = false;
-
-    if (isProductSale && !isLabeledUSD) {
-      // Venta de productos en pesos: no aplica umbral de USD ni clasificación como USD
-      detectedCurrency = "ARS";
-      effectiveMedioPago = normalizePaymentMethod(rec.medio_pago) || "efectivo";
-    } else if (isLabeledUSD && montoRaw <= usdMax) {
-      // Caso 1: Medio de pago dice USD Y monto <= 2.000 (configurable) -> Dólares legítimos
-      detectedCurrency = "USD";
-      effectiveMedioPago = "efectivo_usd";
-    } else if (isLabeledUSD && montoRaw > usdMax) {
-      // Caso 2: Medio de pago dice USD Y monto > 2.000 -> Monto fusionado (USD + ARS)
-      // Entra en ARS, se marca explícitamente y va a revisión
-      detectedCurrency = "ARS";
-      effectiveMedioPago = "efectivo";
-      isMontoFusionado = true;
-      montoAmbiguoReason = `monto_fusionado_usd_ars: Medio de pago dice "${rec.medio_pago}" pero monto ($${montoRaw.toLocaleString("es-AR")}) supera umbral de dólares (${usdMax}). Posible suma de USD y ARS en origen.`;
-    } else if (!isLabeledUSD && montoRaw > 0 && montoRaw < usdMax) {
-      // Caso 3: Sin etiqueta USD y monto < 2.000 -> Ambiguo, entra en pesos y se marca
-      detectedCurrency = "ARS";
-      effectiveMedioPago = normalizePaymentMethod(rec.medio_pago) || "efectivo";
-      montoAmbiguoReason = `monto_sospechoso_sub2k: Monto $${montoRaw.toLocaleString("es-AR")} sin etiqueta USD inferior a $${usdMax}. Posible seña o dólares no rotulados.`;
+    if (currency === "ARS") {
+      amountArs = isNaN(amountNum) ? 0 : amountNum;
+      amountUsd = null;
+    } else if (currency === "USD") {
+      amountArs = 0;
+      amountUsd = isNaN(amountNum) ? 0 : amountNum;
     } else {
-      // Caso 4: Resto -> Pesos (ARS)
-      detectedCurrency = "ARS";
-      effectiveMedioPago = normalizePaymentMethod(rec.medio_pago) || "efectivo";
-      if (montoRaw >= usdMax && montoRaw < arsMin) {
-        montoAmbiguoReason = `monto_parcial_seña: Monto $${montoRaw.toLocaleString("es-AR")} registrado como saldo parcial o seña`;
-      }
-    }
-
-    // ── 5.6 Normalización de Medio de Pago ─────────────────────────────────────
-    if (!effectiveMedioPago) {
-      effectiveMedioPago = "efectivo";
-    }
-
-    // ── Resolución anticipada de Profesional y Tasa de Comisión ───────────────
-    let resolvedProfId: string | undefined = rec.professional_profile_id;
-    const rawProf = (rec.profesional ?? "").trim();
-    if (!resolvedProfId && rawProf) {
-      const normProf = rawProf.toLowerCase();
-      let mapped = profesionalMap.get(rawProf) || profesionalMap.get(normProf);
-      if (!mapped && resolveProfFn) {
-        const found = resolveProfFn(rawProf);
-        if (found) mapped = found.id;
-      }
-      if (mapped) resolvedProfId = mapped;
-    }
-
-    // Regla C: Venta de mostrador no es de Paula (no se atribuye profesional ni comisión)
-    if (isProductSale) {
-      resolvedProfId = undefined;
-    }
-
-    const profInfo = resolvedProfId ? idToInfoMap.get(resolvedProfId) : undefined;
-    const appliedRate = isProductSale
-      ? 0
-      : resolveCommissionRate(
-          rawProf,
-          profInfo?.fullName,
-          profInfo?.role,
-          commissionRatesMap
-        );
-
-    // ── 5.6.1 Si ya existía por external_id, comparar y actualizar (Regla A) ──
-    if (existingByExtId) {
-      const oldAmountArs = Number(existingByExtId.amount_ars ?? 0);
-      const newAmountArs = detectedCurrency === "USD" ? 0 : montoRaw;
-      const oldAmountUsd = existingByExtId.amount_usd != null ? Number(existingByExtId.amount_usd) : null;
-      const newAmountUsd = detectedCurrency === "USD" ? montoRaw : null;
-      const oldPaymentMethod = existingByExtId.payment_method;
-      const newPaymentMethod = effectiveMedioPago;
-      const calculatedCommission =
-        detectedCurrency === "USD" || !resolvedProfId ? 0 : Math.round(newAmountArs * (appliedRate / 100));
-
-      const amountChanged = oldAmountArs !== newAmountArs || oldAmountUsd !== newAmountUsd;
-      const methodChanged = oldPaymentMethod !== newPaymentMethod;
-      const currencyChanged = existingByExtId.currency !== detectedCurrency;
-
-      if (!amountChanged && !methodChanged && !currencyChanged) {
-        // Registro idéntico sin cambios relevantes
-        duplicates_exact++;
-        continue;
-      }
-
-      // ── Hubo cambios: ACTUALIZAR registro existente en payments ──
-      const currentNotes = existingByExtId.notes || "";
-      const changeAudit = amountChanged
-        ? ` [Actualizado: antes $${oldAmountArs.toLocaleString("es-AR")}]`
-        : ` [Medio pago: ${oldPaymentMethod} -> ${newPaymentMethod}]`;
-
-      const commTag = appliedRate > 0 && resolvedProfId ? ` [Comisión ${appliedRate}%: $${calculatedCommission.toLocaleString("es-AR")}]` : "";
-      const fusedTag = isMontoFusionado && !currentNotes.includes("[MONTO-FUSIONADO-NO-CONFIABLE]") ? " [MONTO-FUSIONADO-NO-CONFIABLE]" : "";
-      const updatedNotes = currentNotes.includes("[Actualizado")
-        ? `${currentNotes};${changeAudit}${commTag}${fusedTag}`
-        : `${currentNotes || rec.servicio || ""}${changeAudit}${commTag}${fusedTag}`;
-
-      const { error: updateError } = await supabaseAdmin
-        .from("payments")
-        .update({
-          amount_ars: newAmountArs,
-          amount_usd: newAmountUsd,
-          currency: detectedCurrency,
-          payment_method: newPaymentMethod,
-          commission_amount_ars: calculatedCommission,
-          notes: updatedNotes,
-        })
-        .eq("id", existingByExtId.id);
-
-      if (updateError) {
-        rejected.push({
-          index: i,
-          reason: `Error al actualizar cobro existente: ${updateError.message}`,
-          record: rec,
-        });
-        continue;
-      }
-
-      // Dejar constancia en ingest_review si cambió el monto
-      if (amountChanged) {
-        await supabaseAdmin.from("ingest_review").insert({
-          source: "payments",
-          record_identifier: rec.clave_unica,
-          reason: `monto_actualizado: Cobro modificado de $${oldAmountArs.toLocaleString("es-AR")} a $${newAmountArs.toLocaleString("es-AR")} (${newPaymentMethod})`,
-          payload: {
-            clave_unica: rec.clave_unica,
-            dni: rec.dni,
-            fecha: rec.fecha,
-            monto_anterior_ars: oldAmountArs,
-            monto_nuevo_ars: newAmountArs,
-            medio_pago_anterior: oldPaymentMethod,
-            medio_pago_nuevo: newPaymentMethod,
-            servicio: rec.servicio,
-            payment_id: existingByExtId.id,
-          },
-          status: "resolved",
-          resolution_notes: `Actualización automática durante ingesta: cambio de monto de $${oldAmountArs} a $${newAmountArs}`,
-          resolved_by: null,
-          resolved_at: new Date().toISOString(),
-        });
-      }
-
-      if (isMontoFusionado && montoAmbiguoReason) {
-        needs_review.push({
-          index: i,
-          reason: `${montoAmbiguoReason}. Cobro actualizado en base con ID ${existingByExtId.id}.`,
-          record: { ...rec, payment_id: existingByExtId.id },
-        });
-      }
-
-      updated++;
+      // Moneda desconocida -> a revisión
+      reviewItemsToPersist.push({
+        source: "payments",
+        record_identifier: extId,
+        reason: "moneda_desconocida",
+        payload: row as Record<string, unknown>,
+      });
+      reviewReasons["moneda_desconocida"] =
+        (reviewReasons["moneda_desconocida"] || 0) + 1;
+      rowsDivertedToReview++;
       continue;
     }
 
-    // ── 5.7 Resolución de Paciente (Punto A: no bloquea, entra en null) ───────
-    let patientId: string | undefined = rec.patient_id;
-    let patientMissingReason: string | null = null;
+    // Si el payload contiene explícitamente amount_ars o amount_usd (ej: pruebas de coherencia), respetarlo
+    if (row.amount_ars !== undefined) amountArs = Number(row.amount_ars);
+    if (row.amount_usd !== undefined) amountUsd = Number(row.amount_usd);
 
-    if (!patientId) {
-      const lookupResult = await resolvePatient(rec.dni, rec.telefono);
-      if (lookupResult === "ambiguous") {
-        patientMissingReason = `ambiguous_ref: Múltiples pacientes coinciden con el identificador "${rec.dni}"`;
-      } else if (!lookupResult) {
-        patientMissingReason = `sin_paciente: Paciente no encontrada en el padrón (DNI/identificador: "${rec.dni}")`;
-      } else {
-        patientId = lookupResult.id;
-      }
+    // 5.4 Reclasificación de Moneda (Auditable)
+    if (row.reclassified === true) {
+      reviewItemsToPersist.push({
+        source: "payments",
+        record_identifier: extId,
+        reason: "moneda_reclasificada",
+        payload: row as Record<string, unknown>,
+      });
+      reviewReasons["moneda_reclasificada"] =
+        (reviewReasons["moneda_reclasificada"] || 0) + 1;
     }
 
-    // ── 5.8 Validación de Profesional Resuelto (Punto A: no bloquea, entra en null)
-    let professionalId: string | undefined = resolvedProfId;
-    let professionalMissingReason: string | null = null;
+    // 5.5 Resolución de Identidades (Regla 2: no bloquea si falla)
+    const payerNameRaw = row.payer_name_raw ? String(row.payer_name_raw).trim() : null;
+    let patientId: string | null = null;
 
-    if (!isProductSale && !professionalId) {
-      if (!rawProf) {
-        professionalMissingReason = `sin_professional: Falta asignar la profesional en la planilla de origen`;
-      } else {
-        professionalMissingReason = `sin_professional: Profesional "${rawProf}" no encontrada en perfiles (asignar manualmente)`;
-      }
-    }
-
-    // ── 5.9 Deduplicación Nivel 2 (ventana solapada) ──────────────────────────
-    if (patientId) {
-      const winStart = hasSpecificTime
-        ? new Date(parsedDate.getTime() - 15 * 60 * 1000)
-        : new Date(parsedDate.getTime());
-
-      const winEnd = hasSpecificTime
-        ? new Date(parsedDate.getTime() + 15 * 60 * 1000)
-        : new Date(parsedDate.getTime() + 24 * 60 * 60 * 1000 - 1);
-
-      const approxQuery = supabaseAdmin
-        .from("payments")
-        .select("id, payment_date")
-        .eq("patient_id", patientId)
-        .is("superseded_by", null)
-        .gte("payment_date", winStart.toISOString())
-        .lte("payment_date", winEnd.toISOString());
-
-      if (detectedCurrency === "USD") {
-        approxQuery.eq("amount_usd", montoRaw);
-      } else {
-        approxQuery.eq("amount_ars", montoRaw);
-      }
-
-      let { data: existingApprox, error: approxError } = await approxQuery.maybeSingle();
-
-      // Guardarraíl adicional: Si no coincidió en ventana de ±15 min (porque un registro fue
-      // guardado a medianoche y el otro con hora específica), buscar por día calendario completo en Argentina (-03:00)
-      if (!existingApprox && hasSpecificTime) {
-        const pYear = parsedDate.getFullYear();
-        const pMonth = String(parsedDate.getMonth() + 1).padStart(2, "0");
-        const pDay = String(parsedDate.getDate()).padStart(2, "0");
-        const dayStartIso = `${pYear}-${pMonth}-${pDay}T00:00:00-03:00`;
-        const dayEndIso = `${pYear}-${pMonth}-${pDay}T23:59:59.999-03:00`;
-
-        const sameDayQuery = supabaseAdmin
-          .from("payments")
-          .select("id, payment_date")
-          .eq("patient_id", patientId)
-          .is("superseded_by", null)
-          .gte("payment_date", dayStartIso)
-          .lte("payment_date", dayEndIso);
-
-        if (detectedCurrency === "USD") {
-          sameDayQuery.eq("amount_usd", montoRaw);
-        } else {
-          sameDayQuery.eq("amount_ars", montoRaw);
-        }
-
-        const { data: existingSameDay } = await sameDayQuery.limit(1).maybeSingle();
-        if (existingSameDay) {
-          existingApprox = existingSameDay;
+    if (payerNameRaw) {
+      const normPayer = normalizeName(payerNameRaw);
+      patientId = patientMap.get(normPayer) || null;
+      if (!patientId && payerNameRaw.includes(",")) {
+        const [last, first] = payerNameRaw.split(",").map((s: string) => s.trim());
+        if (last && first) {
+          patientId = patientMap.get(normalizeName(`${first} ${last}`)) || null;
         }
       }
-
-      if (!approxError && existingApprox) {
-        duplicates_approx++;
-        needs_review.push({
-          index: i,
-          reason: `posible_duplicado_ventana_solapada: Coincide con cobro ID=${existingApprox.id} por paciente+fecha+monto (${rec.clave_unica})`,
-          record: rec,
-        });
-        continue;
-      }
     }
 
-    // ── 5.10 Multi-servicio, Productos y Guardado en DB (Reglas A, B, C) ──────
-    const isMulti = isRealMultiService(rec.servicio ?? "");
-    let paymentNotes = rec.servicio ?? null;
-    if (isProductSale) {
-      paymentNotes = `[VENTA-PRODUCTO] ${rec.servicio ?? ""}`;
-    } else if (isMulti) {
-      paymentNotes = `[MULTI-SERVICIO] ${rec.servicio ?? ""}`;
+    let professionalProfileId: string | null = null;
+    if (row.origin_raw) {
+      const prof = resolveProfessional(row.origin_raw);
+      if (prof) professionalProfileId = prof.id;
     }
 
-    if (!patientId && rec.dni) {
-      paymentNotes = paymentNotes
-        ? `${paymentNotes} [SIN-PACIENTE DNI:${rec.dni}]`
-        : `[SIN-PACIENTE DNI:${rec.dni}]`;
-    }
-
-    if (!isProductSale && !professionalId) {
-      paymentNotes = paymentNotes
-        ? `${paymentNotes} [SIN-PROFESIONAL]`
-        : `[SIN-PROFESIONAL]`;
-    }
-
-    const calculatedCommission =
-      detectedCurrency === "USD" || !professionalId ? 0 : Math.round(montoRaw * (appliedRate / 100));
-
-    if (appliedRate > 0 && professionalId) {
-      const commTag = `[Comisión ${appliedRate}%: $${calculatedCommission.toLocaleString("es-AR")}]`;
-      paymentNotes = paymentNotes ? `${paymentNotes} ${commTag}` : commTag;
-    }
-
-    if (isMontoFusionado) {
-      paymentNotes = paymentNotes
-        ? `${paymentNotes} [MONTO-FUSIONADO-NO-CONFIABLE]`
-        : `[MONTO-FUSIONADO-NO-CONFIABLE]`;
-    }
-
-    const insertPayload: Record<string, unknown> = {
-      patient_id: patientId ?? null,
-      professional_profile_id: professionalId ?? null,
-      amount_ars: detectedCurrency === "USD" ? 0 : montoRaw,
-      amount_usd: detectedCurrency === "USD" ? montoRaw : null,
-      currency: detectedCurrency,
-      payment_method: effectiveMedioPago,
-      commission_amount_ars: calculatedCommission,
-      payment_date: parsedDate.toISOString(),
+    // 5.6 Armar Fila de Cobro para Inserción
+    paymentsToInsert.push({
+      external_id: extId,
+      movement_type: movementType,
+      payment_date: new Date(row.payment_date!).toISOString(),
+      payer_name: payerNameRaw,
+      patient_id: patientId,
+      professional_profile_id: professionalProfileId,
+      notes: row.description ? String(row.description).trim() : null,
+      payment_method: rawMethod,
+      currency,
+      amount_ars: amountArs,
+      amount_usd: amountUsd,
+      commission_amount_ars: 0,
       appointment_id: null,
       order_id: null,
-      external_id: rec.clave_unica,
-      notes: paymentNotes,
-    };
+    });
+  }
 
-    const { data: insertedPayment, error: insertError } = await supabaseAdmin
+  // 6. Persistencia Idempotente en payments (Regla 4: on conflict do nothing)
+  let rowsInserted = 0;
+  let rowsDuplicated = 0;
+
+  if (paymentsToInsert.length > 0) {
+    const { data: insertedRows, error: insertError } = await supabaseAdmin
       .from("payments")
-      .insert(insertPayload)
-      .select("id")
-      .single();
+      .upsert(paymentsToInsert, { onConflict: "external_id", ignoreDuplicates: true })
+      .select("id, external_id");
 
     if (insertError) {
-      rejected.push({ index: i, reason: insertError.message, record: rec });
-      continue;
+      console.error("[ingest/payments] Error en insert de payments:", insertError);
+      return NextResponse.json({ error: insertError.message }, { status: 400 });
     }
 
-    const insertedPaymentId = insertedPayment.id;
-    inserted++;
-
-    // Registrar incidencias si faltan datos o monto ambiguo (Punto A)
-    // El cobro YA INGRESÓ a payments, la incidencia señala completar el dato faltante
-    if (patientMissingReason) {
-      needs_review.push({
-        index: i,
-        reason: `${patientMissingReason}. Cobro registrado en base con ID ${insertedPaymentId}.`,
-        record: { ...rec, payment_id: insertedPaymentId },
-      });
-    }
-
-    if (professionalMissingReason) {
-      needs_review.push({
-        index: i,
-        reason: `${professionalMissingReason}. Cobro registrado en base con ID ${insertedPaymentId}.`,
-        record: { ...rec, payment_id: insertedPaymentId },
-      });
-    }
-
-    if (montoAmbiguoReason) {
-      needs_review.push({
-        index: i,
-        reason: `${montoAmbiguoReason}. Cobro registrado en base con ID ${insertedPaymentId}.`,
-        record: { ...rec, payment_id: insertedPaymentId },
-      });
-    }
+    rowsInserted = insertedRows?.length ?? 0;
+    rowsDuplicated = paymentsToInsert.length - rowsInserted;
   }
 
-  // ── 6. Persistir items en ingest_review (idempotente) ─────────────────────
-  if (needs_review.length > 0) {
-    await persistReviewItems(
-      needs_review.map((item) => ({
-        source: "payments",
-        record_identifier: item.record.clave_unica || item.record.dni || null,
-        reason: item.reason,
-        payload: item.record as unknown as Record<string, unknown>,
-      }))
-    );
+  // 7. Persistir ítems en ingest_review
+  if (reviewItemsToPersist.length > 0) {
+    await persistReviewItems(reviewItemsToPersist);
   }
 
-  // ── 7. Respuesta reconciliada ────────────────────────────────────────────
-  const reconciliationCheck =
-    inserted +
-    updated +
-    skipped_estado +
-    skipped_fuera_de_rango +
-    duplicates_exact +
-    duplicates_approx +
-    needs_review_uninserted +
-    rejected.length ===
-    records.length;
-
+  // 8. Respuesta con Contrato Oficial
   return NextResponse.json({
-    success: true,
-    summary: {
-      total_received: records.length,
-      inserted,
-      updated,
-      skipped_estado,
-      skipped_fuera_de_rango,
-      duplicates_exact,
-      duplicates_approx,
-      needs_review_uninserted,
-      needs_review: needs_review.length,
-      rejected: rejected.length,
-      reconciliation_check: reconciliationCheck,
-    },
-    needs_review_detail: needs_review,
-    rejected_detail: rejected,
+    rows_received: rows.length,
+    rows_inserted: rowsInserted,
+    rows_duplicated: rowsDuplicated,
+    rows_in_review: rowsDivertedToReview,
+    review_reasons: reviewReasons,
   });
 }
