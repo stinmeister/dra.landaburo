@@ -46,40 +46,86 @@ interface RejectedDetail {
 // Helpers & RFM Mapping
 // ---------------------------------------------------------------------------
 
-// Valores exactos permitidos por el constraint patients_rfm_segment_check en DB:
-// 'Nuevo', 'En Riesgo', 'No Perder', 'Inactivo', 'Durmiente 2025', 'Inactivo pre-2025'
+// Valores exactos permitidos por el constraint patients_rfm_segment_check en DB (14 valores):
+// 'Campeón', 'Leal', 'No Perder', 'En Riesgo', 'Potencial Leal', 'Prometedor',
+// 'Nuevo Paciente', 'Nuevo', 'Necesita Atención', 'Hibernando',
+// 'Durmiente 2025', 'Inactivo pre-2025', 'Inactivo', 'Sin segmento'
+const CANONICAL_RFM_SEGMENTS = new Set<string>([
+  'Campeón',
+  'Leal',
+  'No Perder',
+  'En Riesgo',
+  'Potencial Leal',
+  'Prometedor',
+  'Nuevo Paciente',
+  'Nuevo',
+  'Necesita Atención',
+  'Hibernando',
+  'Durmiente 2025',
+  'Inactivo pre-2025',
+  'Inactivo',
+  'Sin segmento',
+]);
+
 const RFM_MAP: Record<string, string> = {
-  nuevo: 'Nuevo',
-  nuevos: 'Nuevo',
-  'en riesgo': 'En Riesgo',
-  en_riesgo: 'En Riesgo',
+  // 14 valores canónicos (case-insensitive y variantes sin tilde / con guion bajo)
+  'campeón': 'Campeón',
+  campeon: 'Campeón',
+  campeones: 'Campeón',
+  leal: 'Leal',
+  leales: 'Leal',
   'no perder': 'No Perder',
   no_perder: 'No Perder',
-  inactivo: 'Inactivo',
-  inactivos: 'Inactivo',
+  'en riesgo': 'En Riesgo',
+  en_riesgo: 'En Riesgo',
+  'potencial leal': 'Potencial Leal',
+  potencial_leal: 'Potencial Leal',
+  potencial: 'Potencial Leal',
+  prometedor: 'Prometedor',
+  prometedores: 'Prometedor',
+  'nuevo paciente': 'Nuevo Paciente',
+  nuevo_paciente: 'Nuevo Paciente',
+  'nuevos pacientes': 'Nuevo Paciente',
+  nuevo: 'Nuevo',
+  nuevos: 'Nuevo',
+  'necesita atención': 'Necesita Atención',
+  'necesita atencion': 'Necesita Atención',
+  necesita_atencion: 'Necesita Atención',
+  hibernando: 'Hibernando',
+  'durmiente 2025': 'Durmiente 2025',
+  durmiente_2025: 'Durmiente 2025',
   durmiente: 'Durmiente 2025',
   durmientes: 'Durmiente 2025',
-  'durmiente 2025': 'Durmiente 2025',
   'inactivo pre-2025': 'Inactivo pre-2025',
   'inactivo pre 2025': 'Inactivo pre-2025',
+  inactivo_pre_2025: 'Inactivo pre-2025',
+  inactivo: 'Inactivo',
+  inactivos: 'Inactivo',
+  'sin segmento': 'Sin segmento',
+  sin_segmento: 'Sin segmento',
+  // Alias heredados
   activo: 'Nuevo',
   activos: 'Nuevo',
 };
 
 function normalizeRfmSegment(raw: unknown): { mapped: string | null; note?: string } {
   if (typeof raw !== 'string' || !raw.trim()) return { mapped: null };
-  const clean = raw.trim().toLowerCase();
+  const trimmed = raw.trim();
+  if (CANONICAL_RFM_SEGMENTS.has(trimmed)) {
+    return { mapped: trimmed };
+  }
+  const clean = trimmed.toLowerCase();
   const matched = RFM_MAP[clean];
   if (matched) {
     const note =
-      clean === 'activo' || clean === 'activos' || clean === 'durmiente' || clean === 'durmientes'
-        ? `rfm_mapeado: '${raw.trim()}' -> '${matched}'`
+      clean === 'activo' || clean === 'activos' || clean === 'durmiente' || clean === 'durmientes' || clean === 'potencial'
+        ? `rfm_mapeado: '${trimmed}' -> '${matched}'`
         : undefined;
     return { mapped: matched, note };
   }
   return {
     mapped: 'Nuevo',
-    note: `rfm_desconocido: '${raw.trim()}' no reconocido en constraint, asignado 'Nuevo'`,
+    note: `rfm_desconocido: '${trimmed}' no reconocido en constraint, asignado 'Nuevo'`,
   };
 }
 
@@ -102,20 +148,67 @@ function isHash(value: string): boolean {
   return /[a-zA-Z]/.test(value);
 }
 
+function buildValidIsoDate(yyyy: number, mm: number, dd: number): string | null {
+  const currentYear = new Date().getUTCFullYear();
+  if (!Number.isInteger(yyyy) || !Number.isInteger(mm) || !Number.isInteger(dd)) return null;
+  if (yyyy < 1900 || yyyy > currentYear) return null;
+  if (mm < 1 || mm > 12) return null;
+  if (dd < 1 || dd > 31) return null;
+
+  const d = new Date(Date.UTC(yyyy, mm - 1, dd));
+  if (
+    isNaN(d.getTime()) ||
+    d.getUTCFullYear() !== yyyy ||
+    d.getUTCMonth() + 1 !== mm ||
+    d.getUTCDate() !== dd
+  ) {
+    return null;
+  }
+
+  return `${String(yyyy).padStart(4, '0')}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
+}
+
 /**
- * Parse a date string in DD-MM-YYYY format.
- * Returns an ISO date string 'YYYY-MM-DD' or null on failure.
+ * Parse a birthdate in any of the supported unambiguous formats:
+ * - DD-MM-YYYY
+ * - DD/MM/YYYY
+ * - YYYY-MM-DD
+ * - Excel serial number (e.g. 32028 -> 1987-09-08; valid range 3654..47000)
+ * Returns an ISO date string 'YYYY-MM-DD' or null on failure/ambiguity.
  */
-function parseDDMMYYYY(raw: unknown): string | null {
+function parseBirthdate(raw: unknown): string | null {
+  if (raw === null || raw === undefined) return null;
+
+  // 1. Excel serial number (number or pure numeric string in valid date serial range 1910..2028)
+  if (typeof raw === 'number' || /^\d{4,5}(?:\.0+)?$/.test(toStr(raw))) {
+    const serial = Math.floor(Number(raw));
+    // 3654 = 1910-01-01, 47000 = 2028-09-04 (excludes 4-digit birth years like 1985)
+    if (Number.isFinite(serial) && serial >= 3654 && serial <= 47000) {
+      const utcMs = Math.round((serial - 25569) * 86400 * 1000);
+      const d = new Date(utcMs);
+      if (!isNaN(d.getTime())) {
+        return buildValidIsoDate(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate());
+      }
+    }
+    return null;
+  }
+
   const str = toStr(raw);
   if (!str) return null;
-  const parts = str.split('-');
-  if (parts.length !== 3) return null;
-  const [dd, mm, yyyy] = parts;
-  const iso = `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return null;
-  return iso;
+
+  // 2. YYYY-MM-DD
+  const isoMatch = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(str);
+  if (isoMatch) {
+    return buildValidIsoDate(Number(isoMatch[1]), Number(isoMatch[2]), Number(isoMatch[3]));
+  }
+
+  // 3. DD-MM-YYYY or DD/MM/YYYY
+  const dmyMatch = /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/.exec(str);
+  if (dmyMatch) {
+    return buildValidIsoDate(Number(dmyMatch[3]), Number(dmyMatch[2]), Number(dmyMatch[1]));
+  }
+
+  return null;
 }
 
 /**
@@ -223,7 +316,7 @@ export async function POST(req: NextRequest) {
     let birthdateInvalid = false;
     const rawBirthdate = toStr(rec.Fecha_Nacimiento);
     if (rawBirthdate) {
-      birthdate = parseDDMMYYYY(rawBirthdate);
+      birthdate = parseBirthdate(rec.Fecha_Nacimiento);
       if (birthdate === null) {
         birthdateInvalid = true;
         // Don't reject — insert with null and flag needs_review
@@ -233,16 +326,12 @@ export async function POST(req: NextRequest) {
     // -- DNI normalisation ---------------------------------------------------
     const rawDni = toStr(rec.DNI);
     let normalizedDni: string | null = null;
-    let lookupByPhone = false;
     let hashDni = false;
 
-    if (!rawDni) {
-      lookupByPhone = true;
-    } else {
+    if (rawDni) {
       const norm = normalizeDni(rawDni);
       if (isHash(norm)) {
         hashDni = true;
-        lookupByPhone = true;
       } else {
         normalizedDni = norm;
       }
@@ -264,8 +353,10 @@ export async function POST(req: NextRequest) {
         continue;
       }
       existingRow = data ?? null;
-    } else if (lookupByPhone && phone) {
-      // Secondary lookup: by phone
+    }
+
+    if (!existingRow && phone) {
+      // Fallback lookup: by phone (runs when DNI is missing/hash OR when DNI was not found in DB)
       const { data, error } = await supabaseAdmin
         .from('patients')
         .select('*')
@@ -278,7 +369,9 @@ export async function POST(req: NextRequest) {
 
       if (data && data.length === 1) {
         existingRow = data[0];
-        reviewReasons.push(`vinculo_por_telefono: registro vinculado por teléfono (${phone}) al carecer de DNI unívoco`);
+        if (!normalizedDni) {
+          reviewReasons.push(`vinculo_por_telefono: registro vinculado por teléfono (${phone}) al carecer de DNI unívoco`);
+        }
       } else if (data && data.length > 1) {
         // Multiples pacientes comparten el mismo teléfono (madre/hijo, hermanos, etc.)
         // NO elegir arbitrariamente data[0] para evitar sobreescritura destructiva.
@@ -333,9 +426,21 @@ export async function POST(req: NextRequest) {
       if (!dbRow.rfm_segment && mappedRfm) {
         changes['rfm_segment'] = mappedRfm;
       }
-      // If matched via phone and DB has no DNI, backfill it
-      if (!dbRow.dni && normalizedDni) {
+      // If matched via phone and DB has no DNI (or had a hash), backfill the real numeric DNI
+      if ((!dbRow.dni || isHash(String(dbRow.dni))) && normalizedDni) {
         changes['dni'] = normalizedDni;
+      } else if (
+        dbRow.dni &&
+        !isHash(String(dbRow.dni)) &&
+        normalizedDni &&
+        String(dbRow.dni) !== normalizedDni
+      ) {
+        rejectedDetail.push({
+          index: i,
+          reason: `Insert/Update conflict: el teléfono ${phone} ya está asignado al DNI ${dbRow.dni} (registro entrante trae DNI ${normalizedDni})`,
+          record: rec,
+        });
+        continue;
       }
       // Always merge trazabilidad notes
       const mergedNotes = mergeNotes(dbRow.notes, osNotes);
@@ -431,12 +536,16 @@ export async function POST(req: NextRequest) {
   }
 }
 
-  // -- Persist review items to DB (idempotente) ------------------------------
-  if (needsReviewDetail.length > 0) {
+  // -- Persist BOTH review items AND rejected items to ingest_review (idempotente) --
+  const allReviewAndRejected = [...needsReviewDetail, ...rejectedDetail];
+  if (allReviewAndRejected.length > 0) {
     await persistReviewItems(
-      needsReviewDetail.map((item) => ({
+      allReviewAndRejected.map((item) => ({
         source: 'patients',
-        record_identifier: item.record.DNI ? normalizeDni(item.record.DNI) : item.record.WhatsApp_E164 ?? null,
+        record_identifier:
+          item.record.DNI && normalizeDni(item.record.DNI)
+            ? normalizeDni(item.record.DNI)
+            : toStr(item.record.WhatsApp_E164) || toStr(item.record.Email) || null,
         reason: item.reason,
         payload: item.record as Record<string, unknown>,
       }))
