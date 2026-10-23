@@ -1,34 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient as createSupabaseJsClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Resuelve el usuario autenticado desde header Bearer (JWT) o cookie de sesión de Next.js
+ * Construye un cliente Supabase autenticado con la identidad del usuario (JWT Bearer o cookies SSR),
+ * sin privilegios de service_role, para invocar RPCs con guarda de rol en base (public.is_admin()).
  */
-async function getAuthenticatedUser(req: NextRequest) {
+async function getUserSupabaseClient(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
   if (authHeader?.startsWith("Bearer ")) {
     const token = authHeader.slice(7).trim();
-    const adminClient = createAdminClient();
+    const client = createSupabaseJsClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      }
+    );
     const {
       data: { user },
       error,
-    } = await adminClient.auth.getUser(token);
+    } = await client.auth.getUser(token);
     if (!error && user) {
-      return user;
+      return { client, user };
     }
+    return { client: null, user: null };
   }
 
   try {
-    const supabase = await createClient();
+    const client = await createClient();
     const {
       data: { user },
-    } = await supabase.auth.getUser();
-    return user || null;
+    } = await client.auth.getUser();
+    if (!user) return { client: null, user: null };
+    return { client, user };
   } catch {
-    return null;
+    return { client: null, user: null };
   }
 }
 
@@ -44,9 +62,18 @@ async function getAuthenticatedUser(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   // 1. Validar autenticación y rol admin server-side
-  const user = await getAuthenticatedUser(req);
-  if (!user) {
+  const { client: userClient, user } = await getUserSupabaseClient(req);
+  if (!user || !userClient) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+
+  // Verificar guarda canónica public.is_admin() con el cliente del usuario
+  const { data: isAdminRpc, error: isAdminErr } = await userClient.rpc("is_admin");
+  if (isAdminErr || !isAdminRpc) {
+    return NextResponse.json(
+      { error: "No sos admin: se requiere rol de administrador", code: "42501" },
+      { status: 403 }
+    );
   }
 
   const adminClient = createAdminClient();
@@ -58,7 +85,7 @@ export async function POST(req: NextRequest) {
 
   if (!profile || profile.role !== "admin") {
     return NextResponse.json(
-      { error: "Acceso denegado: se requiere rol de administrador" },
+      { error: "No sos admin: se requiere rol de administrador", code: "42501" },
       { status: 403 }
     );
   }
@@ -177,49 +204,99 @@ export async function POST(req: NextRequest) {
 
 /**
  * GET /api/admin/run-ingesta
- * Consulta el estado de una corrida específica (?run_id=...) o de la última corrida registrada.
+ * Consulta la última corrida vía RPC `public.obtener_ultimo_ingest_run()` con el cliente
+ * autenticado del usuario (sin fallback a service_role).
+ * Distingue explícitamente tres estados:
+ * - NULL          -> { run: null, state: 'empty' } ("todavía no se corrió ninguna ingesta")
+ * - fila + status -> { run: <fila>, state: 'has_run' } (el resumen de la corrida)
+ * - error 42501   -> HTTP 403 { run: null, state: 'forbidden', code: '42501' } ("no sos admin")
  */
 export async function GET(req: NextRequest) {
-  const user = await getAuthenticatedUser(req);
-  if (!user) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
-
-  const adminClient = createAdminClient();
-  const { data: profile } = await adminClient
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!profile || profile.role !== "admin") {
+  const { client: userClient, user } = await getUserSupabaseClient(req);
+  if (!user || !userClient) {
     return NextResponse.json(
-      { error: "Acceso denegado: se requiere rol de administrador" },
-      { status: 403 }
+      { run: null, state: "forbidden", code: "42501", error: "No autorizado" },
+      { status: 401 }
     );
   }
 
+  const { data: rpcData, error: rpcError } = await userClient.rpc("obtener_ultimo_ingest_run");
+
+  if (rpcError) {
+    if (rpcError.code === "42501") {
+      return NextResponse.json(
+        {
+          run: null,
+          state: "forbidden",
+          code: "42501",
+          error: "No sos admin (acceso denegado por public.obtener_ultimo_ingest_run)",
+        },
+        { status: 403 }
+      );
+    }
+
+    if (rpcError.code === "PGRST202") {
+      return NextResponse.json(
+        {
+          run: null,
+          state: "rpc_missing",
+          code: "PGRST202",
+          error:
+            "La RPC public.obtener_ultimo_ingest_run() aún no figura en el esquema de Supabase. Ejecutar PASO 1 en SQL Editor.",
+        },
+        { status: 503 }
+      );
+    }
+
+    console.error("[run-ingesta GET] Error en RPC obtener_ultimo_ingest_run:", rpcError);
+    return NextResponse.json(
+      {
+        run: null,
+        state: "error",
+        code: rpcError.code,
+        error: rpcError.message || "Error al consultar última corrida",
+      },
+      { status: 500 }
+    );
+  }
+
+  // Si se consultó por un run_id específico durante el polling y difiere de la última fila
   const { searchParams } = new URL(req.url);
   const runId = searchParams.get("run_id");
+  const latestRun = (rpcData as Record<string, unknown> | null) || null;
 
-  let query = adminClient
-    .from("ingest_runs")
-    .select(
-      "id, started_at, finished_at, triggered_by, triggered_by_name, trigger_source, n8n_execution_id, status, summary"
-    );
+  if (runId && latestRun && latestRun.id !== runId) {
+    // La guarda de rol ya fue validada por obtener_ultimo_ingest_run() en la base
+    const adminClient = createAdminClient();
+    const { data: specificRun, error: specificErr } = await adminClient
+      .from("ingest_runs")
+      .select(
+        "id, started_at, finished_at, triggered_by, triggered_by_name, trigger_source, n8n_execution_id, status, summary"
+      )
+      .eq("id", runId)
+      .maybeSingle();
 
-  if (runId) {
-    query = query.eq("id", runId);
-  } else {
-    query = query.order("started_at", { ascending: false }).limit(1);
+    if (specificErr) {
+      return NextResponse.json({ error: "Error al consultar corrida" }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      run: specificRun || null,
+      state: specificRun ? "has_run" : "empty",
+    });
   }
 
-  const { data, error } = await query.maybeSingle();
-
-  if (error) {
-    console.error("[run-ingesta GET] Error consultando ingest_runs:", error);
-    return NextResponse.json({ error: "Error al consultar corrida" }, { status: 500 });
+  // Estado 1: NULL -> "todavía no se corrió ninguna ingesta"
+  if (!latestRun) {
+    return NextResponse.json({
+      run: null,
+      state: "empty",
+    });
   }
 
-  return NextResponse.json({ run: data || null });
+  // Estado 2: fila + status -> el resumen de la corrida
+  return NextResponse.json({
+    run: latestRun,
+    state: "has_run",
+  });
 }

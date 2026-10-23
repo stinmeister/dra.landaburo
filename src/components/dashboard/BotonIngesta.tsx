@@ -12,6 +12,7 @@ import {
   Database,
   ChevronDown,
   ChevronUp,
+  ShieldAlert,
 } from 'lucide-react';
 import styles from './BotonIngesta.module.css';
 
@@ -39,6 +40,15 @@ interface IngestRun {
   summary: SourceDetail[] | Record<string, unknown> | null;
 }
 
+/**
+ * Tres estados explícitos requeridos por el contrato de `public.obtener_ultimo_ingest_run()`:
+ * - 'empty'     -> NULL ("todavía no se corrió ninguna ingesta")
+ * - 'has_run'   -> fila + status (el resumen de la corrida)
+ * - 'forbidden' -> error 42501 ("no sos admin")
+ * (Más estados técnicos 'loading' y 'rpc_error' para transparencia)
+ */
+type RunLoadState = 'loading' | 'empty' | 'has_run' | 'forbidden' | 'rpc_error';
+
 function formatDate(isoStr: string | null | undefined): string {
   if (!isoStr) return '--:--';
   try {
@@ -59,8 +69,10 @@ function formatDate(isoStr: string | null | undefined): string {
 export default function BotonIngesta() {
   const router = useRouter();
   const [isRunning, setIsRunning] = useState(false);
+  const [loadState, setLoadState] = useState<RunLoadState>('loading');
   const [lastRun, setLastRun] = useState<IngestRun | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [rpcErrorDetail, setRpcErrorDetail] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(true);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -72,18 +84,62 @@ export default function BotonIngesta() {
   }, []);
 
   const fetchRunStatus = useCallback(
-    async (runId?: string) => {
+    async (
+      runId?: string
+    ): Promise<{
+      state: RunLoadState;
+      run: IngestRun | null;
+      errorDetail?: string;
+    }> => {
       try {
         const url = runId
           ? `/api/admin/run-ingesta?run_id=${encodeURIComponent(runId)}`
           : '/api/admin/run-ingesta';
         const res = await fetch(url);
-        if (!res.ok) return null;
-        const data = await res.json();
-        return (data?.run as IngestRun) || null;
+        const data = await res.json().catch(() => ({}));
+
+        // Estado 3: error 42501 -> no sos admin
+        if (
+          res.status === 403 ||
+          res.status === 401 ||
+          data?.code === '42501' ||
+          data?.state === 'forbidden'
+        ) {
+          return {
+            state: 'forbidden',
+            run: null,
+            errorDetail: data?.error || 'No sos admin (42501)',
+          };
+        }
+
+        if (!res.ok) {
+          return {
+            state: 'rpc_error',
+            run: null,
+            errorDetail: data?.error || `Error al consultar estado (${res.status})`,
+          };
+        }
+
+        // Estado 1: NULL -> "todavía no se corrió ninguna ingesta"
+        if (!data?.run || data?.state === 'empty') {
+          return {
+            state: 'empty',
+            run: null,
+          };
+        }
+
+        // Estado 2: fila + status -> el resumen de la corrida
+        return {
+          state: 'has_run',
+          run: data.run as IngestRun,
+        };
       } catch (err) {
         console.error('[BotonIngesta] Error al consultar corrida:', err);
-        return null;
+        return {
+          state: 'rpc_error',
+          run: null,
+          errorDetail: 'Error de red al consultar última ingesta.',
+        };
       }
     },
     []
@@ -95,10 +151,18 @@ export default function BotonIngesta() {
       setIsRunning(true);
 
       pollIntervalRef.current = setInterval(async () => {
-        const current = await fetchRunStatus(runId);
-        if (current) {
-          setLastRun(current);
-          if (current.status !== 'running') {
+        const result = await fetchRunStatus(runId);
+        if (result.state === 'forbidden') {
+          setLoadState('forbidden');
+          setLastRun(null);
+          stopPolling();
+          setIsRunning(false);
+          return;
+        }
+        if (result.state === 'has_run' && result.run) {
+          setLoadState('has_run');
+          setLastRun(result.run);
+          if (result.run.status !== 'running') {
             stopPolling();
             setIsRunning(false);
             router.refresh(); // Actualiza los números del dashboard
@@ -109,16 +173,17 @@ export default function BotonIngesta() {
     [fetchRunStatus, stopPolling, router]
   );
 
-  // Al montar, consultar la última corrida para ver si ya había una ejecutándose
+  // Al montar, consultar la última corrida vía RPC obtener_ultimo_ingest_run
   useEffect(() => {
     let mounted = true;
-    fetchRunStatus().then((run) => {
+    fetchRunStatus().then((result) => {
       if (!mounted) return;
-      if (run) {
-        setLastRun(run);
-        if (run.status === 'running') {
-          startPolling(run.id);
-        }
+      setLoadState(result.state);
+      setLastRun(result.run);
+      setRpcErrorDetail(result.errorDetail || null);
+
+      if (result.state === 'has_run' && result.run?.status === 'running') {
+        startPolling(result.run.id);
       }
     });
 
@@ -138,7 +203,14 @@ export default function BotonIngesta() {
         headers: { 'Content-Type': 'application/json' },
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+
+      if (res.status === 403 || data?.code === '42501') {
+        setLoadState('forbidden');
+        setLastRun(null);
+        setIsRunning(false);
+        return;
+      }
 
       if (res.status === 409) {
         // Candado activo (< 15 minutos)
@@ -160,9 +232,21 @@ export default function BotonIngesta() {
       }
 
       if (data.run_id) {
+        // Actualizar inmediatamente el estado visual a corrida en curso
+        setLoadState('has_run');
+        setLastRun({
+          id: data.run_id,
+          started_at: data.started_at || new Date().toISOString(),
+          finished_at: null,
+          triggered_by_name: null,
+          trigger_source: 'boton_web',
+          n8n_execution_id: null,
+          status: data.status || 'running',
+          summary: null,
+        });
         startPolling(data.run_id);
       }
-    } catch (err: unknown) {
+    } catch {
       setErrorMsg('Error de conexión al solicitar la corrida.');
       setIsRunning(false);
     }
@@ -177,7 +261,9 @@ export default function BotonIngesta() {
       typeof lastRun.summary === 'object' &&
       Array.isArray((lastRun.summary as Record<string, unknown>).sources)
     ) {
-      sources.push(...(((lastRun.summary as Record<string, unknown>).sources) as SourceDetail[]));
+      sources.push(
+        ...((lastRun.summary as Record<string, unknown>).sources as SourceDetail[])
+      );
     } else if (typeof lastRun.summary === 'object') {
       // Si viniera como clave-valor por fuente: { pagos: {...}, citas: {...} }
       for (const [key, val] of Object.entries(lastRun.summary)) {
@@ -207,7 +293,7 @@ export default function BotonIngesta() {
           <button
             type="button"
             onClick={handleTriggerIngesta}
-            disabled={isRunning}
+            disabled={isRunning || loadState === 'forbidden'}
             className={`${styles.runBtn} ${isRunning ? styles.runBtnRunning : ''}`}
           >
             {isRunning ? (
@@ -223,7 +309,7 @@ export default function BotonIngesta() {
             )}
           </button>
 
-          {lastRun && (
+          {loadState === 'has_run' && lastRun && (
             <button
               type="button"
               onClick={() => setExpanded(!expanded)}
@@ -244,7 +330,7 @@ export default function BotonIngesta() {
         </div>
       </div>
 
-      {/* Banner de error o conflicto */}
+      {/* Banner de error o conflicto al disparar POST */}
       {errorMsg && (
         <div className={styles.errorBanner}>
           <span>{errorMsg}</span>
@@ -269,9 +355,48 @@ export default function BotonIngesta() {
         </div>
       )}
 
-      {/* Resumen de la última corrida */}
-      {lastRun && expanded && (
-        <div className={styles.summaryContainer}>
+      {/* ═══════════════════════════════════════════════════════════════════════
+          ESTADO 1: NULL -> "Todavía no se corrió ninguna ingesta"
+          ═══════════════════════════════════════════════════════════════════════ */}
+      {loadState === 'empty' && !isRunning && (
+        <div className={styles.emptyStateBox} data-testid="ingest-state-empty">
+          <div className={styles.summaryHeader}>
+            <span className={styles.summaryTitle}>Estado de ingesta</span>
+            <span className={`${styles.statusBadge} ${styles.badgeAbandonada}`}>
+              <MinusCircle size={12} /> Sin corridas registradas
+            </span>
+          </div>
+          <p className={styles.emptyStateText}>
+            Todavía no se corrió ninguna ingesta.
+          </p>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          ESTADO 3: error 42501 -> "No sos admin"
+          ═══════════════════════════════════════════════════════════════════════ */}
+      {loadState === 'forbidden' && (
+        <div className={styles.forbiddenStateBox} data-testid="ingest-state-forbidden">
+          <ShieldAlert size={18} />
+          <div>
+            <strong>No sos admin (código 42501):</strong> Acceso denegado para consultar o
+            ejecutar corridas de ingesta.
+          </div>
+        </div>
+      )}
+
+      {/* Estado técnico si la RPC aún no fue creada en Supabase */}
+      {loadState === 'rpc_error' && rpcErrorDetail && (
+        <div className={styles.errorBanner} data-testid="ingest-state-rpc-error">
+          <span>{rpcErrorDetail}</span>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          ESTADO 2: fila + status -> El resumen de la corrida
+          ═══════════════════════════════════════════════════════════════════════ */}
+      {loadState === 'has_run' && lastRun && expanded && (
+        <div className={styles.summaryContainer} data-testid="ingest-state-has-run">
           <div className={styles.summaryHeader}>
             <span className={styles.summaryTitle}>Última corrida registrada</span>
             <div>
