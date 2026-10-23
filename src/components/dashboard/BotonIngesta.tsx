@@ -13,6 +13,7 @@ import {
   ChevronDown,
   ChevronUp,
   ShieldAlert,
+  AlertTriangle,
 } from 'lucide-react';
 import styles from './BotonIngesta.module.css';
 
@@ -41,13 +42,13 @@ interface IngestRun {
 }
 
 /**
- * Tres estados explícitos requeridos por el contrato de `public.obtener_ultimo_ingest_run()`:
- * - 'empty'     -> NULL ("todavía no se corrió ninguna ingesta")
- * - 'has_run'   -> fila + status (el resumen de la corrida)
- * - 'forbidden' -> error 42501 ("no sos admin")
- * (Más estados técnicos 'loading' y 'rpc_error' para transparencia)
+ * Cuatro estados explícitos requeridos para la lectura de `public.obtener_ultimo_ingest_run()`:
+ * - 'empty'       -> NULL ("todavía no se corrió ninguna ingesta")
+ * - 'has_run'     -> fila + status (el resumen de la corrida)
+ * - 'forbidden'   -> error 42501 ("no sos admin")
+ * - 'unavailable' -> cualquier otro error de base con el código crudo visible (ej. PGRST202)
  */
-type RunLoadState = 'loading' | 'empty' | 'has_run' | 'forbidden' | 'rpc_error';
+type RunLoadState = 'loading' | 'empty' | 'has_run' | 'forbidden' | 'unavailable';
 
 function formatDate(isoStr: string | null | undefined): string {
   if (!isoStr) return '--:--';
@@ -72,7 +73,8 @@ export default function BotonIngesta() {
   const [loadState, setLoadState] = useState<RunLoadState>('loading');
   const [lastRun, setLastRun] = useState<IngestRun | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [rpcErrorDetail, setRpcErrorDetail] = useState<string | null>(null);
+  const [unavailableCode, setUnavailableCode] = useState<string | null>(null);
+  const [unavailableDetail, setUnavailableDetail] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(true);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -89,6 +91,7 @@ export default function BotonIngesta() {
     ): Promise<{
       state: RunLoadState;
       run: IngestRun | null;
+      code?: string;
       errorDetail?: string;
     }> => {
       try {
@@ -108,15 +111,19 @@ export default function BotonIngesta() {
           return {
             state: 'forbidden',
             run: null,
+            code: data?.code || '42501',
             errorDetail: data?.error || 'No sos admin (42501)',
           };
         }
 
-        if (!res.ok) {
+        // Estado 4: cualquier otro error de base -> unavailable con código crudo visible
+        if (!res.ok || data?.state === 'unavailable') {
           return {
-            state: 'rpc_error',
+            state: 'unavailable',
             run: null,
-            errorDetail: data?.error || `Error al consultar estado (${res.status})`,
+            code: data?.code || `HTTP_${res.status}`,
+            errorDetail:
+              data?.error || 'No se pudo consultar el estado de la última ingesta en la base.',
           };
         }
 
@@ -136,8 +143,9 @@ export default function BotonIngesta() {
       } catch (err) {
         console.error('[BotonIngesta] Error al consultar corrida:', err);
         return {
-          state: 'rpc_error',
+          state: 'unavailable',
           run: null,
+          code: 'NETWORK_ERROR',
           errorDetail: 'Error de red al consultar última ingesta.',
         };
       }
@@ -157,6 +165,12 @@ export default function BotonIngesta() {
           setLastRun(null);
           stopPolling();
           setIsRunning(false);
+          return;
+        }
+        if (result.state === 'unavailable') {
+          setLoadState('unavailable');
+          setUnavailableCode(result.code || 'DB_ERROR');
+          setUnavailableDetail(result.errorDetail || null);
           return;
         }
         if (result.state === 'has_run' && result.run) {
@@ -180,7 +194,8 @@ export default function BotonIngesta() {
       if (!mounted) return;
       setLoadState(result.state);
       setLastRun(result.run);
-      setRpcErrorDetail(result.errorDetail || null);
+      setUnavailableCode(result.code || null);
+      setUnavailableDetail(result.errorDetail || null);
 
       if (result.state === 'has_run' && result.run?.status === 'running') {
         startPolling(result.run.id);
@@ -356,7 +371,7 @@ export default function BotonIngesta() {
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          ESTADO 1: NULL -> "Todavía no se corrió ninguna ingesta"
+          ESTADO 1: NULL (empty) -> "Todavía no se corrió ninguna ingesta"
           ═══════════════════════════════════════════════════════════════════════ */}
       {loadState === 'empty' && !isRunning && (
         <div className={styles.emptyStateBox} data-testid="ingest-state-empty">
@@ -373,7 +388,7 @@ export default function BotonIngesta() {
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          ESTADO 3: error 42501 -> "No sos admin"
+          ESTADO 3: error 42501 (forbidden) -> "No sos admin"
           ═══════════════════════════════════════════════════════════════════════ */}
       {loadState === 'forbidden' && (
         <div className={styles.forbiddenStateBox} data-testid="ingest-state-forbidden">
@@ -385,15 +400,27 @@ export default function BotonIngesta() {
         </div>
       )}
 
-      {/* Estado técnico si la RPC aún no fue creada en Supabase */}
-      {loadState === 'rpc_error' && rpcErrorDetail && (
-        <div className={styles.errorBanner} data-testid="ingest-state-rpc-error">
-          <span>{rpcErrorDetail}</span>
+      {/* ═══════════════════════════════════════════════════════════════════════
+          ESTADO 4: unavailable -> Error de base (distinto de 42501) con código crudo visible
+          ═══════════════════════════════════════════════════════════════════════ */}
+      {loadState === 'unavailable' && (
+        <div className={styles.unavailableStateBox} data-testid="ingest-state-unavailable">
+          <div className={styles.summaryHeader}>
+            <span className={styles.summaryTitle}>Estado de ingesta no disponible</span>
+            <span className={`${styles.statusBadge} ${styles.badgeError}`}>
+              <AlertTriangle size={12} /> Código: {unavailableCode || 'DB_ERROR'}
+            </span>
+          </div>
+          <p className={styles.unavailableStateText}>
+            No se pudo consultar la última corrida en la base de datos (estado{' '}
+            <code>unavailable</code> · código crudo: <code>{unavailableCode || 'DB_ERROR'}</code>
+            {unavailableDetail ? ` — ${unavailableDetail}` : ''}).
+          </p>
         </div>
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          ESTADO 2: fila + status -> El resumen de la corrida
+          ESTADO 2: fila + status (has_run) -> El resumen de la corrida
           ═══════════════════════════════════════════════════════════════════════ */}
       {loadState === 'has_run' && lastRun && expanded && (
         <div className={styles.summaryContainer} data-testid="ingest-state-has-run">

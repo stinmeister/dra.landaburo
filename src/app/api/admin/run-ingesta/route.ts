@@ -206,10 +206,11 @@ export async function POST(req: NextRequest) {
  * GET /api/admin/run-ingesta
  * Consulta la última corrida vía RPC `public.obtener_ultimo_ingest_run()` con el cliente
  * autenticado del usuario (sin fallback a service_role).
- * Distingue explícitamente tres estados:
- * - NULL          -> { run: null, state: 'empty' } ("todavía no se corrió ninguna ingesta")
- * - fila + status -> { run: <fila>, state: 'has_run' } (el resumen de la corrida)
- * - error 42501   -> HTTP 403 { run: null, state: 'forbidden', code: '42501' } ("no sos admin")
+ * Distingue explícitamente cuatro estados:
+ * - NULL               -> { run: null, state: 'empty' } ("todavía no se corrió ninguna ingesta")
+ * - fila + status      -> { run: <fila>, state: 'has_run' } (el resumen de la corrida)
+ * - error 42501        -> HTTP 403 { run: null, state: 'forbidden', code: '42501' } ("no sos admin")
+ * - otro error de base -> HTTP 503 { run: null, state: 'unavailable', code: '<raw_code>' } (con código crudo visible)
  */
 export async function GET(req: NextRequest) {
   const { client: userClient, user } = await getUserSupabaseClient(req);
@@ -223,6 +224,7 @@ export async function GET(req: NextRequest) {
   const { data: rpcData, error: rpcError } = await userClient.rpc("obtener_ultimo_ingest_run");
 
   if (rpcError) {
+    // Estado 3: error 42501 -> no sos admin
     if (rpcError.code === "42501") {
       return NextResponse.json(
         {
@@ -235,28 +237,18 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    if (rpcError.code === "PGRST202") {
-      return NextResponse.json(
-        {
-          run: null,
-          state: "rpc_missing",
-          code: "PGRST202",
-          error:
-            "La RPC public.obtener_ultimo_ingest_run() aún no figura en el esquema de Supabase. Ejecutar PASO 1 en SQL Editor.",
-        },
-        { status: 503 }
-      );
-    }
-
-    console.error("[run-ingesta GET] Error en RPC obtener_ultimo_ingest_run:", rpcError);
+    // Estado 4: cualquier otro error de base -> 'unavailable' con el código crudo visible (ej. PGRST202)
+    console.error("[run-ingesta GET] Estado unavailable en RPC obtener_ultimo_ingest_run:", rpcError);
     return NextResponse.json(
       {
         run: null,
-        state: "error",
-        code: rpcError.code,
-        error: rpcError.message || "Error al consultar última corrida",
+        state: "unavailable",
+        code: rpcError.code || "DB_ERROR",
+        error: rpcError.message || "No se pudo consultar el estado de ingesta en la base de datos",
+        details: rpcError.details || null,
+        hint: rpcError.hint || null,
       },
-      { status: 500 }
+      { status: 503 }
     );
   }
 
@@ -277,7 +269,16 @@ export async function GET(req: NextRequest) {
       .maybeSingle();
 
     if (specificErr) {
-      return NextResponse.json({ error: "Error al consultar corrida" }, { status: 500 });
+      return NextResponse.json(
+        {
+          run: null,
+          state: "unavailable",
+          code: specificErr.code || "DB_ERROR",
+          error: specificErr.message || "Error al consultar corrida específica",
+          details: specificErr.details || null,
+        },
+        { status: 503 }
+      );
     }
 
     return NextResponse.json({

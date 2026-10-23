@@ -278,3 +278,21 @@
   gap: 0.65rem;
 }
 
+.unavailableStateBox {
+  margin-top: 1.1rem;
+  padding: 0.85rem 1rem;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid #f59e0b;
+  border-radius: 6px;
+  color: #92400e;
+}
+
+.unavailableStateText {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 0.84rem;
+  color: #92400e;
+  line-height: 1.45;
+}
+
+

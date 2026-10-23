@@ -23,27 +23,24 @@ function createMockRequest(body, authHeader, method = 'POST', url = 'http://loca
   };
 }
 
-async function getAccessTokenForUser(email) {
-  const { data: linkData, error: linkErr } = await sbAdmin.auth.admin.generateLink({
-    type: 'magiclink',
-    email,
-  });
-
-  if (linkErr || !linkData?.properties?.hashed_token) {
-    throw new Error(`No se pudo generar link para ${email}: ${linkErr?.message}`);
+async function getAccessTokenForQaUser(email, password) {
+  if (!email || !email.toLowerCase().startsWith('qa-')) {
+    throw new Error(
+      `REGLA DE SEGURIDAD: Prohibido iniciar sesión con cuentas de personas reales (${email}). Usar únicamente cuentas dedicadas qa-admin@ / qa-operativo@.`
+    );
   }
 
   const client = createClient(SUPABASE_URL, ANON_KEY);
-  const { data: verifyData, error: verifyErr } = await client.auth.verifyOtp({
-    token_hash: linkData.properties.hashed_token,
-    type: 'magiclink',
+  const { data, error } = await client.auth.signInWithPassword({
+    email,
+    password,
   });
 
-  if (verifyErr || !verifyData?.session?.access_token) {
-    throw new Error(`No se pudo verificar OTP para ${email}: ${verifyErr?.message}`);
+  if (error || !data?.session?.access_token) {
+    throw new Error(`No se pudo autenticar cuenta QA ${email}: ${error?.message}`);
   }
 
-  return verifyData.session.access_token;
+  return data.session.access_token;
 }
 
 async function runAll12Tests() {
@@ -290,8 +287,9 @@ async function runAll12Tests() {
 
     // ── Test 7: No invocable por no-admin (403) ──────────────────────────────
     {
-      // Usuario operativo: lauradzuryk@gmail.com
-      const tokenOperativo = await getAccessTokenForUser('lauradzuryk@gmail.com');
+      const qaOperativoEmail = process.env.QA_OPERATIVO_EMAIL || 'qa-operativo@dralandaburo.com';
+      const qaOperativoPass = process.env.QA_OPERATIVO_PASSWORD || '';
+      const tokenOperativo = await getAccessTokenForQaUser(qaOperativoEmail, qaOperativoPass);
       const reqOperativo = createMockRequest({}, `Bearer ${tokenOperativo}`);
       const resOperativo = await runIngestaPOST(reqOperativo);
       const statusOperativo = resOperativo.status;
@@ -306,7 +304,9 @@ async function runAll12Tests() {
 
     // ── Test 8: Dos botones en simultáneo (409) ───────────────────────────────
     {
-      const tokenAdmin = await getAccessTokenForUser('agustinlandaburo@gmail.com');
+      const qaAdminEmail = process.env.QA_ADMIN_EMAIL || 'qa-admin@dralandaburo.com';
+      const qaAdminPass = process.env.QA_ADMIN_PASSWORD || '';
+      const tokenAdmin = await getAccessTokenForQaUser(qaAdminEmail, qaAdminPass);
 
       // Limpiar corridas previas en status 'running' para iniciar Test 8 en estado limpio
       await sbAdmin.from('ingest_runs').update({ status: 'abandonada' }).eq('status', 'running');
@@ -340,7 +340,9 @@ async function runAll12Tests() {
 
     // ── Test 9: Corrida abandonada (>15 min) ──────────────────────────────────
     {
-      const tokenAdmin = await getAccessTokenForUser('agustinlandaburo@gmail.com');
+      const qaAdminEmail = process.env.QA_ADMIN_EMAIL || 'qa-admin@dralandaburo.com';
+      const qaAdminPass = process.env.QA_ADMIN_PASSWORD || '';
+      const tokenAdmin = await getAccessTokenForQaUser(qaAdminEmail, qaAdminPass);
 
       // Insertar una corrida 'running' vieja (de hace 20 minutos)
       const twentyMinsAgo = new Date(Date.now() - 20 * 60 * 1000).toISOString();
