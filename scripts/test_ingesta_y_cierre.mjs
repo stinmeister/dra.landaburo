@@ -23,10 +23,15 @@ function createMockRequest(body, authHeader, method = 'POST', url = 'http://loca
   };
 }
 
-async function getAccessTokenForQaUser(email, password) {
+async function getAccessTokenForQaUser(email, password, envVarName = 'QA_*_PASSWORD') {
   if (!email || !email.toLowerCase().startsWith('qa-')) {
     throw new Error(
       `REGLA DE SEGURIDAD: Prohibido iniciar sesión con cuentas de personas reales (${email}). Usar únicamente cuentas dedicadas qa-admin@ / qa-operativo@.`
+    );
+  }
+  if (!password || typeof password !== 'string' || password.trim().length === 0) {
+    throw new Error(
+      `Falta la variable de entorno requerida ${envVarName} para autenticar ${email}. Ningún secreto puede tener valor por defecto en el código.`
     );
   }
 
@@ -288,8 +293,12 @@ async function runAll12Tests() {
     // ── Test 7: No invocable por no-admin (403) ──────────────────────────────
     {
       const qaOperativoEmail = process.env.QA_OPERATIVO_EMAIL || 'qa-operativo@dralandaburo.com';
-      const qaOperativoPass = process.env.QA_OPERATIVO_PASSWORD || '';
-      const tokenOperativo = await getAccessTokenForQaUser(qaOperativoEmail, qaOperativoPass);
+      const qaOperativoPass = process.env.QA_OPERATIVO_PASSWORD;
+      const tokenOperativo = await getAccessTokenForQaUser(
+        qaOperativoEmail,
+        qaOperativoPass,
+        'QA_OPERATIVO_PASSWORD'
+      );
       const reqOperativo = createMockRequest({}, `Bearer ${tokenOperativo}`);
       const resOperativo = await runIngestaPOST(reqOperativo);
       const statusOperativo = resOperativo.status;
@@ -305,8 +314,12 @@ async function runAll12Tests() {
     // ── Test 8: Dos botones en simultáneo (409) ───────────────────────────────
     {
       const qaAdminEmail = process.env.QA_ADMIN_EMAIL || 'qa-admin@dralandaburo.com';
-      const qaAdminPass = process.env.QA_ADMIN_PASSWORD || '';
-      const tokenAdmin = await getAccessTokenForQaUser(qaAdminEmail, qaAdminPass);
+      const qaAdminPass = process.env.QA_ADMIN_PASSWORD;
+      const tokenAdmin = await getAccessTokenForQaUser(
+        qaAdminEmail,
+        qaAdminPass,
+        'QA_ADMIN_PASSWORD'
+      );
 
       // Limpiar corridas previas en status 'running' para iniciar Test 8 en estado limpio
       await sbAdmin.from('ingest_runs').update({ status: 'abandonada' }).eq('status', 'running');
@@ -341,8 +354,12 @@ async function runAll12Tests() {
     // ── Test 9: Corrida abandonada (>15 min) ──────────────────────────────────
     {
       const qaAdminEmail = process.env.QA_ADMIN_EMAIL || 'qa-admin@dralandaburo.com';
-      const qaAdminPass = process.env.QA_ADMIN_PASSWORD || '';
-      const tokenAdmin = await getAccessTokenForQaUser(qaAdminEmail, qaAdminPass);
+      const qaAdminPass = process.env.QA_ADMIN_PASSWORD;
+      const tokenAdmin = await getAccessTokenForQaUser(
+        qaAdminEmail,
+        qaAdminPass,
+        'QA_ADMIN_PASSWORD'
+      );
 
       // Insertar una corrida 'running' vieja (de hace 20 minutos)
       const twentyMinsAgo = new Date(Date.now() - 20 * 60 * 1000).toISOString();
