@@ -111,6 +111,15 @@ export default async function Footer({ attentionHours: propHours }: { attentionH
 
       <div className={styles.bottomBar}>
         <span>&copy; {new Date().getFullYear()} Dra. Paula Landaburo. Todos los derechos reservados.</span>
+        <div className={styles.legalLinks}>
+          <Link href="/politica-de-privacidad" className={styles.legalLink}>
+            Política de Privacidad
+          </Link>
+          <span className={styles.legalSeparator} aria-hidden="true">·</span>
+          <Link href="/terminos-y-condiciones" className={styles.legalLink}>
+            Términos y Condiciones
+          </Link>
+        </div>
         <span>Desarrollado por Arbol</span>
       </div>
       </div>
