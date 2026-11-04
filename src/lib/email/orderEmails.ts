@@ -22,8 +22,8 @@ export interface OrderDetail {
 }
 
 export interface StoreConfigDetail {
-  pickup_address: string;
-  pickup_hours: string;
+  pickup_address: string | null;
+  pickup_hours: string | null;
 }
 
 const formatARS = (n: number) =>
@@ -96,10 +96,10 @@ export async function sendOrderEmails({
         <div style="background: #faf7f2; border: 1px solid #C5A47E; border-radius: 6px; padding: 18px; margin: 24px 0;">
           <h3 style="margin-top: 0; color: #1C1C1C; font-size: 16px; font-weight: 600;">📍 Retiro en consultorio</h3>
           <p style="margin: 6px 0; font-size: 14px; color: #333333;">
-            <strong>Dirección:</strong> ${storeConfig.pickup_address}
+            <strong>Dirección:</strong> ${storeConfig.pickup_address || 'A coordinar'}
           </p>
           <p style="margin: 6px 0; font-size: 14px; color: #333333;">
-            <strong>Horarios de atención:</strong> ${storeConfig.pickup_hours}
+            <strong>Cuándo retirar:</strong> ${storeConfig.pickup_hours || 'A coordinar'}
           </p>
           <p style="margin: 12px 0 0; font-size: 13px; color: #666666;">
             Te avisaremos por WhatsApp o email en cuanto tu pedido esté listo para retirar.

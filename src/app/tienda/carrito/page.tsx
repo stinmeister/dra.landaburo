@@ -64,8 +64,8 @@ export default function CarritoPage() {
           checkoutEnabled: false,
           shippingEnabled: false,
           shippingCostArs: 0,
-          pickupAddress: 'Leandro N. Alem 45, Gualeguaychú, Entre Ríos',
-          pickupHours: 'Lunes a Viernes de 9:00 a 17:00 hs',
+          pickupAddress: '',
+          pickupHours: 'A coordinar',
         });
       });
   }, []);
@@ -157,7 +157,7 @@ export default function CarritoPage() {
   const deliveryWaSummary =
     deliveryMethod === 'envio'
       ? `Envío a domicilio (${deliveryForm.address || 'A coordinar'}, ${deliveryForm.city || ''})`
-      : `Retiro en consultorio (${status?.pickupAddress || 'Leandro N. Alem 45'})`;
+      : `Retiro en consultorio${status?.pickupAddress ? ` (${status.pickupAddress})` : ''}`;
 
   const waCheckoutUrl = `https://wa.me/5491169684062?text=${encodeURIComponent(
     `Hola! Quisiera comprar los siguientes productos de la tienda:\n${items
@@ -364,11 +364,11 @@ export default function CarritoPage() {
                   <div className={styles.pickupDetailsBox}>
                     <p>
                       <strong>📍 Dirección:</strong>{' '}
-                      {status?.pickupAddress || 'Leandro N. Alem 45, Gualeguaychú, Entre Ríos'}
+                      {status?.pickupAddress || 'A coordinar'}
                     </p>
                     <p>
-                      <strong>🕒 Horario de atención:</strong>{' '}
-                      {status?.pickupHours || 'Lunes a Viernes de 9:00 a 17:00 hs'}
+                      <strong>🕒 Cuándo retirar:</strong>{' '}
+                      {status?.pickupHours || 'A coordinar'}
                     </p>
                   </div>
                 )}

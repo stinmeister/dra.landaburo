@@ -149,28 +149,23 @@ async function processPaymentNotification(paymentId: string, mpAccessToken: stri
         console.error('[Webhook/MP Async] Error activando gift card:', giftCardId, updateError);
       } else if (card && card.delivery_method === 'fisica') {
         try {
-          const { data: ceciProfile } = await supabase
-            .from('profiles')
-            .select('id')
-            .or('full_name.ilike.%Ceci%,role.eq.operativo')
-            .limit(1)
-            .maybeSingle();
+          const todayAR = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'America/Argentina/Buenos_Aires',
+          }).format(new Date());
 
-          if (ceciProfile) {
-            const todayAR = new Intl.DateTimeFormat('en-CA', {
-              timeZone: 'America/Argentina/Buenos_Aires',
-            }).format(new Date());
-
-            await supabase.from('staff_tasks').insert({
-              assigned_profile_id: ceciProfile.id,
-              task_type: 'gift_card',
-              title: `Preparar Gift Card Física: ${card.code}`,
-              description: `Preparar tarjeta física para ${card.recipient_name || 'Agasajado/a'} (De parte de: ${card.sender_name}).`,
-              due_date: todayAR,
-              related_entity_type: 'gift_card',
-              related_entity_id: card.id,
-              status: 'pendiente',
-            });
+          const { error: taskInsertErr } = await supabase.from('staff_tasks').insert({
+            target_role: 'operativo',
+            assigned_profile_id: null,
+            task_type: 'gift_card',
+            title: `Preparar Gift Card Física: ${card.code}`,
+            description: `Preparar tarjeta física para ${card.recipient_name || 'Agasajado/a'} (De parte de: ${card.sender_name}).`,
+            due_date: todayAR,
+            related_entity_type: 'gift_card',
+            related_entity_id: card.id,
+            status: 'pendiente',
+          });
+          if (taskInsertErr) {
+            console.error('[Webhook/MP Async] Error insertando tarea gift_card en staff_tasks:', taskInsertErr);
           }
         } catch (taskErr) {
           console.error('[Webhook/MP Async] Error creando tarea en staff_tasks:', taskErr);
@@ -312,23 +307,31 @@ async function processPaymentNotification(paymentId: string, mpAccessToken: stri
           console.error('[Webhook/MP Async] Error creando tarea en staff_tasks:', taskErr);
         }
 
-        // 2. Consultar store_config para datos de entrega del consultorio
-        let storeConfig = {
-          pickup_address: 'Leandro N. Alem 45, Gualeguaychú, Entre Ríos',
-          pickup_hours: 'Lunes a Viernes de 9:00 a 17:00 hs',
+        // 2. Consultar store_config para datos de entrega del consultorio (sin fallback literal — FIX-130)
+        const storeConfig: { pickup_address: string | null; pickup_hours: string | null } = {
+          pickup_address: null,
+          pickup_hours: null,
         };
         try {
-          const { data: scData } = await supabase
+          const { data: scData, error: scError } = await supabase
             .from('store_config')
             .select('pickup_address, pickup_hours')
             .eq('id', 1)
             .maybeSingle();
-          if (scData) {
-            if (scData.pickup_address) storeConfig.pickup_address = scData.pickup_address;
-            if (scData.pickup_hours) storeConfig.pickup_hours = scData.pickup_hours;
+          if (scError || !scData) {
+            console.error(
+              '[Webhook/MP Async] No se pudo leer store_config (id=1) para datos de retiro; se omitirán datos inventados en el email:',
+              scError || 'fila id=1 no encontrada'
+            );
+          } else {
+            storeConfig.pickup_address = scData.pickup_address?.trim() || null;
+            storeConfig.pickup_hours = scData.pickup_hours?.trim() || null;
           }
         } catch (scErr) {
-          console.error('[Webhook/MP Async] Error leyendo store_config:', scErr);
+          console.error(
+            '[Webhook/MP Async] Excepción leyendo store_config para datos de retiro; se omitirán datos inventados en el email:',
+            scErr
+          );
         }
 
         // 3. Despachar emails por Resend (compradora y consultorio)
