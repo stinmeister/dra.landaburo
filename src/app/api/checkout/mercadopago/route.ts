@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { isRateLimited, getClientIp } from '@/lib/rateLimit';
+import { buildOrderPreferenceBody } from '@/lib/mercadopago/preference';
 
 interface CartItemPayload {
   id: string;
@@ -201,30 +202,21 @@ export async function POST(req: NextRequest) {
   }
 
   // Llamar a MercadoPago Preferences API
+  // Mitigación temporal de FIX-129: solo pagos instantáneos (binary_mode: true + exclusión de ticket y atm).
+  // Se revisa cuando el arreglo de fondo del webhook esté desplegado.
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
 
-  const mpBody = {
+  const mpBody = buildOrderPreferenceBody({
+    orderId: order.id,
+    siteUrl,
     items: items.map((i) => ({
       id: i.id,
-      title: i.name,
+      name: i.name,
       quantity: i.quantity,
-      unit_price: priceMap.get(i.id)!, // precio verificado desde la BD
-      currency_id: 'ARS',
+      unitPriceArs: priceMap.get(i.id)!, // precio verificado desde la BD
     })),
-    payer: {
-      name: buyer.name.trim(),
-      email: buyer.email.trim().toLowerCase(),
-      ...(buyer.phone?.trim() ? { phone: { number: buyer.phone.trim() } } : {}),
-    },
-    external_reference: order.id,
-    back_urls: {
-      success: `${siteUrl}/tienda/pago/exito?order_id=${order.id}`,
-      pending: `${siteUrl}/tienda/pago/pendiente?order_id=${order.id}`,
-      failure: `${siteUrl}/tienda/pago/fallo?order_id=${order.id}`,
-    },
-    auto_return: 'approved',
-    statement_descriptor: 'DRA LANDABURO',
-  };
+    buyer,
+  });
 
   let mpResponse: Response;
   try {

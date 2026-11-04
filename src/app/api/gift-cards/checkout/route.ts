@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { isRateLimited, getClientIp } from '@/lib/rateLimit';
+import { buildGiftCardPreferenceBody } from '@/lib/mercadopago/preference';
 
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O, no 1/I
 
@@ -290,31 +291,23 @@ export async function POST(req: NextRequest) {
   }
 
   // Create MercadoPago preference
+  // Mitigación temporal de FIX-129: solo pagos instantáneos (binary_mode: true + exclusión de ticket y atm).
+  // Se revisa cuando el arreglo de fondo del webhook esté desplegado.
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
 
-  const mpItems = validatedItems.map((item, idx) => ({
-    id: `${giftCard.id}_${idx + 1}`,
-    title: `Gift Card — ${item.title}`,
-    quantity: item.quantity,
-    unit_price: item.unit_price,
-    currency_id: 'ARS',
-  }));
-
-  const mpBody = {
-    items: mpItems,
-    payer: {
-      name: sender_name.trim(),
-      email: sender_email.trim().toLowerCase(),
+  const mpBody = buildGiftCardPreferenceBody({
+    giftCardId: giftCard.id,
+    siteUrl,
+    items: validatedItems.map((item) => ({
+      title: item.title,
+      quantity: item.quantity,
+      unitPriceArs: item.unit_price,
+    })),
+    sender: {
+      name: sender_name,
+      email: sender_email,
     },
-    external_reference: `giftcard:${giftCard.id}`,
-    back_urls: {
-      success: `${siteUrl}/tienda/pago/exito?gift_card=${giftCard.id}`,
-      pending: `${siteUrl}/tienda/pago/pendiente?gift_card=${giftCard.id}`,
-      failure: `${siteUrl}/tienda/pago/fallo?gift_card=${giftCard.id}`,
-    },
-    auto_return: 'approved',
-    statement_descriptor: 'DRA LANDABURO GIFT',
-  };
+  });
 
   let mpResponse: Response;
   try {
