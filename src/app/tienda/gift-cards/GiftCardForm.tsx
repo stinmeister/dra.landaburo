@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Trash2, Plus, Minus, Gift, Sparkles, CheckCircle2 } from 'lucide-react';
 import type { GiftCardCatalogItem } from './page';
+import { useResetOnPageShow } from '@/hooks/useResetOnPageShow';
 import { trackConfigureGiftCard, trackBeginCheckout } from '@/lib/tracking';
 import { buildStoreWhatsappUrl } from '@/lib/storeWhatsapp';
 import styles from './gift-cards.module.css';
@@ -39,6 +40,9 @@ export default function GiftCardForm({ catalog }: { catalog: GiftCardCatalogItem
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<'all' | 'treatment' | 'product' | 'custom'>('all');
+  const { markRedirecting } = useResetOnPageShow(
+    useCallback(() => setLoading(false), [])
+  );
 
   const formatARS = (n: number) =>
     new Intl.NumberFormat('es-AR', {
@@ -177,12 +181,13 @@ export default function GiftCardForm({ catalog }: { catalog: GiftCardCatalogItem
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || 'Error al procesar el pago. Intentá de nuevo.');
+        setLoading(false);
         return;
       }
+      markRedirecting();
       window.location.href = data.init_point;
     } catch {
       setError('Error de conexión con el servidor. Intentá de nuevo.');
-    } finally {
       setLoading(false);
     }
   };

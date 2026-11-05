@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCart, type CartItem } from '@/contexts/CartContext';
+import { useResetOnPageShow } from '@/hooks/useResetOnPageShow';
 import { trackBeginCheckout } from '@/lib/tracking';
 import { buildStoreWhatsappUrl } from '@/lib/storeWhatsapp';
 import styles from './comprar.module.css';
@@ -80,6 +81,9 @@ export default function FinalizarCompraClient({
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { markRedirecting } = useResetOnPageShow(
+    useCallback(() => setLoading(false), [])
+  );
 
   // Recordar datos previos de la compradora en este navegador
   useEffect(() => {
@@ -261,6 +265,7 @@ export default function FinalizarCompraClient({
       }
 
       const { init_point } = await res.json();
+      markRedirecting();
       window.location.href = init_point;
     } catch (err) {
       setError(
