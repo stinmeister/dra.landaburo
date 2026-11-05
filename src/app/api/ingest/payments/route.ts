@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { persistReviewItems, type IngestReviewInput } from "@/lib/ingest-review";
 import { loadProfessionals } from "@/lib/professionals";
+import { loadAllPatientsForIngest, type PatientsPageQuery } from "@/lib/ingest/loadAllPatients";
 
 // ─── Constantes y Restricciones de Base de Datos ─────────────────────────────
 
@@ -137,13 +138,22 @@ export async function POST(req: NextRequest) {
   const supabaseAdmin = createAdminClient();
 
   // 4. Pre-carga de Identidades (Pacientes y Profesionales)
-  // Pacientes: mapeo de nombres normalizados
-  const { data: patientsData } = await supabaseAdmin
-    .from("patients")
-    .select("id, full_name");
+  // Pacientes: mapeo de nombres normalizados (paginado, FIX-137)
+  let patientsData: Awaited<ReturnType<typeof loadAllPatientsForIngest>>;
+  try {
+    patientsData = await loadAllPatientsForIngest(
+      supabaseAdmin as unknown as PatientsPageQuery
+    );
+  } catch (err) {
+    console.error("[ingest/payments] No se pudo cargar el padrón completo:", err);
+    return NextResponse.json(
+      { error: "No se pudo cargar el padrón de pacientes completo" },
+      { status: 500 }
+    );
+  }
 
   const patientMap = new Map<string, string>();
-  for (const p of patientsData || []) {
+  for (const p of patientsData) {
     if (!p.full_name) continue;
     const norm = normalizeName(p.full_name);
     patientMap.set(norm, p.id);
