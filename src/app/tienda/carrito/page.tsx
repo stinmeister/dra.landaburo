@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useCart } from '@/contexts/CartContext';
 import { trackBeginCheckout } from '@/lib/tracking';
+import { buildStoreWhatsappUrl } from '@/lib/storeWhatsapp';
 import styles from './carrito.module.css';
 
 const formatARS = (n: number) =>
@@ -159,11 +160,11 @@ export default function CarritoPage() {
       ? `Envío a domicilio (${deliveryForm.address || 'A coordinar'}, ${deliveryForm.city || ''})`
       : `Retiro en consultorio${status?.pickupAddress ? ` (${status.pickupAddress})` : ''}`;
 
-  const waCheckoutUrl = `https://wa.me/5491169684062?text=${encodeURIComponent(
+  const waCheckoutUrl = buildStoreWhatsappUrl(
     `Hola! Quisiera comprar los siguientes productos de la tienda:\n${items
       .map((i) => `• ${i.quantity}x ${i.name}`)
       .join('\n')}\nEntrega: ${deliveryWaSummary}\nTotal: ${formatARS(totalARS)}`
-  )}`;
+  );
 
   return (
     <div className={styles.page}>
@@ -442,7 +443,31 @@ export default function CarritoPage() {
                 )}
               </div>
 
-              {error && <p className={styles.errorMsg}>{error}</p>}
+              {error && (
+                <div className={styles.errorMsg}>
+                  <p style={{ margin: 0 }}>{error}</p>
+                  {/whatsapp/i.test(error) && (
+                    <a
+                      href={waCheckoutUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: 'inline-block',
+                        marginTop: '0.6rem',
+                        backgroundColor: '#25D366',
+                        color: '#ffffff',
+                        textDecoration: 'none',
+                        padding: '0.55rem 1rem',
+                        borderRadius: '4px',
+                        fontWeight: 600,
+                        fontSize: '0.85rem',
+                      }}
+                    >
+                      Escribir por WhatsApp
+                    </a>
+                  )}
+                </div>
+              )}
 
               {/* Botón de pago o fallback WhatsApp */}
               {!isCheckoutAllowed ? (

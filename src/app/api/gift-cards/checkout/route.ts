@@ -10,6 +10,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { isRateLimited, getClientIp } from '@/lib/rateLimit';
 import { buildGiftCardPreferenceBody } from '@/lib/mercadopago/preference';
+import {
+  resolveCheckoutSiteUrl,
+  dispatchGiftCardPreferenceToMp,
+  BUYER_SITE_URL_MISCONFIGURED_MESSAGE,
+} from '@/lib/mercadopago/preferenceRuntime';
 
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O, no 1/I
 
@@ -211,13 +216,22 @@ export async function POST(req: NextRequest) {
 
   const totalAmountARS = validatedItems.reduce((sum, i) => sum + i.unit_price * i.quantity, 0);
 
-  // Leer credencial de Mercado Pago desde variable de entorno
-  const mpAccessToken = process.env.MP_ACCESS_TOKEN;
+  // Leer credencial de Mercado Pago y URL pública antes de insertar en gift_cards
+  const mpAccessToken = process.env.MP_ACCESS_TOKEN?.trim();
 
   if (!mpAccessToken) {
     console.warn('[GiftCard/Checkout] MP_ACCESS_TOKEN no configurado en variables de entorno.');
     return NextResponse.json(
-      { error: 'El sistema de pagos no está configurado. Contactá al consultorio.' },
+      { error: BUYER_SITE_URL_MISCONFIGURED_MESSAGE },
+      { status: 503 }
+    );
+  }
+
+  const siteUrlResolved = resolveCheckoutSiteUrl(process.env);
+  if (!siteUrlResolved.ok) {
+    console.error(`[GiftCard/Checkout] Configuración inválida: ${siteUrlResolved.reason}`);
+    return NextResponse.json(
+      { error: BUYER_SITE_URL_MISCONFIGURED_MESSAGE },
       { status: 503 }
     );
   }
@@ -267,8 +281,11 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (insertError || !giftCard) {
-    console.error('[GiftCard/Checkout] Insert error into gift_cards:', insertError);
-    return NextResponse.json({ error: 'Error interno al crear gift card.' }, { status: 500 });
+    console.error('[GiftCard/Checkout] Insert error into gift_cards:', insertError?.message || 'sin detalle');
+    return NextResponse.json(
+      { error: BUYER_SITE_URL_MISCONFIGURED_MESSAGE },
+      { status: 500 }
+    );
   }
 
   // Save items in gift_card_items table if table exists
@@ -292,12 +309,9 @@ export async function POST(req: NextRequest) {
 
   // Create MercadoPago preference
   // Mitigación temporal de FIX-129: solo pagos instantáneos (binary_mode: true + exclusión de ticket y atm).
-  // Se revisa cuando el arreglo de fondo del webhook esté desplegado.
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
-
   const mpBody = buildGiftCardPreferenceBody({
     giftCardId: giftCard.id,
-    siteUrl,
+    siteUrl: siteUrlResolved.siteUrl,
     items: validatedItems.map((item) => ({
       title: item.title,
       quantity: item.quantity,
@@ -309,27 +323,35 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  let mpResponse: Response;
-  try {
-    mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${mpAccessToken}`,
+  const dispatchResult = await dispatchGiftCardPreferenceToMp({
+    giftCardId: giftCard.id,
+    giftCardCode: giftCard.code,
+    mpAccessToken,
+    mpBody,
+    markGiftCardCancelled: async (failedGiftCardId) => {
+      const { error: cancelErr } = await supabase
+        .from('gift_cards')
+        .update({ status: 'cancelled' })
+        .eq('id', failedGiftCardId);
+      if (cancelErr) {
+        console.error('[GiftCard/Checkout] Error marcando gift_card cancelada tras fallo de MP:', {
+          giftCardId: failedGiftCardId,
+          dbError: cancelErr.message,
+        });
+      }
+    },
+  });
+
+  if (!dispatchResult.ok) {
+    return NextResponse.json(
+      {
+        error: dispatchResult.error,
+        code: dispatchResult.code,
+        canRetry: dispatchResult.canRetry,
       },
-      body: JSON.stringify(mpBody),
-    });
-  } catch (fetchErr) {
-    console.error('[GiftCard/Checkout] Network error calling MP:', fetchErr);
-    return NextResponse.json({ error: 'No se pudo conectar con MercadoPago.' }, { status: 502 });
+      { status: dispatchResult.httpStatus }
+    );
   }
 
-  if (!mpResponse.ok) {
-    const mpErr = await mpResponse.text().catch(() => 'sin detalle');
-    console.error('[GiftCard/Checkout] MP error:', mpResponse.status, mpErr);
-    return NextResponse.json({ error: 'Error al crear el pago en MercadoPago.' }, { status: 502 });
-  }
-
-  const mpData = await mpResponse.json();
-  return NextResponse.json({ init_point: mpData.init_point });
+  return NextResponse.json({ init_point: dispatchResult.initPoint });
 }

@@ -7,6 +7,11 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { isRateLimited, getClientIp } from '@/lib/rateLimit';
 import { buildOrderPreferenceBody } from '@/lib/mercadopago/preference';
+import {
+  resolveCheckoutSiteUrl,
+  dispatchOrderPreferenceToMp,
+  BUYER_SITE_URL_MISCONFIGURED_MESSAGE,
+} from '@/lib/mercadopago/preferenceRuntime';
 
 interface CartItemPayload {
   id: string;
@@ -145,13 +150,22 @@ export async function POST(req: NextRequest) {
   // Construimos un mapa id → price_ars para acceso O(1) al armar los items
   const priceMap = new Map<string, number>(dbProducts.map((p) => [p.id, p.price_ars]));
 
-  // Leer credencial de Mercado Pago desde variable de entorno
-  const mpAccessToken = process.env.MP_ACCESS_TOKEN;
+  // Leer credencial de Mercado Pago y URL pública del sitio antes de insertar la orden
+  const mpAccessToken = process.env.MP_ACCESS_TOKEN?.trim();
 
   if (!mpAccessToken) {
     console.error('[Checkout/MP] No se encontró MP_ACCESS_TOKEN en variables de entorno.');
     return NextResponse.json(
-      { error: 'El sistema de pagos no está configurado. Contactá al consultorio.' },
+      { error: BUYER_SITE_URL_MISCONFIGURED_MESSAGE },
+      { status: 503 }
+    );
+  }
+
+  const siteUrlResolved = resolveCheckoutSiteUrl(process.env);
+  if (!siteUrlResolved.ok) {
+    console.error(`[Checkout/MP] Configuración inválida: ${siteUrlResolved.reason}`);
+    return NextResponse.json(
+      { error: BUYER_SITE_URL_MISCONFIGURED_MESSAGE },
       { status: 503 }
     );
   }
@@ -183,8 +197,11 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (orderError || !order) {
-    console.error('[Checkout/MP] Error creando orden:', orderError);
-    return NextResponse.json({ error: 'Error interno. Intentá de nuevo.' }, { status: 500 });
+    console.error('[Checkout/MP] Error creando orden:', orderError?.message || 'sin detalle');
+    return NextResponse.json(
+      { error: BUYER_SITE_URL_MISCONFIGURED_MESSAGE },
+      { status: 500 }
+    );
   }
 
   // Insertar items de la orden
@@ -197,18 +214,15 @@ export async function POST(req: NextRequest) {
 
   const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
   if (itemsError) {
-    console.error('[Checkout/MP] Error guardando items de la orden:', itemsError);
+    console.error('[Checkout/MP] Error guardando items de la orden:', itemsError.message);
     // Continuamos igual — la orden existe y el pago puede procesarse
   }
 
   // Llamar a MercadoPago Preferences API
   // Mitigación temporal de FIX-129: solo pagos instantáneos (binary_mode: true + exclusión de ticket y atm).
-  // Se revisa cuando el arreglo de fondo del webhook esté desplegado.
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
-
   const mpBody = buildOrderPreferenceBody({
     orderId: order.id,
-    siteUrl,
+    siteUrl: siteUrlResolved.siteUrl,
     items: items.map((i) => ({
       id: i.id,
       name: i.name,
@@ -218,33 +232,44 @@ export async function POST(req: NextRequest) {
     buyer,
   });
 
-  let mpResponse: Response;
-  try {
-    mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${mpAccessToken}`,
+  const dispatchResult = await dispatchOrderPreferenceToMp({
+    orderId: order.id,
+    orderNumber: order.order_number,
+    mpAccessToken,
+    mpBody,
+    markOrderRejected: async (failedOrderId) => {
+      const { error: rejErr } = await supabase
+        .from('orders')
+        .update({
+          payment_status: 'rejected',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', failedOrderId);
+      if (rejErr) {
+        console.error('[Checkout/MP] Error marcando orden rechazada tras fallo de MP:', {
+          orderId: failedOrderId,
+          dbError: rejErr.message,
+        });
+      }
+    },
+    savePreferenceId: async (createdOrderId, preferenceId) => {
+      await supabase
+        .from('orders')
+        .update({ mp_preference_id: preferenceId })
+        .eq('id', createdOrderId);
+    },
+  });
+
+  if (!dispatchResult.ok) {
+    return NextResponse.json(
+      {
+        error: dispatchResult.error,
+        code: dispatchResult.code,
+        canRetry: dispatchResult.canRetry,
       },
-      body: JSON.stringify(mpBody),
-    });
-  } catch (fetchErr) {
-    console.error('[Checkout/MP] Error de red al llamar MP:', fetchErr);
-    return NextResponse.json(
-      { error: 'No se pudo conectar con MercadoPago. Intentá de nuevo.' },
-      { status: 502 }
+      { status: dispatchResult.httpStatus }
     );
   }
 
-  if (!mpResponse.ok) {
-    const mpError = await mpResponse.text().catch(() => 'sin detalle');
-    console.error('[Checkout/MP] MP respondió con error:', mpResponse.status, mpError);
-    return NextResponse.json(
-      { error: 'Error al crear la preferencia de pago. Intentá de nuevo.' },
-      { status: 502 }
-    );
-  }
-
-  const mpData = await mpResponse.json();
-  return NextResponse.json({ init_point: mpData.init_point });
+  return NextResponse.json({ init_point: dispatchResult.initPoint });
 }

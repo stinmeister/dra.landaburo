@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Trash2, Plus, Minus, Gift, Sparkles, CheckCircle2 } from 'lucide-react';
 import type { GiftCardCatalogItem } from './page';
 import { trackConfigureGiftCard, trackBeginCheckout } from '@/lib/tracking';
+import { buildStoreWhatsappUrl } from '@/lib/storeWhatsapp';
 import styles from './gift-cards.module.css';
 
 export interface SelectedCartItem {
@@ -471,7 +472,35 @@ export default function GiftCardForm({ catalog }: { catalog: GiftCardCatalogItem
                 </div>
               </div>
 
-              {error && <p className={styles.errorMsg}>{error}</p>}
+              {error && (
+                <div className={styles.errorMsg}>
+                  <p style={{ margin: 0 }}>{error}</p>
+                  {/whatsapp/i.test(error) && (
+                    <a
+                      href={buildStoreWhatsappUrl(
+                        `Hola! Quisiera comprar una Gift Card por ${formatARS(totalARS)} (${selectedItems
+                          .map((i) => `${i.quantity}x ${i.title}`)
+                          .join(', ')}).`
+                      )}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: 'inline-block',
+                        marginTop: '0.6rem',
+                        backgroundColor: '#25D366',
+                        color: '#ffffff',
+                        textDecoration: 'none',
+                        padding: '0.55rem 1rem',
+                        borderRadius: '4px',
+                        fontWeight: 600,
+                        fontSize: '0.82rem',
+                      }}
+                    >
+                      Escribir por WhatsApp
+                    </a>
+                  )}
+                </div>
+              )}
 
               <button
                 type="submit"

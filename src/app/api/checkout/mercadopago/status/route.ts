@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { resolveCheckoutSiteUrl } from '@/lib/mercadopago/preferenceRuntime';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  const siteUrlCheck = resolveCheckoutSiteUrl(process.env);
   const isConfigured = Boolean(
-    process.env.MP_ACCESS_TOKEN && process.env.MP_ACCESS_TOKEN.trim().length > 0
+    process.env.MP_ACCESS_TOKEN &&
+      process.env.MP_ACCESS_TOKEN.trim().length > 0 &&
+      siteUrlCheck.ok
   );
 
   let checkoutEnabled = false;
