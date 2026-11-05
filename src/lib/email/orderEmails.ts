@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { buildStoreWhatsappUrl } from '@/lib/storeWhatsapp';
 
 export interface OrderItemDetail {
   product_name: string;
@@ -32,6 +33,144 @@ const formatARS = (n: number) =>
     currency: 'ARS',
     maximumFractionDigits: 0,
   }).format(n);
+
+function buildItemsRowsHtml(items: OrderItemDetail[]): string {
+  return items
+    .map(
+      (item) => `
+        <tr style="border-bottom: 1px solid #f0f0f0;">
+          <td style="padding: 10px 0; color: #1C1C1C; font-weight: 500;">${item.product_name}</td>
+          <td style="padding: 10px 0; text-align: center; color: #666666;">${item.quantity}</td>
+          <td style="padding: 10px 0; text-align: right; color: #1C1C1C;">${formatARS(item.unit_price_ars)}</td>
+          <td style="padding: 10px 0; text-align: right; font-weight: 600; color: #1C1C1C;">${formatARS(
+            item.unit_price_ars * item.quantity
+          )}</td>
+        </tr>
+      `
+    )
+    .join('');
+}
+
+export function buildBuyerOrderEmailHtml({
+  order,
+  items,
+  storeConfig,
+  env = process.env,
+}: {
+  order: OrderDetail;
+  items: OrderItemDetail[];
+  storeConfig: StoreConfigDetail;
+  env?: NodeJS.ProcessEnv;
+}): string {
+  const itemsRowsHtml = buildItemsRowsHtml(items);
+  const isRetiro = order.delivery_method !== 'envio';
+
+  const pickupWaUrl = buildStoreWhatsappUrl(
+    `Hola, quiero coordinar el retiro de mi pedido ${order.order_number}`,
+    env
+  );
+  const supportWaUrl = buildStoreWhatsappUrl(
+    `Hola! Tengo una consulta sobre mi pedido online ${order.order_number}`,
+    env
+  );
+
+  const deliveryBlockHtml = isRetiro
+    ? `
+        <div style="background: #faf7f2; border: 1px solid #C5A47E; border-radius: 6px; padding: 18px; margin: 24px 0;">
+          <h3 style="margin-top: 0; color: #1C1C1C; font-size: 16px; font-weight: 600;">📍 Retiro en consultorio</h3>
+          <p style="margin: 6px 0; font-size: 14px; color: #333333;">
+            <strong>Dirección:</strong> ${storeConfig.pickup_address || 'A coordinar'}
+          </p>
+          <p style="margin: 6px 0; font-size: 14px; color: #333333;">
+            <strong>Cuándo retirar:</strong> ${storeConfig.pickup_hours || 'A coordinar'}
+          </p>
+          <p style="margin: 14px 0 12px; font-size: 14px; color: #1C1C1C;">
+            Escribinos por WhatsApp para coordinar el día y horario de retiro.
+          </p>
+          <a
+            href="${pickupWaUrl}"
+            style="display: inline-block; background: #25D366; color: #ffffff; text-decoration: none; padding: 10px 22px; border-radius: 4px; font-weight: 600; font-size: 14px;"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Contactar por WhatsApp
+          </a>
+        </div>
+      `
+    : `
+        <div style="background: #faf7f2; border: 1px solid #C5A47E; border-radius: 6px; padding: 18px; margin: 24px 0;">
+          <h3 style="margin-top: 0; color: #1C1C1C; font-size: 16px; font-weight: 600;">📦 Envío a domicilio</h3>
+          <p style="margin: 6px 0; font-size: 14px; color: #333333;">
+            <strong>Dirección de entrega:</strong> ${order.delivery_address || 'No especificada'}
+          </p>
+          <p style="margin: 6px 0; font-size: 14px; color: #333333;">
+            <strong>Localidad y CP:</strong> ${order.delivery_city || ''} ${order.delivery_postal_code ? `(CP ${order.delivery_postal_code})` : ''}
+          </p>
+          ${
+            order.delivery_notes
+              ? `<p style="margin: 6px 0; font-size: 14px; color: #333333;"><strong>Referencias / Depto:</strong> ${order.delivery_notes}</p>`
+              : ''
+          }
+          <p style="margin: 12px 0 0; font-size: 13px; color: #666666;">
+            Coordinaremos el despacho a la brevedad y te enviaremos la información de seguimiento.
+          </p>
+        </div>
+        <div style="text-align: center; margin-top: 24px; padding: 18px; background: #fafafa; border-radius: 6px;">
+          <p style="margin: 0 0 12px; font-size: 14px; color: #444444;">
+            ¿Tenés dudas con tu pedido o necesitás coordinar la entrega?
+          </p>
+          <a
+            href="${supportWaUrl}"
+            style="display: inline-block; background: #25D366; color: #ffffff; text-decoration: none; padding: 10px 22px; border-radius: 4px; font-weight: 600; font-size: 14px;"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Contactar por WhatsApp
+          </a>
+        </div>
+      `;
+
+  return `
+      <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+        <div style="background: #1C1C1C; padding: 26px; text-align: center;">
+          <h1 style="color: #C5A47E; margin: 0; font-size: 20px; font-weight: 500; letter-spacing: 0.05em;">Dra. Paula Landaburo</h1>
+          <p style="color: #ffffff; margin: 6px 0 0; font-size: 14px; opacity: 0.85;">¡Gracias por tu compra, ${order.buyer_name}!</p>
+        </div>
+
+        <div style="padding: 26px; color: #1C1C1C; line-height: 1.6;">
+          <p style="font-size: 15px; margin-top: 0;">
+            Tu pedido <strong>${order.order_number}</strong> ha sido confirmado y el pago registrado exitosamente.
+          </p>
+
+          <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+            <thead>
+              <tr style="border-bottom: 2px solid #C5A47E; text-align: left; font-size: 12px; color: #848484; text-transform: uppercase;">
+                <th style="padding: 8px 0;">Producto</th>
+                <th style="padding: 8px 0; text-align: center;">Cant.</th>
+                <th style="padding: 8px 0; text-align: right;">Precio</th>
+                <th style="padding: 8px 0; text-align: right;">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsRowsHtml}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="3" style="padding: 16px 0 6px; text-align: right; font-weight: bold; font-size: 15px; color: #1C1C1C;">Total pagado:</td>
+                <td style="padding: 16px 0 6px; text-align: right; font-weight: bold; font-size: 17px; color: #C5A47E;">${formatARS(order.total_ars)}</td>
+              </tr>
+            </tfoot>
+          </table>
+
+          ${deliveryBlockHtml}
+
+          <p style="font-size: 12px; color: #848484; margin-top: 30px; text-align: center; border-top: 1px solid #f0f0f0; padding-top: 16px;">
+            Consultorio Dra. Paula Landaburo · Leandro N. Alem 45, Gualeguaychú · dralandaburo.com
+          </p>
+        </div>
+      </div>
+    `;
+}
 
 export async function sendOrderEmails({
   order,
@@ -71,116 +210,11 @@ export async function sendOrderEmails({
     return { buyerSuccess, buyerError, staffSuccess, staffError };
   }
 
-  // Armar tabla de items para ambos correos
-  const itemsRowsHtml = items
-    .map(
-      (item) => `
-        <tr style="border-bottom: 1px solid #f0f0f0;">
-          <td style="padding: 10px 0; color: #1C1C1C; font-weight: 500;">${item.product_name}</td>
-          <td style="padding: 10px 0; text-align: center; color: #666666;">${item.quantity}</td>
-          <td style="padding: 10px 0; text-align: right; color: #1C1C1C;">${formatARS(item.unit_price_ars)}</td>
-          <td style="padding: 10px 0; text-align: right; font-weight: 600; color: #1C1C1C;">${formatARS(
-            item.unit_price_ars * item.quantity
-          )}</td>
-        </tr>
-      `
-    )
-    .join('');
+  const itemsRowsHtml = buildItemsRowsHtml(items);
 
   // 1. Email a la Compradora
   try {
-    const isRetiro = order.delivery_method === 'retiro';
-
-    const deliveryBlockHtml = isRetiro
-      ? `
-        <div style="background: #faf7f2; border: 1px solid #C5A47E; border-radius: 6px; padding: 18px; margin: 24px 0;">
-          <h3 style="margin-top: 0; color: #1C1C1C; font-size: 16px; font-weight: 600;">📍 Retiro en consultorio</h3>
-          <p style="margin: 6px 0; font-size: 14px; color: #333333;">
-            <strong>Dirección:</strong> ${storeConfig.pickup_address || 'A coordinar'}
-          </p>
-          <p style="margin: 6px 0; font-size: 14px; color: #333333;">
-            <strong>Cuándo retirar:</strong> ${storeConfig.pickup_hours || 'A coordinar'}
-          </p>
-          <p style="margin: 12px 0 0; font-size: 13px; color: #666666;">
-            Te avisaremos por WhatsApp o email en cuanto tu pedido esté listo para retirar.
-          </p>
-        </div>
-      `
-      : `
-        <div style="background: #faf7f2; border: 1px solid #C5A47E; border-radius: 6px; padding: 18px; margin: 24px 0;">
-          <h3 style="margin-top: 0; color: #1C1C1C; font-size: 16px; font-weight: 600;">📦 Envío a domicilio</h3>
-          <p style="margin: 6px 0; font-size: 14px; color: #333333;">
-            <strong>Dirección de entrega:</strong> ${order.delivery_address || 'No especificada'}
-          </p>
-          <p style="margin: 6px 0; font-size: 14px; color: #333333;">
-            <strong>Localidad y CP:</strong> ${order.delivery_city || ''} ${order.delivery_postal_code ? `(CP ${order.delivery_postal_code})` : ''}
-          </p>
-          ${
-            order.delivery_notes
-              ? `<p style="margin: 6px 0; font-size: 14px; color: #333333;"><strong>Referencias / Depto:</strong> ${order.delivery_notes}</p>`
-              : ''
-          }
-          <p style="margin: 12px 0 0; font-size: 13px; color: #666666;">
-            Coordinaremos el despacho a la brevedad y te enviaremos la información de seguimiento.
-          </p>
-        </div>
-      `;
-
-    const buyerEmailHtml = `
-      <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
-        <div style="background: #1C1C1C; padding: 26px; text-align: center;">
-          <h1 style="color: #C5A47E; margin: 0; font-size: 20px; font-weight: 500; letter-spacing: 0.05em;">Dra. Paula Landaburo</h1>
-          <p style="color: #ffffff; margin: 6px 0 0; font-size: 14px; opacity: 0.85;">¡Gracias por tu compra, ${order.buyer_name}!</p>
-        </div>
-
-        <div style="padding: 26px; color: #1C1C1C; line-height: 1.6;">
-          <p style="font-size: 15px; margin-top: 0;">
-            Tu pedido <strong>${order.order_number}</strong> ha sido confirmado y el pago registrado exitosamente.
-          </p>
-
-          <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-            <thead>
-              <tr style="border-bottom: 2px solid #C5A47E; text-align: left; font-size: 12px; color: #848484; text-transform: uppercase;">
-                <th style="padding: 8px 0;">Producto</th>
-                <th style="padding: 8px 0; text-align: center;">Cant.</th>
-                <th style="padding: 8px 0; text-align: right;">Precio</th>
-                <th style="padding: 8px 0; text-align: right;">Subtotal</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${itemsRowsHtml}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colspan="3" style="padding: 16px 0 6px; text-align: right; font-weight: bold; font-size: 15px; color: #1C1C1C;">Total pagado:</td>
-                <td style="padding: 16px 0 6px; text-align: right; font-weight: bold; font-size: 17px; color: #C5A47E;">${formatARS(order.total_ars)}</td>
-              </tr>
-            </tfoot>
-          </table>
-
-          ${deliveryBlockHtml}
-
-          <div style="text-align: center; margin-top: 30px; padding: 20px; background: #fafafa; border-radius: 6px;">
-            <p style="margin: 0 0 12px; font-size: 14px; color: #444444;">
-              ¿Tenés dudas con tu pedido o necesitás coordinar la entrega?
-            </p>
-            <a
-              href="https://wa.me/5491169684062?text=${encodeURIComponent(
-                `Hola! Tengo una consulta sobre mi pedido online ${order.order_number}`
-              )}"
-              style="display: inline-block; background: #25D366; color: #ffffff; text-decoration: none; padding: 10px 22px; border-radius: 4px; font-weight: 600; font-size: 14px;"
-              target="_blank"
-            >
-              Contactar por WhatsApp
-            </a>
-          </div>
-
-          <p style="font-size: 12px; color: #848484; margin-top: 30px; text-align: center; border-top: 1px solid #f0f0f0; padding-top: 16px;">
-            Consultorio Dra. Paula Landaburo · Leandro N. Alem 45, Gualeguaychú · dralandaburo.com
-          </p>
-        </div>
-      </div>
-    `;
+    const buyerEmailHtml = buildBuyerOrderEmailHtml({ order, items, storeConfig });
 
     const buyerRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',

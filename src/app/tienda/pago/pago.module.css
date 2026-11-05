@@ -5,7 +5,7 @@
   align-items: center;
   justify-content: center;
   background-color: var(--color-bg-alt);
-  padding: calc(var(--header-height) + var(--space-2xl)) var(--space-xl) var(--space-3xl);
+  padding: calc(var(--header-height) + var(--space-2xl)) var(--space-xl) 9rem;
 }
 
 .card {
@@ -64,7 +64,71 @@
   color: var(--color-gris);
   margin: 0;
   line-height: var(--leading-normal);
-  max-width: 380px;
+  max-width: 390px;
+}
+
+.orderBadge {
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-negro);
+  background-color: #faf7f2;
+  border: 1px solid rgba(197, 164, 126, 0.55);
+  border-radius: 999px;
+  padding: 0.25rem 0.85rem;
+  margin: 0;
+}
+
+.pickupCallout {
+  width: 100%;
+  background-color: #faf7f2;
+  border: 1px solid var(--color-champagne);
+  border-radius: 6px;
+  padding: 1.1rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+  box-sizing: border-box;
+  margin-top: 0.25rem;
+}
+
+.pickupAddressLine {
+  font-family: var(--font-sans);
+  font-size: 0.84rem;
+  color: #374151;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.pickupPrompt {
+  font-family: var(--font-sans);
+  font-size: 0.92rem;
+  color: var(--color-negro);
+  font-weight: 500;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.btnWhatsapp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.82rem 1.25rem;
+  background-color: #25D366;
+  color: #ffffff;
+  font-family: var(--font-sans);
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.2s ease;
+  box-sizing: border-box;
+}
+
+.btnWhatsapp:hover {
+  background-color: #1eb956;
 }
 
 .actions {
@@ -72,7 +136,7 @@
   flex-direction: column;
   gap: var(--space-sm);
   width: 100%;
-  margin-top: var(--space-md);
+  margin-top: var(--space-xs);
 }
 
 .btnPrimary {
