@@ -4,11 +4,12 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
-import { X, Phone, Mail, User } from 'lucide-react';
+import { X, Phone, Mail, User, ShoppingBag } from 'lucide-react';
 import styles from './MobileMenu.module.css';
 import { navigation } from '@/data/navigation';
 import { siteContent } from '@/data/site-content';
 import { trackScheduleClick } from '@/lib/tracking';
+import { useCart } from '@/contexts/CartContext';
 
 interface MobileMenuProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ interface MobileMenuProps {
 
 export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
   const pathname = usePathname();
+  const { totalItems } = useCart();
 
   return (
     <div className={`${styles.overlay} ${isOpen ? styles.overlayOpen : ''}`}>
@@ -85,6 +87,16 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
             </Link>
           );
         })}
+
+        <Link
+          href="/tienda/carrito"
+          className={`${styles.navLink} ${pathname === '/tienda/carrito' ? styles.navLinkActive : ''}`}
+          onClick={onClose}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+        >
+          <ShoppingBag size={20} />
+          <span>Carrito{totalItems > 0 ? ` (${totalItems})` : ''}</span>
+        </Link>
 
         <div className={styles.accountSection}>
           <Link

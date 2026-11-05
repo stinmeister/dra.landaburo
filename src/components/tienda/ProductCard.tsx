@@ -1,6 +1,7 @@
 'use client';
 // ProductCard — tarjeta de producto para la grilla de la tienda.
 // Client Component porque usa useCart (contexto de React con estado cliente).
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCart } from '@/contexts/CartContext';
@@ -17,6 +18,7 @@ export const formatARS = (n: number | string | undefined | null) => {
 
 export default function ProductCard({ product }: { product: Product }) {
   const { addItem } = useCart();
+  const [added, setAdded] = useState(false);
   const outOfStock = product.stock_quantity === 0;
   const hasDiscount =
     product.compare_price_ars != null && product.compare_price_ars > product.price_ars;
@@ -38,6 +40,8 @@ export default function ProductCard({ product }: { product: Product }) {
       category: product.category,
       quantity: 1,
     });
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1800);
   };
 
   return (
@@ -77,14 +81,20 @@ export default function ProductCard({ product }: { product: Product }) {
           )}
         </div>
         <button
+          type="button"
           className={styles.addBtn}
           onClick={handleAdd}
           disabled={outOfStock}
+          aria-live="polite"
           aria-label={
-            outOfStock ? 'Sin stock' : `Agregar ${product.name} al carrito`
+            outOfStock
+              ? 'Sin stock'
+              : added
+              ? 'Producto agregado al carrito'
+              : `Agregar ${product.name} al carrito`
           }
         >
-          {outOfStock ? 'Sin stock' : 'Agregar al carrito'}
+          {outOfStock ? 'Sin stock' : added ? '✓ Agregado al carrito' : 'Agregar al carrito'}
         </button>
       </div>
     </article>
