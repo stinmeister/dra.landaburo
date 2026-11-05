@@ -6,7 +6,6 @@
 // USO: llamar una sola vez por request en el layout o en la page que necesite verificar.
 // No llamar en cada componente hijo para evitar N+1 queries.
 
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const ALL_SECTIONS = [
@@ -31,6 +30,22 @@ export interface SectionPermissions {
   overrides: Map<Section, boolean>;
 }
 
+export interface PermissionsDbClient {
+  from: (table: string) => {
+    select: (columns: string) => {
+      eq: (column: string, value: string) => PromiseLike<{
+        data: Array<{ section?: string; allowed?: boolean; role?: string | null }> | null;
+        error?: { message: string } | null;
+      }> & {
+        maybeSingle: <T = { role: string | null }>() => PromiseLike<{
+          data: T | null;
+          error: { message: string } | null;
+        }>;
+      };
+    };
+  };
+}
+
 /**
  * Calcula el conjunto de secciones permitidas para un usuario dado su rol.
  * Usa el cliente admin para leer los defaults (evita problemas de RLS en el layout).
@@ -38,8 +53,18 @@ export interface SectionPermissions {
  */
 export async function getUserSections(
   profileId: string,
-  role: string
+  role: string,
+  adminClientOverride?: PermissionsDbClient
 ): Promise<SectionPermissions> {
+  // Rol vacío o paciente nunca tiene acceso a secciones del panel interno
+  if (!role || role === "paciente") {
+    return {
+      allowed: new Set(),
+      fromRole: new Set(),
+      overrides: new Map(),
+    };
+  }
+
   // admin siempre tiene acceso total sin consultar la tabla
   if (role === "admin") {
     return {
@@ -49,7 +74,7 @@ export async function getUserSections(
     };
   }
 
-  const admin = createAdminClient();
+  const admin = (adminClientOverride ?? (createAdminClient() as unknown as PermissionsDbClient));
 
   // 1. Defaults del rol
   const { data: defaults } = await admin
@@ -69,7 +94,7 @@ export async function getUserSections(
 
   // Aplicar defaults
   for (const d of defaults ?? []) {
-    if (d.allowed) fromRole.add(d.section as Section);
+    if (d.allowed && d.section) fromRole.add(d.section as Section);
   }
 
   // Fallback seguro si la sección "cierre-diario" no está en DB todavía:
@@ -80,7 +105,9 @@ export async function getUserSections(
 
   // Aplicar overrides (sobreescriben el default)
   for (const o of overrideRows ?? []) {
-    overrides.set(o.section as Section, o.allowed);
+    if (o.section && typeof o.allowed === "boolean") {
+      overrides.set(o.section as Section, o.allowed);
+    }
   }
 
   // Calcular final
