@@ -13,6 +13,9 @@ import { getPendingReviewCount, getActionableReviewCount, getReviewItems } from 
 import PeriodSelector from '@/components/dashboard/PeriodSelector';
 import type { PeriodOption } from '@/components/dashboard/PeriodSelector';
 import BotonIngesta from '@/components/dashboard/BotonIngesta';
+import UnlinkedBadge from '@/components/dashboard/UnlinkedBadge';
+import { resolvePayerDisplay } from '@/lib/payerDisplay';
+import { isWf00WebhookConfigured } from '@/app/api/admin/run-ingesta/runIngestaCore';
 import EjecutivoTabs, { TabItem } from './EjecutivoTabs';
 import CierreDiarioClient from '../cierre-diario/CierreDiarioClient';
 import { getCierreDiarioData } from '../cierre-diario/getCierreDiarioData';
@@ -41,6 +44,7 @@ type Payment = {
   commission_amount_ars: number;
   payment_date: string;
   notes: string | null;
+  payer_name: string | null;
   patients: { full_name: string } | null;
   profiles: { full_name: string } | null;
 };
@@ -165,7 +169,7 @@ export default async function EjecutivoPage({
     return (
       <div className={styles.page}>
         <EjecutivoTabs tabs={availableTabs} activeTab={activeTab} />
-        {role === 'admin' && <BotonIngesta />}
+        {role === 'admin' && <BotonIngesta isWebhookConfigured={isWf00WebhookConfigured()} />}
         <CierreDiarioClient
           currentDate={cierreData.currentDate}
           todayDate={cierreData.todayDate}
@@ -406,6 +410,7 @@ export default async function EjecutivoPage({
       commission_amount_ars,
       payment_date,
       notes,
+      payer_name,
       patients ( full_name ),
       profiles ( full_name )
     `)
@@ -422,7 +427,7 @@ export default async function EjecutivoPage({
   return (
     <div className={styles.page}>
       <EjecutivoTabs tabs={availableTabs} activeTab={activeTab} />
-      {role === 'admin' && <BotonIngesta />}
+      {role === 'admin' && <BotonIngesta isWebhookConfigured={isWf00WebhookConfigured()} />}
 
       <div className={styles.pageHeader}>
         <div>
@@ -611,13 +616,25 @@ export default async function EjecutivoPage({
                     <tr key={payment.id} className={styles.tr}>
                       <td className={styles.td}>{formatDate(payment.payment_date)}</td>
                       <td className={styles.td}>
-                        {payment.patients?.full_name ?? (
-                          payment.notes?.match(/\[SIN-PACIENTE DNI:([^\]]+)\]/) ? (
-                            <span title="Paciente pendiente de vincular en el padrón" style={{ color: 'var(--color-gris)', fontStyle: 'italic', fontSize: '0.85rem' }}>
-                              DNI {payment.notes.match(/\[SIN-PACIENTE DNI:([^\]]+)\]/)![1].trim()}
+                        {(() => {
+                          const payer = resolvePayerDisplay(payment.patients?.full_name, payment.payer_name);
+                          const dniMatch = payment.notes?.match(/\[SIN-PACIENTE DNI:([^\]]+)\]/);
+                          if (payer.status === 'linked') return payer.name;
+                          if (payer.status === 'unlinked_payer') {
+                            return (
+                              <>
+                                {payer.name}
+                                <UnlinkedBadge />
+                              </>
+                            );
+                          }
+                          return (
+                            <span style={{ color: 'var(--color-gris)', fontStyle: 'italic', fontSize: '0.85rem' }}>
+                              {payer.name}
+                              {dniMatch ? ` · DNI ${dniMatch[1].trim()}` : ''}
                             </span>
-                          ) : '—'
-                        )}
+                          );
+                        })()}
                       </td>
                       <td className={styles.td} style={{ fontWeight: 500 }}>
                         {payment.profiles?.full_name ? (

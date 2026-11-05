@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import { resolvePayerDisplay } from '@/lib/payerDisplay';
 import type { PaymentItem, ReviewItem, MethodTotal } from './CierreDiarioClient';
 
 const METHOD_LABELS: Record<string, { label: string; isCash?: boolean }> = {
@@ -126,6 +127,7 @@ export async function getCierreDiarioData(rawDate?: string): Promise<CierreDiari
         payment_method,
         notes,
         external_id,
+        payer_name,
         patients ( full_name, dni ),
         profiles ( full_name )
       `)
@@ -147,19 +149,23 @@ export async function getCierreDiarioData(rawDate?: string): Promise<CierreDiari
   const rawPayments = paymentsRes.data ?? [];
   const rawReviews = reviewsRes.data ?? [];
 
-  const mappedPayments: PaymentItem[] = rawPayments.map((p: any) => ({
-    id: p.id,
-    payment_date: p.payment_date,
-    amount_ars: p.amount_ars != null ? Number(p.amount_ars) : null,
-    amount_usd: p.amount_usd != null ? Number(p.amount_usd) : null,
-    currency: p.currency || 'ARS',
-    payment_method: p.payment_method || 'efectivo',
-    notes: p.notes,
-    external_id: p.external_id,
-    patient_name: p.patients?.full_name || 'Paciente sin registrar',
-    patient_dni: p.patients?.dni || null,
-    professional_name: p.profiles?.full_name || 'Sin profesional asignado',
-  }));
+  const mappedPayments: PaymentItem[] = rawPayments.map((p: any) => {
+    const payer = resolvePayerDisplay(p.patients?.full_name, p.payer_name);
+    return {
+      id: p.id,
+      payment_date: p.payment_date,
+      amount_ars: p.amount_ars != null ? Number(p.amount_ars) : null,
+      amount_usd: p.amount_usd != null ? Number(p.amount_usd) : null,
+      currency: p.currency || 'ARS',
+      payment_method: p.payment_method || 'efectivo',
+      notes: p.notes,
+      external_id: p.external_id,
+      patient_name: payer.name,
+      patient_link_status: payer.status,
+      patient_dni: p.patients?.dni || null,
+      professional_name: p.profiles?.full_name || 'Sin profesional asignado',
+    };
+  });
 
   const paidPayments = mappedPayments.filter(
     (p) => (p.amount_ars != null && p.amount_ars > 0) || (p.amount_usd != null && p.amount_usd > 0)

@@ -17,6 +17,8 @@ import {
   Activity,
 } from 'lucide-react';
 import styles from './page.module.css';
+import UnlinkedBadge from '@/components/dashboard/UnlinkedBadge';
+import type { PayerLinkStatus } from '@/lib/payerDisplay';
 
 export interface PaymentItem {
   id: string;
@@ -28,6 +30,7 @@ export interface PaymentItem {
   notes: string | null;
   external_id: string | null;
   patient_name: string;
+  patient_link_status: PayerLinkStatus;
   patient_dni: string | null;
   professional_name: string;
 }
@@ -300,7 +303,10 @@ export default function CierreDiarioClient({
                       <td className={styles.timeCell}>{formatTime(p.payment_date)}</td>
                       <td>
                         <div className={styles.patientCell}>
-                          <span className={styles.patientName}>{p.patient_name}</span>
+                          <span>
+                            <span className={styles.patientName}>{p.patient_name}</span>
+                            {p.patient_link_status === 'unlinked_payer' && <UnlinkedBadge />}
+                          </span>
                           {p.patient_dni && (
                             <span className={styles.patientDni}>DNI: {p.patient_dni}</span>
                           )}
@@ -344,7 +350,10 @@ export default function CierreDiarioClient({
               {paidPayments.map((p) => (
                 <div key={p.id} className={styles.mobileCard}>
                   <div className={styles.mobileCardTop}>
-                    <span className={styles.mobilePatient}>{p.patient_name}</span>
+                    <span className={styles.mobilePatient}>
+                      {p.patient_name}
+                      {p.patient_link_status === 'unlinked_payer' && <UnlinkedBadge />}
+                    </span>
                     <span className={styles.mobileAmount}>
                       {p.amount_ars != null && p.amount_ars > 0
                         ? formatARS(p.amount_ars)
@@ -410,7 +419,10 @@ export default function CierreDiarioClient({
                         <td className={styles.timeCell}>{formatTime(z.payment_date)}</td>
                         <td>
                           <div className={styles.patientCell}>
-                            <span className={styles.patientName}>{z.patient_name}</span>
+                            <span>
+                              <span className={styles.patientName}>{z.patient_name}</span>
+                              {z.patient_link_status === 'unlinked_payer' && <UnlinkedBadge />}
+                            </span>
                             {z.patient_dni && (
                               <span className={styles.patientDni}>DNI: {z.patient_dni}</span>
                             )}
