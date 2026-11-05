@@ -30,11 +30,12 @@ export default function CartIcon() {
         <line x1="3" y1="6" x2="21" y2="6" />
         <path d="M16 10a4 4 0 0 1-8 0" />
       </svg>
-      {totalItems > 0 && (
-        <span className={styles.badge} aria-hidden="true">
-          {totalItems > 99 ? '99+' : totalItems}
-        </span>
-      )}
+      <span
+        className={`${styles.badge} ${totalItems === 0 ? styles.badgeEmpty : ''}`}
+        aria-hidden="true"
+      >
+        {totalItems > 99 ? '99+' : totalItems}
+      </span>
     </Link>
   );
 }

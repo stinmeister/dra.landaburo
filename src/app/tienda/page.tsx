@@ -7,6 +7,8 @@ import { createClient } from '@/lib/supabase/server';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import ProductCard from '@/components/tienda/ProductCard';
+import { buildStoreWhatsappUrl } from '@/lib/storeWhatsapp';
+import { siteContent } from '@/data/site-content';
 import { MapPin, MessageCircle } from 'lucide-react';
 import type { Product } from '@/lib/types/product';
 import styles from './tienda.module.css';
@@ -94,14 +96,14 @@ export default async function TiendaPage({
               </span>
             </div>
             <a
-              href="https://wa.me/5491169684062?text=Hola%2C%20quisiera%20consultar%20sobre%20los%20productos%20de%20la%20tienda."
+              href={buildStoreWhatsappUrl('Hola, quisiera consultar sobre los productos de la tienda.')}
               target="_blank"
               rel="noopener noreferrer"
               className={styles.storeInfoWhatsapp}
               aria-label="Consultas por WhatsApp"
             >
               <MessageCircle size={16} />
-              <span>Consultas: +54 9 11 6968-4062</span>
+              <span>Consultas: {siteContent.contact.phone}</span>
             </a>
           </div>
 

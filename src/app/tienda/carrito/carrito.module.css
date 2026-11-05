@@ -7,7 +7,7 @@
 .container {
   max-width: var(--max-width);
   margin: 0 auto;
-  padding: var(--space-3xl) var(--space-xl) var(--space-4xl);
+  padding: var(--space-3xl) var(--space-xl) 9rem;
 }
 
 /* Header */
@@ -116,6 +116,15 @@
   gap: var(--space-xs);
 }
 
+.itemNameLink {
+  text-decoration: none;
+  color: inherit;
+}
+
+.itemNameLink:hover .itemName {
+  color: var(--color-champagne-dark);
+}
+
 .itemName {
   font-family: var(--font-sans);
   font-size: var(--text-base);
@@ -123,6 +132,7 @@
   color: var(--color-negro);
   margin: 0;
   line-height: var(--leading-tight);
+  transition: color 0.2s ease;
 }
 
 .itemPrice {
@@ -324,29 +334,40 @@
   margin: 0;
 }
 
-.checkoutBtn {
+.continueBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
-  padding: 0.9rem 1.5rem;
-  background-color: #009ee3; /* Azul MercadoPago */
+  padding: 0.95rem 1.5rem;
+  background-color: var(--color-negro);
   color: var(--color-blanco);
   font-family: var(--font-sans);
   font-size: var(--text-base);
   font-weight: 600;
-  border: none;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border: 1px solid var(--color-negro);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
   margin-top: var(--space-sm);
+  box-sizing: border-box;
 }
 
-.checkoutBtn:hover:not(:disabled) {
-  background-color: #0077b8;
+.continueBtn:hover {
+  background-color: var(--color-champagne-dark);
+  border-color: var(--color-champagne-dark);
 }
 
-.checkoutBtn:disabled {
-  background-color: var(--color-gris-claro);
+.paymentNote {
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
   color: var(--color-gris);
-  cursor: not-allowed;
+  text-align: center;
+  margin: 0;
+  line-height: 1.45;
 }
 
 /* Estado carrito vacío */
@@ -357,6 +378,8 @@
   align-items: center;
   justify-content: center;
   background-color: var(--color-bg-alt);
+  padding-left: var(--space-xl);
+  padding-right: var(--space-xl);
 }
 
 .emptyCard {
@@ -383,6 +406,25 @@
   color: var(--color-gris);
   margin: 0 0 var(--space-xl);
   line-height: var(--leading-normal);
+}
+
+.emptyBtn {
+  display: inline-block;
+  padding: 0.85rem 1.5rem;
+  background-color: var(--color-negro);
+  color: var(--color-blanco);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.2s ease;
+}
+
+.emptyBtn:hover {
+  background-color: var(--color-champagne-dark);
 }
 
 /* Selector de entrega */

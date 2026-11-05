@@ -7,8 +7,10 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import AddToCartButton from '@/components/tienda/AddToCartButton';
+import ProductPurchaseActions from '@/components/tienda/ProductPurchaseActions';
 import ProductViewTracker from '@/components/tienda/ProductViewTracker';
+import { buildStoreWhatsappUrl } from '@/lib/storeWhatsapp';
+import { siteContent } from '@/data/site-content';
 import { MessageCircle, MapPin } from 'lucide-react';
 import type { Product } from '@/lib/types/product';
 import styles from './producto.module.css';
@@ -166,15 +168,7 @@ export default async function ProductoPage({ params }: Props) {
                 <p className={styles.description}>{product.description}</p>
               )}
 
-              <div className={styles.stockInfo}>
-                {product.stock_quantity > 0 ? (
-                  <span className={styles.inStock}>En stock</span>
-                ) : (
-                  <span className={styles.outOfStock}>Sin stock</span>
-                )}
-              </div>
-
-              <AddToCartButton product={product} />
+              <ProductPurchaseActions product={product} />
 
               {/* Información de entrega leída de store_config */}
               <div className={styles.deliveryBox}>
@@ -190,14 +184,14 @@ export default async function ProductoPage({ params }: Props) {
 
               {/* Botón directo de WhatsApp para consultas */}
               <a
-                href={`https://wa.me/5491169684062?text=${encodeURIComponent(`Hola, quisiera consultar sobre el producto "${product.name}".`)}`}
+                href={buildStoreWhatsappUrl(`Hola, quisiera consultar sobre el producto "${product.name}".`)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={styles.whatsappCta}
                 aria-label="Consultar por WhatsApp"
               >
                 <MessageCircle size={18} />
-                <span>Consultar por WhatsApp (+54 9 11 6968-4062)</span>
+                <span>Consultar por WhatsApp ({siteContent.contact.phone})</span>
               </a>
 
               <p className={styles.disclaimer}>

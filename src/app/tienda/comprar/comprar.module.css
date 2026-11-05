@@ -1,0 +1,550 @@
+.page {
+  min-height: 100vh;
+  padding-top: var(--header-height);
+  background-color: var(--color-bg-alt);
+}
+
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--space-2xl) var(--space-xl) 9rem;
+}
+
+@media (max-width: 600px) {
+  .container {
+    padding: 1.5rem 1rem 8.75rem;
+  }
+}
+
+.headerRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.backLink {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-gris);
+  text-decoration: none;
+  width: fit-content;
+  transition: color 0.2s ease;
+}
+
+.backLink:hover {
+  color: var(--color-champagne-dark);
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: clamp(1.75rem, 3.5vw, 2.25rem);
+  font-weight: 400;
+  color: var(--color-negro);
+  margin: 0;
+}
+
+.flowForm {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.sectionCard {
+  background-color: var(--color-blanco);
+  border: 1px solid var(--color-gris-claro);
+  border-radius: var(--radius-md);
+  padding: 1.35rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (max-width: 600px) {
+  .sectionCard {
+    padding: 1.1rem 1rem;
+  }
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.sectionTitle {
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+  font-weight: 400;
+  color: var(--color-negro);
+  margin: 0;
+}
+
+.sectionActionLink {
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  color: var(--color-gris);
+  text-decoration: underline;
+}
+
+.sectionActionLink:hover {
+  color: var(--color-negro);
+}
+
+/* 1. Productos */
+.itemList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.itemRow {
+  display: grid;
+  grid-template-columns: 72px 1fr auto;
+  gap: 0.9rem;
+  align-items: center;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-gris-claro);
+}
+
+.itemRow:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+@media (max-width: 480px) {
+  .itemRow {
+    grid-template-columns: 64px 1fr;
+  }
+
+  .itemSubtotal {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+
+.itemThumb {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  background-color: #faf9f7;
+  border: 1px solid var(--color-gris-claro);
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .itemThumb {
+    width: 64px;
+    height: 64px;
+  }
+}
+
+.itemImage {
+  object-fit: contain;
+  padding: 4px;
+}
+
+.itemImageFallback {
+  width: 100%;
+  height: 100%;
+  background-color: var(--color-bg-alt);
+}
+
+.itemBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.itemName {
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-negro);
+  margin: 0;
+  line-height: 1.35;
+}
+
+.itemUnitPrice {
+  font-family: var(--font-sans);
+  font-size: 0.83rem;
+  color: var(--color-gris);
+  margin: 0;
+}
+
+.itemControls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.qtyStepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--color-gris-claro);
+  border-radius: 3px;
+  background-color: var(--color-blanco);
+}
+
+.qtyBtn {
+  background: transparent;
+  border: none;
+  width: 32px;
+  height: 30px;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  color: var(--color-negro);
+  cursor: pointer;
+}
+
+.qtyBtn:hover:not(:disabled) {
+  color: var(--color-champagne-dark);
+}
+
+.qtyBtn:disabled {
+  color: var(--color-gris-claro);
+  cursor: not-allowed;
+}
+
+.qtyVal {
+  min-width: 26px;
+  text-align: center;
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-negro);
+}
+
+.lastUnitNote {
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  color: var(--color-champagne-dark);
+  font-weight: 500;
+}
+
+.removeBtn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  color: var(--color-gris);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.removeBtn:hover {
+  color: #c0392b;
+}
+
+.itemSubtotal {
+  font-family: var(--font-sans);
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: var(--color-negro);
+  margin: 0;
+  white-space: nowrap;
+}
+
+/* 2. Pestañas de forma de entrega */
+.deliveryTabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.deliveryTab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  padding: 0.8rem 0.9rem;
+  background-color: var(--color-blanco);
+  border: 1.5px solid var(--color-gris-claro);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-negro);
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.deliveryTab:hover:not(:disabled) {
+  border-color: var(--color-champagne);
+}
+
+.deliveryTabActive {
+  border-color: var(--color-negro);
+  background-color: #faf9f7;
+}
+
+.deliveryTabDisabled {
+  background-color: #f7f7f7;
+  border-color: #e5e5e5;
+  color: var(--color-gris);
+  cursor: not-allowed;
+}
+
+.comingSoonBadge {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background-color: rgba(197, 164, 126, 0.2);
+  color: #7c6242;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.pickupBox {
+  padding: 0.9rem 1rem;
+  background-color: #faf7f2;
+  border: 1px solid rgba(197, 164, 126, 0.45);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.pickupTitle {
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-negro);
+  margin: 0;
+}
+
+.pickupLine {
+  font-family: var(--font-sans);
+  font-size: 0.84rem;
+  color: #374151;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.shippingFields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+}
+
+.shippingFieldFull {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 560px) {
+  .shippingFields {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 3. Datos de la compradora */
+.fieldsStack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.label {
+  font-family: var(--font-sans);
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: var(--color-negro);
+}
+
+.input {
+  width: 100%;
+  padding: 0.7rem 0.875rem;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  color: var(--color-negro);
+  background-color: var(--color-blanco);
+  border: 1px solid var(--color-gris-claro);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
+}
+
+.input:focus {
+  border-color: var(--color-champagne);
+}
+
+.input::placeholder {
+  color: var(--color-gris);
+}
+
+.softNotice {
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  color: #7c5c2b;
+  background-color: #fcf8f0;
+  border: 1px solid rgba(197, 164, 126, 0.55);
+  border-radius: 4px;
+  padding: 0.5rem 0.7rem;
+  margin: 0.15rem 0 0;
+  line-height: 1.4;
+}
+
+/* 4. Resumen */
+.summaryRows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: var(--font-sans);
+  font-size: 0.92rem;
+  color: var(--color-negro);
+}
+
+.summaryMuted {
+  color: var(--color-gris);
+  font-size: 0.86rem;
+}
+
+.summaryTotal {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-gris-claro);
+  font-family: var(--font-sans);
+  font-size: 1.12rem;
+  font-weight: 700;
+  color: var(--color-negro);
+}
+
+/* 5. Botón Pagar + leyenda */
+.payBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.payBtn {
+  width: 100%;
+  padding: 1rem 1.5rem;
+  background-color: var(--color-negro);
+  color: var(--color-blanco);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: 1px solid var(--color-negro);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.payBtn:hover:not(:disabled) {
+  background-color: var(--color-champagne-dark);
+  border-color: var(--color-champagne-dark);
+}
+
+.payBtn:disabled {
+  background-color: var(--color-gris-claro);
+  border-color: var(--color-gris-claro);
+  color: var(--color-gris);
+  cursor: not-allowed;
+}
+
+.payHelper {
+  font-family: var(--font-sans);
+  font-size: 0.83rem;
+  color: var(--color-gris);
+  text-align: center;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.errorMsg {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: #991b1b;
+  background-color: #fdf2f2;
+  border: 1px solid #f5c6c2;
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 0.9rem;
+  margin: 0;
+}
+
+.whatsappBtn {
+  display: inline-block;
+  margin-top: 0.6rem;
+  background-color: #25D366;
+  color: #ffffff;
+  text-decoration: none;
+  padding: 0.55rem 1rem;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+/* Estado vacío */
+.emptyCard {
+  background-color: var(--color-blanco);
+  border: 1px solid var(--color-gris-claro);
+  border-radius: var(--radius-md);
+  padding: 2.5rem 1.75rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.emptyTitle {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 400;
+  color: var(--color-negro);
+  margin: 0;
+}
+
+.emptyText {
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  color: var(--color-gris);
+  margin: 0;
+  max-width: 400px;
+  line-height: 1.5;
+}
+
+.emptyLink {
+  display: inline-block;
+  margin-top: 0.35rem;
+  padding: 0.8rem 1.4rem;
+  background-color: var(--color-negro);
+  color: var(--color-blanco);
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border-radius: 3px;
+}
