@@ -31,7 +31,8 @@ export const DEFAULT_PATIENTS_PAGE_SIZE = 1000;
 export async function loadAllPatientsForIngest(
   client: PatientsPageQuery,
   pageSize: number = DEFAULT_PATIENTS_PAGE_SIZE,
-  logger: Pick<Console, 'log'> = console
+  logger: Pick<Console, 'log'> = console,
+  logPrefix: string = '[ingest/payments]'
 ): Promise<PatientRow[]> {
   if (!Number.isInteger(pageSize) || pageSize <= 0) {
     throw new Error(`pageSize inválido: ${pageSize}`);
@@ -63,7 +64,7 @@ export async function loadAllPatientsForIngest(
   }
 
   logger.log(
-    `[ingest/payments] Padrón de pacientes cargado: ${all.length} filas en ${pages} página(s) de ${pageSize}`
+    `${logPrefix} Padrón de pacientes cargado: ${all.length} filas en ${pages} página(s) de ${pageSize}`
   );
 
   return all;

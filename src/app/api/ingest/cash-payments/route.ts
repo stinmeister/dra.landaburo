@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  loadAllPatientsForIngest,
+  DEFAULT_PATIENTS_PAGE_SIZE,
+  type PatientsPageQuery,
+} from "@/lib/ingest/loadAllPatients";
 
 // POST /api/ingest/cash-payments
 // Auth: Authorization: Bearer $INGEST_SECRET
@@ -159,22 +164,28 @@ export async function POST(req: NextRequest) {
   const supabaseAdmin = createAdminClient();
   const { resolveProfessional } = await loadProfessionals(supabaseAdmin);
 
-  // ── 3. Cargar padrón de pacientes para vinculación en memoria ───────────────
-  let cachedPatients: CachedPatient[] = [];
+  // ── 3. Cargar padrón de pacientes para vinculación en memoria (paginado, FIX-137) ──
+  let dbPatients: Awaited<ReturnType<typeof loadAllPatientsForIngest>>;
   try {
-    const { data: dbPatients } = await supabaseAdmin
-      .from("patients")
-      .select("id, full_name");
-    if (dbPatients) {
-      cachedPatients = dbPatients.map((p) => ({
-        id: p.id,
-        full_name: p.full_name || "",
-        parsed: parseName(p.full_name || ""),
-      }));
-    }
+    dbPatients = await loadAllPatientsForIngest(
+      supabaseAdmin as unknown as PatientsPageQuery,
+      DEFAULT_PATIENTS_PAGE_SIZE,
+      console,
+      "[ingest/cash-payments]"
+    );
   } catch (err) {
-    console.warn("[ingest/cash-payments] Error cargando pacientes:", err);
+    console.error("[ingest/cash-payments] No se pudo cargar el padrón completo:", err);
+    return NextResponse.json(
+      { error: "No se pudo cargar el padrón de pacientes completo" },
+      { status: 500 }
+    );
   }
+
+  const cachedPatients: CachedPatient[] = dbPatients.map((p) => ({
+    id: p.id,
+    full_name: p.full_name || "",
+    parsed: parseName(p.full_name || ""),
+  }));
 
   // ── 4. Procesar y normalizar cada registro del lote ────────────────────────
   const processedRecords = [];
