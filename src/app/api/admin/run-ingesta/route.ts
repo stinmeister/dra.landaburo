@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient as createSupabaseJsClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { executeRunIngestaPost } from "./runIngestaCore";
 
 export const dynamic = "force-dynamic";
 
@@ -54,152 +55,27 @@ async function getUserSupabaseClient(req: NextRequest) {
  * POST /api/admin/run-ingesta
  * Dispara una nueva corrida de ingesta de Calu (WF-00).
  * 1. Valida rol admin server-side -> 403 si no es admin.
- * 2. Bloqueo de 15 min: si hay status='running' con started_at < 15 min -> 409 Conflict.
- * 3. Si hay status='running' con >= 15 min -> se actualiza a 'abandonada' y se continúa.
- * 4. Inserta fila en ingest_runs (status='running', trigger_source='boton_web', triggered_by).
- * 5. Llama a webhook de WF-00 con header X-Run-Secret y { run_id }.
- * 6. Devuelve { run_id, status: 'running', started_at }.
+ * 2. Sin URL configurada -> 503 { state: 'not_configured' } sin insertar fila en ingest_runs.
+ * 3. Bloqueo de 15 min: si hay status='running' con started_at < 15 min -> 409 Conflict.
+ * 4. Si hay status='running' con >= 15 min -> se actualiza a 'abandonada' y se continúa.
+ * 5. Inserta fila en ingest_runs (status='running', trigger_source='boton_web', triggered_by).
+ * 6. Llama a webhook de WF-00 con header X-Run-Secret y { run_id }.
+ *    Si n8n falla (timeout, red o != 2xx), pasa la fila a 'abandonada' con finished_at y motivo en summary, y responde 502/504.
+ * 7. Devuelve { run_id, status: 'running', started_at }.
  */
 export async function POST(req: NextRequest) {
-  // 1. Validar autenticación y rol admin server-side
-  const { client: userClient, user } = await getUserSupabaseClient(req);
-  if (!user || !userClient) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
-
-  // Verificar guarda canónica public.is_admin() con el cliente del usuario
-  const { data: isAdminRpc, error: isAdminErr } = await userClient.rpc("is_admin");
-  if (isAdminErr || !isAdminRpc) {
-    return NextResponse.json(
-      { error: "No sos admin: se requiere rol de administrador", code: "42501" },
-      { status: 403 }
-    );
-  }
-
-  const adminClient = createAdminClient();
-  const { data: profile } = await adminClient
-    .from("profiles")
-    .select("id, role, full_name")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!profile || profile.role !== "admin") {
-    return NextResponse.json(
-      { error: "No sos admin: se requiere rol de administrador", code: "42501" },
-      { status: 403 }
-    );
-  }
-
-  // 2. Comprobar candado de ejecución (lock de 15 minutos)
-  const nowMs = Date.now();
-  const fifteenMinutesMs = 15 * 60 * 1000;
-
-  const { data: runningRuns, error: fetchError } = await adminClient
-    .from("ingest_runs")
-    .select("id, started_at, status")
-    .eq("status", "running")
-    .order("started_at", { ascending: false });
-
-  if (fetchError) {
-    console.error("[run-ingesta] Error consultando ingest_runs:", fetchError);
-    return NextResponse.json({ error: "Error de base de datos" }, { status: 500 });
-  }
-
-  if (runningRuns && runningRuns.length > 0) {
-    // 2.1 Buscar si hay alguna corrida activa de menos de 15 minutos
-    const activeRun = runningRuns.find((r) => {
-      if (!r.started_at) return false;
-      const startedMs = new Date(r.started_at).getTime();
-      return nowMs - startedMs < fifteenMinutesMs;
-    });
-
-    if (activeRun) {
-      return NextResponse.json(
-        {
-          error: "Ya existe una ingesta en ejecución.",
-          run_id: activeRun.id,
-          started_at: activeRun.started_at,
-        },
-        { status: 409 }
-      );
-    }
-
-    // 3. Si hay corridas 'running' con más de 15 minutos, marcarlas como 'abandonada'
-    const staleIds = runningRuns
-      .filter((r) => {
-        if (!r.started_at) return true;
-        const startedMs = new Date(r.started_at).getTime();
-        return nowMs - startedMs >= fifteenMinutesMs;
-      })
-      .map((r) => r.id);
-
-    if (staleIds.length > 0) {
-      await adminClient
-        .from("ingest_runs")
-        .update({
-          status: "abandonada",
-          finished_at: new Date().toISOString(),
-        })
-        .in("id", staleIds);
-    }
-  }
-
-  // 4. Crear la fila en ingest_runs con triggered_by y triggered_by_name de la sesión
-  const startedAt = new Date().toISOString();
-  const { data: newRun, error: insertError } = await adminClient
-    .from("ingest_runs")
-    .insert({
-      status: "running",
-      trigger_source: "boton_web",
-      triggered_by: user.id,
-      triggered_by_name: profile.full_name || user.email || "Admin",
-      started_at: startedAt,
-    })
-    .select("id, started_at, status")
-    .single();
-
-  if (insertError || !newRun) {
-    console.error("[run-ingesta] Error insertando ingest_run:", insertError);
-    return NextResponse.json({ error: "Error al registrar la corrida" }, { status: 500 });
-  }
-
-  // 5. Invocación de webhook de WF-00
-  const webhookUrl = process.env.N8N_WF00_WEBHOOK_URL || process.env.WF00_WEBHOOK_URL;
-  const runSecret = process.env.N8N_RUN_SECRET || process.env.WF00_RUN_SECRET;
-
-  if (webhookUrl) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10000);
-      const n8nRes = await fetch(webhookUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(runSecret ? { "X-Run-Secret": runSecret } : {}),
-        },
-        body: JSON.stringify({ run_id: newRun.id }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-      if (!n8nRes.ok) {
-        console.warn(`[run-ingesta] WF-00 respondió con código ${n8nRes.status}`);
-      }
-    } catch (webhookErr) {
-      console.error("[run-ingesta] Error al invocar webhook WF-00:", webhookErr);
-    }
-  } else {
-    console.log(
-      "[run-ingesta] N8N_WF00_WEBHOOK_URL no configurado aún en este entorno. Corrida registrada:",
-      newRun.id
-    );
-  }
-
-  // 6. Respuesta con run_id para seguimiento
-  return NextResponse.json({
-    run_id: newRun.id,
-    status: newRun.status,
-    started_at: newRun.started_at,
+  const result = await executeRunIngestaPost({
+    getAuthContext: async () => {
+      const { client, user } = await getUserSupabaseClient(req);
+      return {
+        user: user ? { id: user.id, email: user.email } : null,
+        userClient: client,
+      };
+    },
+    createAdminClient: () => createAdminClient(),
   });
+
+  return NextResponse.json(result.body, { status: result.status });
 }
 
 /**

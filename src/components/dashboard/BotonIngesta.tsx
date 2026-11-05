@@ -67,9 +67,16 @@ function formatDate(isoStr: string | null | undefined): string {
   }
 }
 
-export default function BotonIngesta() {
+interface BotonIngestaProps {
+  isWebhookConfigured?: boolean;
+}
+
+export default function BotonIngesta({
+  isWebhookConfigured = true,
+}: BotonIngestaProps) {
   const router = useRouter();
   const [isRunning, setIsRunning] = useState(false);
+  const [notConfigured, setNotConfigured] = useState(!isWebhookConfigured);
   const [loadState, setLoadState] = useState<RunLoadState>('loading');
   const [lastRun, setLastRun] = useState<IngestRun | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -77,6 +84,10 @@ export default function BotonIngesta() {
   const [unavailableDetail, setUnavailableDetail] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(true);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    setNotConfigured(!isWebhookConfigured);
+  }, [isWebhookConfigured]);
 
   const stopPolling = useCallback(() => {
     if (pollIntervalRef.current) {
@@ -209,6 +220,8 @@ export default function BotonIngesta() {
   }, [fetchRunStatus, startPolling, stopPolling]);
 
   const handleTriggerIngesta = async () => {
+    if (notConfigured) return;
+
     setErrorMsg(null);
     setIsRunning(true);
 
@@ -223,6 +236,12 @@ export default function BotonIngesta() {
       if (res.status === 403 || data?.code === '42501') {
         setLoadState('forbidden');
         setLastRun(null);
+        setIsRunning(false);
+        return;
+      }
+
+      if (data?.state === 'not_configured') {
+        setNotConfigured(true);
         setIsRunning(false);
         return;
       }
@@ -242,6 +261,19 @@ export default function BotonIngesta() {
 
       if (!res.ok) {
         setErrorMsg(data.error || 'Ocurrió un error al iniciar la ingesta.');
+        if (data?.run_id && data?.status) {
+          setLoadState('has_run');
+          setLastRun({
+            id: data.run_id,
+            started_at: data.started_at || new Date().toISOString(),
+            finished_at: data.finished_at || new Date().toISOString(),
+            triggered_by_name: null,
+            trigger_source: 'boton_web',
+            n8n_execution_id: null,
+            status: data.status,
+            summary: data.summary || null,
+          });
+        }
         setIsRunning(false);
         return;
       }
@@ -308,10 +340,12 @@ export default function BotonIngesta() {
           <button
             type="button"
             onClick={handleTriggerIngesta}
-            disabled={isRunning || loadState === 'forbidden'}
+            disabled={notConfigured || isRunning || loadState === 'forbidden'}
             className={`${styles.runBtn} ${isRunning ? styles.runBtnRunning : ''}`}
           >
-            {isRunning ? (
+            {notConfigured ? (
+              <span>La ingesta automática todavía no está conectada</span>
+            ) : isRunning ? (
               <>
                 <RefreshCw size={15} className={styles.spinIcon} />
                 <span>Procesando ingesta...</span>
@@ -442,11 +476,16 @@ export default function BotonIngesta() {
                   <AlertCircle size={12} /> Error general
                 </span>
               )}
-              {lastRun.status === 'abandonada' && (
-                <span className={`${styles.statusBadge} ${styles.badgeAbandonada}`}>
-                  <Clock size={12} /> Abandonada (&gt;15 min)
-                </span>
-              )}
+              {lastRun.status === 'abandonada' &&
+                (sources.some((s) => s.source === 'wf00_disparo' && s.status === 'error') ? (
+                  <span className={`${styles.statusBadge} ${styles.badgeError}`}>
+                    <AlertCircle size={12} /> Falló el disparo
+                  </span>
+                ) : (
+                  <span className={`${styles.statusBadge} ${styles.badgeAbandonada}`}>
+                    <Clock size={12} /> Abandonada (&gt;15 min)
+                  </span>
+                ))}
               {lastRun.status === 'partial' && (
                 <span className={`${styles.statusBadge} ${styles.badgeRunning}`}>
                   Parcial
