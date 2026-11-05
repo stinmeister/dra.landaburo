@@ -12,6 +12,7 @@ import {
   dispatchOrderPreferenceToMp,
   BUYER_SITE_URL_MISCONFIGURED_MESSAGE,
 } from '@/lib/mercadopago/preferenceRuntime';
+import { normalizeArgentinePhone } from '@/lib/phoneAr';
 
 interface CartItemPayload {
   id: string;
@@ -173,16 +174,18 @@ export async function POST(req: NextRequest) {
   // Calcular total usando precios de la BD, no del cliente
   const totalARS = items.reduce((sum, i) => sum + priceMap.get(i.id)! * i.quantity, 0);
 
+  const normalizedBuyerPhone = buyer.phone ? normalizeArgentinePhone(buyer.phone) : '';
+
   // Crear orden en Supabase (poblando customer_*, buyer_* y datos de entrega)
   const { data: order, error: orderError } = await supabase
     .from('orders')
     .insert({
       customer_name: buyer.name.trim(),
       customer_email: buyer.email.trim().toLowerCase(),
-      customer_phone: buyer.phone?.trim() || null,
+      customer_phone: normalizedBuyerPhone || null,
       buyer_name: buyer.name.trim(),
       buyer_email: buyer.email.trim().toLowerCase(),
-      buyer_phone: buyer.phone?.trim() || null,
+      buyer_phone: normalizedBuyerPhone || null,
       total_ars: totalARS,
       payment_status: 'pending',
       payment_method: 'mercadopago',
@@ -229,7 +232,10 @@ export async function POST(req: NextRequest) {
       quantity: i.quantity,
       unitPriceArs: priceMap.get(i.id)!, // precio verificado desde la BD
     })),
-    buyer,
+    buyer: {
+      ...buyer,
+      phone: normalizedBuyerPhone || null,
+    },
   });
 
   const dispatchResult = await dispatchOrderPreferenceToMp({

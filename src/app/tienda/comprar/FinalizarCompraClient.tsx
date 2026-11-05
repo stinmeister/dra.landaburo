@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useCart, type CartItem } from '@/contexts/CartContext';
 import { useResetOnPageShow } from '@/hooks/useResetOnPageShow';
+import { normalizeArgentinePhone, shouldWarnNonArgentinePhone } from '@/lib/phoneAr';
 import { trackBeginCheckout } from '@/lib/tracking';
 import { buildStoreWhatsappUrl } from '@/lib/storeWhatsapp';
 import styles from './comprar.module.css';
@@ -203,6 +204,13 @@ export default function FinalizarCompraClient({
     setBuyer((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handlePhoneBlur = () => {
+    setBuyer((prev) => {
+      const normalized = normalizeArgentinePhone(prev.phone);
+      return normalized === prev.phone ? prev : { ...prev, phone: normalized };
+    });
+  };
+
   const handleDeliveryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setDeliveryForm((prev) => ({ ...prev, [name]: value }));
@@ -235,6 +243,11 @@ export default function FinalizarCompraClient({
       }
     }
 
+    const normalizedPhone = normalizeArgentinePhone(buyer.phone);
+    if (normalizedPhone !== buyer.phone) {
+      setBuyer((prev) => ({ ...prev, phone: normalizedPhone }));
+    }
+
     setLoading(true);
     trackBeginCheckout(checkoutItems, totalARS);
 
@@ -247,7 +260,7 @@ export default function FinalizarCompraClient({
           buyer: {
             name: buyer.name.trim(),
             email: buyer.email.trim(),
-            phone: buyer.phone.trim(),
+            phone: normalizedPhone,
           },
           delivery: {
             method: deliveryMethod,
@@ -563,9 +576,15 @@ export default function FinalizarCompraClient({
                   className={styles.input}
                   value={buyer.phone}
                   onChange={handleBuyerChange}
+                  onBlur={handlePhoneBlur}
                   autoComplete="tel"
                   placeholder="Ej: 3446 412345"
                 />
+                {shouldWarnNonArgentinePhone(buyer.phone) && (
+                  <p className={styles.softNotice} role="status">
+                    ¿Es correcto? Lo usamos para coordinar el retiro por WhatsApp.
+                  </p>
+                )}
               </div>
             </div>
           </section>
