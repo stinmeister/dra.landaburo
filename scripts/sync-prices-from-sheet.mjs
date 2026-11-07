@@ -429,14 +429,14 @@ async function main() {
     appliedCount++;
     auditEntries.push({
       run_id: runId,
-      synced_at: isoNow,
+      occurred_at: isoNow,
       entity_type: u.entityType,
       entity_id: u.entityId,
       codigo_web: u.codigoWeb,
       entity_name: u.entityName,
-      tab_name: u.tab,
-      row_number: u.rowNumber,
-      raw_cell: u.rawPrice,
+      sheet_tab: u.tab,
+      sheet_row: u.rowNumber,
+      source_raw_value: u.rawPrice,
       old_price_ars: u.oldPriceArs,
       new_price_ars: u.newPriceArs,
       pct_change: u.pctChange,
