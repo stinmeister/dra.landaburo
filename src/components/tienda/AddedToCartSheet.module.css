@@ -1,8 +1,8 @@
 .backdrop {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.42);
-  z-index: 1190;
+  background-color: rgba(0, 0, 0, 0.44);
+  z-index: 10010;
   animation: fadeIn 0.2s ease-out;
 }
 
@@ -12,27 +12,29 @@
   right: 0;
   bottom: 0;
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
+  max-height: 100dvh;
   background-color: var(--color-blanco);
   border-left: 1px solid var(--color-gris-claro);
-  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.14);
-  z-index: 1200;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.16);
+  z-index: 10020;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  padding: 1.75rem 1.5rem;
+  padding: 1.5rem 1.5rem;
   animation: slideInRight 0.24s cubic-bezier(0.16, 1, 0.3, 1);
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .grabHandle {
   display: none;
 }
 
-.topBlock {
+.headerBlock {
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0.75rem;
 }
 
 .header {
@@ -40,7 +42,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding-bottom: 1rem;
+  padding-bottom: 0.9rem;
   border-bottom: 1px solid var(--color-gris-claro);
 }
 
@@ -51,8 +53,8 @@
 }
 
 .checkBadge {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background-color: rgba(197, 164, 126, 0.18);
   border: 1px solid var(--color-champagne);
@@ -67,20 +69,28 @@
 
 .title {
   font-family: var(--font-serif);
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   font-weight: 400;
   color: var(--color-negro);
   margin: 0;
+  line-height: 1.2;
+}
+
+.headerSubnote {
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  color: var(--color-gris);
+  margin: 0.15rem 0 0;
 }
 
 .closeBtn {
   background: transparent;
   border: none;
   color: var(--color-gris);
-  font-size: 1.4rem;
+  font-size: 1.45rem;
   line-height: 1;
   cursor: pointer;
-  padding: 0.25rem 0.4rem;
+  padding: 0.25rem 0.45rem;
   transition: color 0.2s ease;
 }
 
@@ -88,21 +98,51 @@
   color: var(--color-negro);
 }
 
+.stockCapNotice {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  background-color: #faf7f2;
+  border: 1px solid var(--color-champagne);
+  border-radius: 4px;
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  color: var(--color-negro);
+}
+
+.itemsList {
+  list-style: none;
+  margin: 0.9rem 0;
+  padding: 0 0.2rem 0 0;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
 .productRow {
   display: grid;
-  grid-template-columns: 76px 1fr;
-  gap: 1rem;
+  grid-template-columns: 64px 1fr auto;
+  gap: 0.85rem;
   align-items: center;
-  padding: 0.85rem;
-  background-color: #faf9f7;
+  padding: 0.75rem;
+  background-color: var(--color-blanco);
   border: 1px solid var(--color-gris-claro);
-  border-radius: 4px;
+  border-radius: 6px;
+}
+
+.productRowHighlighted {
+  background-color: #faf7f2;
+  border-color: var(--color-champagne);
+  box-shadow: 0 2px 10px rgba(197, 164, 126, 0.14);
 }
 
 .imageBox {
   position: relative;
-  width: 76px;
-  height: 76px;
+  width: 64px;
+  height: 64px;
   background-color: var(--color-blanco);
   border: 1px solid var(--color-gris-claro);
   border-radius: 4px;
@@ -124,47 +164,88 @@
 .productInfo {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.2rem;
   min-width: 0;
+}
+
+.recentBadge {
+  display: inline-block;
+  align-self: flex-start;
+  font-family: var(--font-sans);
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-champagne-dark);
+  background-color: rgba(197, 164, 126, 0.18);
+  padding: 0.12rem 0.45rem;
+  border-radius: 3px;
 }
 
 .productName {
   font-family: var(--font-sans);
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: var(--color-negro);
   margin: 0;
-  line-height: 1.35;
+  line-height: 1.3;
 }
 
 .productMeta {
   font-family: var(--font-sans);
-  font-size: 0.84rem;
+  font-size: 0.78rem;
   color: var(--color-gris);
   margin: 0;
+  line-height: 1.3;
 }
 
-.productPrice {
+.productSubtotal {
   font-family: var(--font-sans);
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 600;
   color: var(--color-negro);
-  margin: 0.1rem 0 0;
+  margin: 0;
+  white-space: nowrap;
+  text-align: right;
 }
 
-.cartSummaryNote {
+.footerBlock {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding-top: 0.95rem;
+  border-top: 1px solid var(--color-gris-claro);
+  background-color: var(--color-blanco);
+}
+
+.totalRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.totalLabel {
   font-family: var(--font-sans);
-  font-size: 0.82rem;
-  color: var(--color-gris);
-  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-negro);
+}
+
+.totalAmount {
+  font-family: var(--font-sans);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-negro);
 }
 
 .actions {
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--color-gris-claro);
+  gap: 0.6rem;
 }
 
 .primaryBtn {
@@ -172,11 +253,11 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  padding: 0.9rem 1.25rem;
+  padding: 0.88rem 1.25rem;
   background-color: var(--color-negro);
   color: var(--color-blanco);
   font-family: var(--font-sans);
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -198,11 +279,11 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  padding: 0.85rem 1.25rem;
+  padding: 0.82rem 1.25rem;
   background-color: var(--color-blanco);
   color: var(--color-negro);
   font-family: var(--font-sans);
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   font-weight: 500;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -218,7 +299,7 @@
   color: var(--color-champagne-dark);
 }
 
-/* Mobile: hoja inferior (bottom sheet) */
+/* Mobile: hoja inferior (bottom sheet) con lista scrolleable y botones fijos abajo */
 @media (max-width: 767px) {
   .sheet {
     top: auto;
@@ -226,12 +307,12 @@
     right: 0;
     bottom: 0;
     max-width: 100%;
+    max-height: min(82dvh, calc(100vh - 20px));
     border-left: none;
     border-top: 1px solid var(--color-gris-claro);
     border-radius: 14px 14px 0 0;
-    padding: 0.85rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom, 0px));
-    gap: 1rem;
-    box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.18);
+    padding: 0.75rem 1.15rem calc(1.1rem + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.2);
     animation: slideInUp 0.24s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
@@ -241,7 +322,22 @@
     height: 4px;
     border-radius: 999px;
     background-color: var(--color-gris-claro);
-    margin: 0 auto 0.5rem;
+    margin: 0 auto 0.35rem;
+  }
+
+  .itemsList {
+    margin: 0.75rem 0;
+  }
+
+  .productRow {
+    grid-template-columns: 56px 1fr auto;
+    gap: 0.7rem;
+    padding: 0.65rem;
+  }
+
+  .imageBox {
+    width: 56px;
+    height: 56px;
   }
 }
 

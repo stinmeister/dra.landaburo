@@ -326,6 +326,8 @@ export default function FinalizarCompraClient({
                 const maxDirectStock =
                   mode === 'direct' && directProduct
                     ? Math.max(1, directProduct.stock_quantity)
+                    : typeof item.max_stock === 'number' && item.max_stock > 0
+                    ? item.max_stock
                     : undefined;
                 return (
                   <li key={item.id} className={styles.itemRow}>
@@ -621,7 +623,7 @@ export default function FinalizarCompraClient({
             {error && (
               <div className={styles.errorMsg}>
                 <p style={{ margin: 0 }}>{error}</p>
-                {/whatsapp/i.test(error) && (
+                {/whatsapp/i.test(error) && Boolean(waCheckoutUrl) && (
                   <a
                     href={waCheckoutUrl}
                     target="_blank"
@@ -639,17 +641,21 @@ export default function FinalizarCompraClient({
                 <button type="button" className={styles.payBtn} disabled>
                   Los pagos online están temporalmente desactivados
                 </button>
-                <p className={styles.payHelper} style={{ marginTop: '0.65rem' }}>
-                  Escribinos por WhatsApp para coordinar tu compra:
-                </p>
-                <a
-                  href={waCheckoutUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.whatsappBtn}
-                >
-                  Escribir por WhatsApp
-                </a>
+                {waCheckoutUrl && (
+                  <>
+                    <p className={styles.payHelper} style={{ marginTop: '0.65rem' }}>
+                      Escribinos por WhatsApp para coordinar tu compra:
+                    </p>
+                    <a
+                      href={waCheckoutUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.whatsappBtn}
+                    >
+                      Escribir por WhatsApp
+                    </a>
+                  </>
+                )}
               </div>
             ) : (
               <>

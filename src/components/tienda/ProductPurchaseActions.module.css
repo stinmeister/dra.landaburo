@@ -152,8 +152,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  text-align: center;
   width: 100%;
-  padding: 0.88rem 1.75rem;
+  padding: 0.88rem 1.25rem;
   background-color: var(--color-blanco);
   color: var(--color-negro);
   font-family: var(--font-sans);
@@ -161,6 +162,7 @@
   font-weight: 500;
   letter-spacing: 0.05em;
   text-transform: uppercase;
+  line-height: 1.35;
   border: 1px solid var(--color-negro);
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -168,10 +170,29 @@
   box-sizing: border-box;
 }
 
-.addCartBtn:hover:not(:disabled) {
+.addCartBtn:hover:not(:disabled):not(.addCartBtnAtLimit) {
   border-color: var(--color-champagne-dark);
   color: var(--color-champagne-dark);
   background-color: #faf9f7;
+}
+
+.addCartBtnAtLimit {
+  background-color: #faf7f2;
+  border-color: var(--color-champagne);
+  color: var(--color-negro);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0.01em;
+}
+
+.addCartBtnAtLimit:hover {
+  background-color: #f3ede2;
+  border-color: var(--color-champagne-dark);
+}
+
+.addCartBtnPulse {
+  animation: fichaLimitPulse 0.36s ease-out;
 }
 
 .addCartBtn:disabled {
@@ -179,4 +200,33 @@
   border-color: var(--color-gris-claro);
   color: var(--color-gris);
   cursor: not-allowed;
+}
+
+.limitNoticeRow {
+  margin: 0.1rem 0 0;
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: var(--color-gris);
+}
+
+.limitNoticeLink {
+  color: var(--color-champagne-dark);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@keyframes fichaLimitPulse {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(0.985);
+    box-shadow: 0 0 0 3px rgba(197, 164, 126, 0.35);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(197, 164, 126, 0);
+  }
 }

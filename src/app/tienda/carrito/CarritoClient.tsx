@@ -85,6 +85,10 @@ export default function CarritoClient() {
                           type="button"
                           className={styles.qtyBtn}
                           onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          disabled={
+                            typeof item.max_stock === 'number' &&
+                            item.quantity >= item.max_stock
+                          }
                           aria-label="Aumentar cantidad"
                         >
                           +
@@ -99,6 +103,11 @@ export default function CarritoClient() {
                         Eliminar
                       </button>
                     </div>
+                    {typeof item.max_stock === 'number' && item.quantity >= item.max_stock && (
+                      <p style={{ margin: '0.25rem 0 0', fontSize: '0.76rem', color: 'var(--color-gris)' }}>
+                        Máximo disponible en stock ({item.max_stock} {item.max_stock === 1 ? 'unidad' : 'unidades'})
+                      </p>
+                    )}
                   </div>
                   <p className={styles.itemSubtotal}>
                     {formatARS(item.price_ars * item.quantity)}
