@@ -99,38 +99,46 @@ export default async function PagoExitoPage({
           </p>
 
           {!isGiftCard && deliveryMethod !== 'envio' ? (
-            <div className={styles.pickupCallout}>
-              {pickupAddress && (
-                <p className={styles.pickupAddressLine}>
-                  <strong>📍 Retiro en consultorio:</strong> {pickupAddress}
-                </p>
-              )}
-              <p className={styles.pickupPrompt}>
-                Escribinos por WhatsApp para coordinar el día y horario de retiro.
-              </p>
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles.btnWhatsapp}
-              >
-                Contactar por WhatsApp
-              </a>
-            </div>
+            (pickupAddress || whatsappUrl) && (
+              <div className={styles.pickupCallout}>
+                {pickupAddress && (
+                  <p className={styles.pickupAddressLine}>
+                    <strong>📍 Retiro en consultorio:</strong> {pickupAddress}
+                  </p>
+                )}
+                {whatsappUrl && (
+                  <>
+                    <p className={styles.pickupPrompt}>
+                      Escribinos por WhatsApp para coordinar el día y horario de retiro.
+                    </p>
+                    <a
+                      href={whatsappUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.btnWhatsapp}
+                    >
+                      Contactar por WhatsApp
+                    </a>
+                  </>
+                )}
+              </div>
+            )
           ) : (
-            <div className={styles.pickupCallout}>
-              <p className={styles.pickupPrompt}>
-                Escribinos por WhatsApp para coordinar la entrega.
-              </p>
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles.btnWhatsapp}
-              >
-                Contactar por WhatsApp
-              </a>
-            </div>
+            whatsappUrl && (
+              <div className={styles.pickupCallout}>
+                <p className={styles.pickupPrompt}>
+                  Escribinos por WhatsApp para coordinar la entrega.
+                </p>
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.btnWhatsapp}
+                >
+                  Contactar por WhatsApp
+                </a>
+              </div>
+            )
           )}
 
           <div className={styles.actions}>

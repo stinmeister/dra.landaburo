@@ -1,24 +1,41 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
-import { Playfair_Display, IBM_Plex_Sans } from 'next/font/google';
+import localFont from 'next/font/local';
 import CookieBanner from '@/components/ui/CookieBanner';
 import TrackingScripts from '@/components/tracking/TrackingScripts';
 import { CartProvider } from '@/contexts/CartContext';
 import { ConsentProvider } from '@/contexts/ConsentContext';
 import './globals.css';
 
-const playfair = Playfair_Display({
-  subsets: ['latin'],
+const playfair = localFont({
+  src: [
+    {
+      path: '../fonts/PlayfairDisplay-Variable-latin.woff2',
+      weight: '400 700',
+      style: 'normal',
+    },
+    {
+      path: '../fonts/PlayfairDisplay-Italic-Variable-latin.woff2',
+      weight: '400 700',
+      style: 'italic',
+    },
+  ],
   variable: '--font-playfair',
   display: 'swap',
-  weight: ['400', '500', '600', '700'],
+  fallback: ['Georgia', 'serif'],
 });
 
-const ibmPlex = IBM_Plex_Sans({
-  subsets: ['latin'],
+const ibmPlex = localFont({
+  src: [
+    {
+      path: '../fonts/IBMPlexSans-Variable-latin.woff2',
+      weight: '300 700',
+      style: 'normal',
+    },
+  ],
   variable: '--font-ibm-plex',
   display: 'swap',
-  weight: ['300', '400', '500', '600', '700'],
+  fallback: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
 });
 
 export const metadata: Metadata = {

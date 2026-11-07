@@ -84,7 +84,9 @@ export function buildBuyerOrderEmailHtml({
           <p style="margin: 6px 0; font-size: 14px; color: #333333;">
             <strong>Cuándo retirar:</strong> ${storeConfig.pickup_hours || 'A coordinar'}
           </p>
-          <p style="margin: 14px 0 12px; font-size: 14px; color: #1C1C1C;">
+          ${
+            pickupWaUrl
+              ? `<p style="margin: 14px 0 12px; font-size: 14px; color: #1C1C1C;">
             Escribinos por WhatsApp para coordinar el día y horario de retiro.
           </p>
           <a
@@ -94,7 +96,9 @@ export function buildBuyerOrderEmailHtml({
             rel="noopener noreferrer"
           >
             Contactar por WhatsApp
-          </a>
+          </a>`
+              : ''
+          }
         </div>
       `
     : `
@@ -115,7 +119,9 @@ export function buildBuyerOrderEmailHtml({
             Coordinaremos el despacho a la brevedad y te enviaremos la información de seguimiento.
           </p>
         </div>
-        <div style="text-align: center; margin-top: 24px; padding: 18px; background: #fafafa; border-radius: 6px;">
+        ${
+          supportWaUrl
+            ? `<div style="text-align: center; margin-top: 24px; padding: 18px; background: #fafafa; border-radius: 6px;">
           <p style="margin: 0 0 12px; font-size: 14px; color: #444444;">
             ¿Tenés dudas con tu pedido o necesitás coordinar la entrega?
           </p>
@@ -127,7 +133,9 @@ export function buildBuyerOrderEmailHtml({
           >
             Contactar por WhatsApp
           </a>
-        </div>
+        </div>`
+            : ''
+        }
       `;
 
   return `

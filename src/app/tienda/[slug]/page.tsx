@@ -9,8 +9,7 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import ProductPurchaseActions from '@/components/tienda/ProductPurchaseActions';
 import ProductViewTracker from '@/components/tienda/ProductViewTracker';
-import { buildStoreWhatsappUrl } from '@/lib/storeWhatsapp';
-import { siteContent } from '@/data/site-content';
+import { buildStoreWhatsappUrl, formatStoreWhatsappDisplay } from '@/lib/storeWhatsapp';
 import { MessageCircle, MapPin } from 'lucide-react';
 import type { Product } from '@/lib/types/product';
 import styles from './producto.module.css';
@@ -183,16 +182,29 @@ export default async function ProductoPage({ params }: Props) {
               </div>
 
               {/* Botón directo de WhatsApp para consultas */}
-              <a
-                href={buildStoreWhatsappUrl(`Hola, quisiera consultar sobre el producto "${product.name}".`)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles.whatsappCta}
-                aria-label="Consultar por WhatsApp"
-              >
-                <MessageCircle size={18} />
-                <span>Consultar por WhatsApp ({siteContent.contact.phone})</span>
-              </a>
+              {(() => {
+                const cfgWhatsapp = (storeConfig as Record<string, unknown> | null)
+                  ?.whatsapp_number as string | undefined;
+                const productWaUrl = buildStoreWhatsappUrl(
+                  `Hola, quisiera consultar sobre el producto "${product.name}".`,
+                  undefined,
+                  cfgWhatsapp
+                );
+                const productWaDisplay = formatStoreWhatsappDisplay(undefined, cfgWhatsapp);
+                if (!productWaUrl) return null;
+                return (
+                  <a
+                    href={productWaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.whatsappCta}
+                    aria-label="Consultar por WhatsApp"
+                  >
+                    <MessageCircle size={18} />
+                    <span>Consultar por WhatsApp ({productWaDisplay})</span>
+                  </a>
+                );
+              })()}
 
               <p className={styles.disclaimer}>
                 Producto recomendado por la Dra. Landaburo para uso en el hogar.

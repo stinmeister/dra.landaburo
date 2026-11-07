@@ -216,19 +216,19 @@ export default function OrdersInbox({ orders }: { orders: OrderRecord[] }) {
                     <span>Meta CAPI:</span>
                     {order.meta_capi_status === 'sent' ? (
                       <span className={styles.emailOk}>Enviado ✓</span>
+                    ) : order.meta_capi_status === 'skipped' ? (
+                      <span
+                        className={styles.authorshipText}
+                        title={order.meta_capi_error || 'META_CONVERSIONS_API_TOKEN no configurado'}
+                      >
+                        Meta: no configurado
+                      </span>
                     ) : order.meta_capi_status === 'failed' || order.meta_capi_error ? (
                       <span
                         className={styles.emailError}
                         title={`Error CAPI: ${order.meta_capi_error || 'Error al despachar a Meta'}`}
                       >
                         Error en CAPI ⚠️
-                      </span>
-                    ) : order.meta_capi_status === 'skipped' ? (
-                      <span
-                        className={styles.authorshipText}
-                        title={order.meta_capi_error || 'META_CONVERSIONS_API_TOKEN no configurado'}
-                      >
-                        No intentado (falta token)
                       </span>
                     ) : order.meta_capi_event_id ? (
                       <span className={styles.authorshipText}>Pendiente de respuesta</span>

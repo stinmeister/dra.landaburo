@@ -7,8 +7,7 @@ import { createClient } from '@/lib/supabase/server';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import ProductCard from '@/components/tienda/ProductCard';
-import { buildStoreWhatsappUrl } from '@/lib/storeWhatsapp';
-import { siteContent } from '@/data/site-content';
+import { buildStoreWhatsappUrl, formatStoreWhatsappDisplay } from '@/lib/storeWhatsapp';
 import { MapPin, MessageCircle } from 'lucide-react';
 import type { Product } from '@/lib/types/product';
 import styles from './tienda.module.css';
@@ -88,24 +87,39 @@ export default async function TiendaPage({
           </div>
 
           {/* Banner de información de entrega y WhatsApp oficial */}
-          <div className={styles.storeInfoBanner}>
-            <div className={styles.storeInfoItem}>
-              <MapPin size={18} className={styles.storeInfoIcon} />
-              <span>
-                <strong>Retiro sin costo en consultorio:</strong> {pickupAddress} ({pickupHours})
-              </span>
-            </div>
-            <a
-              href={buildStoreWhatsappUrl('Hola, quisiera consultar sobre los productos de la tienda.')}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.storeInfoWhatsapp}
-              aria-label="Consultas por WhatsApp"
-            >
-              <MessageCircle size={16} />
-              <span>Consultas: {siteContent.contact.phone}</span>
-            </a>
-          </div>
+          {(() => {
+            const cfgWhatsapp = (storeConfig as Record<string, unknown> | null)?.whatsapp_number as
+              | string
+              | undefined;
+            const storeWaUrl = buildStoreWhatsappUrl(
+              'Hola, quisiera consultar sobre los productos de la tienda.',
+              undefined,
+              cfgWhatsapp
+            );
+            const storeWaDisplay = formatStoreWhatsappDisplay(undefined, cfgWhatsapp);
+            return (
+              <div className={styles.storeInfoBanner}>
+                <div className={styles.storeInfoItem}>
+                  <MapPin size={18} className={styles.storeInfoIcon} />
+                  <span>
+                    <strong>Retiro sin costo en consultorio:</strong> {pickupAddress} ({pickupHours})
+                  </span>
+                </div>
+                {storeWaUrl && (
+                  <a
+                    href={storeWaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.storeInfoWhatsapp}
+                    aria-label="Consultas por WhatsApp"
+                  >
+                    <MessageCircle size={16} />
+                    <span>Consultas: {storeWaDisplay}</span>
+                  </a>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Banner discreto de Gift Cards */}
           <aside className={styles.giftCardBanner} aria-label="Gift Cards">
