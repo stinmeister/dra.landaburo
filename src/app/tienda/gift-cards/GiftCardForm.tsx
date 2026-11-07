@@ -51,7 +51,11 @@ export default function GiftCardForm({ catalog }: { catalog: GiftCardCatalogItem
       maximumFractionDigits: 0,
     }).format(n);
 
-  const filteredCatalog = catalog.filter(
+  const validCatalog = catalog.filter(
+    (item) => Number.isFinite(item.price_ars) && item.price_ars > 0
+  );
+
+  const filteredCatalog = validCatalog.filter(
     (item) => filter === 'all' || item.type === filter
   );
 
@@ -62,6 +66,7 @@ export default function GiftCardForm({ catalog }: { catalog: GiftCardCatalogItem
 
   // 1. Agregar item del catálogo
   const handleAddItem = (item: GiftCardCatalogItem) => {
+    if (!Number.isFinite(item.price_ars) || item.price_ars <= 0) return;
     setSelectedItems((prev) => {
       const existing = prev.find(
         (i) =>
@@ -480,30 +485,36 @@ export default function GiftCardForm({ catalog }: { catalog: GiftCardCatalogItem
               {error && (
                 <div className={styles.errorMsg}>
                   <p style={{ margin: 0 }}>{error}</p>
-                  {/whatsapp/i.test(error) && (
-                    <a
-                      href={buildStoreWhatsappUrl(
-                        `Hola! Quisiera comprar una Gift Card por ${formatARS(totalARS)} (${selectedItems
-                          .map((i) => `${i.quantity}x ${i.title}`)
-                          .join(', ')}).`
-                      )}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        display: 'inline-block',
-                        marginTop: '0.6rem',
-                        backgroundColor: '#25D366',
-                        color: '#ffffff',
-                        textDecoration: 'none',
-                        padding: '0.55rem 1rem',
-                        borderRadius: '4px',
-                        fontWeight: 600,
-                        fontSize: '0.82rem',
-                      }}
-                    >
-                      Escribir por WhatsApp
-                    </a>
-                  )}
+                  {(() => {
+                    const waGiftUrl = /whatsapp/i.test(error)
+                      ? buildStoreWhatsappUrl(
+                          `Hola! Quisiera comprar una Gift Card por ${formatARS(totalARS)} (${selectedItems
+                            .map((i) => `${i.quantity}x ${i.title}`)
+                            .join(', ')}).`
+                        )
+                      : '';
+                    if (!waGiftUrl) return null;
+                    return (
+                      <a
+                        href={waGiftUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-block',
+                          marginTop: '0.6rem',
+                          backgroundColor: '#25D366',
+                          color: '#ffffff',
+                          textDecoration: 'none',
+                          padding: '0.55rem 1rem',
+                          borderRadius: '4px',
+                          fontWeight: 600,
+                          fontSize: '0.82rem',
+                        }}
+                      >
+                        Escribir por WhatsApp
+                      </a>
+                    );
+                  })()}
                 </div>
               )}
 

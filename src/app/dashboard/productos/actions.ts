@@ -190,6 +190,7 @@ export async function createProduct(
     revalidatePath('/dashboard/productos');
     revalidatePath('/dashboard/operativo');
     revalidatePath('/tienda');
+    revalidatePath('/tienda/gift-cards');
 
     return { success: true, product: newProduct };
   } catch (err: any) {
@@ -211,6 +212,7 @@ export async function toggleProduct(formData: FormData) {
 
   revalidatePath('/dashboard/productos');
   revalidatePath('/tienda');
+  revalidatePath('/tienda/gift-cards');
 }
 
 async function assertAdminOnly() {
@@ -371,6 +373,7 @@ export async function deleteProduct(
 
     revalidatePath('/dashboard/productos');
     revalidatePath('/tienda');
+    revalidatePath('/tienda/gift-cards');
 
     return { success: true };
   } catch (err: any) {
@@ -440,6 +443,7 @@ export async function archiveProduct(
 
     revalidatePath('/dashboard/productos');
     revalidatePath('/tienda');
+    revalidatePath('/tienda/gift-cards');
 
     return { success: true };
   } catch (err: any) {
@@ -544,6 +548,7 @@ export async function updateStock(
     revalidatePath('/dashboard/productos');
     revalidatePath('/dashboard/operativo');
     revalidatePath('/tienda');
+    revalidatePath('/tienda/gift-cards');
 
     return { success: true, newStock: result.stockAfter };
   } catch (err: any) {
@@ -594,6 +599,7 @@ export async function adjustStockWithMovement(
     revalidatePath('/dashboard/productos');
     revalidatePath('/dashboard/operativo');
     revalidatePath('/tienda');
+    revalidatePath('/tienda/gift-cards');
 
     return { success: true, newStock: result.stockAfter };
   } catch (err: any) {
@@ -1282,9 +1288,18 @@ export async function getStockReportData(
       const isBalanced = stockInitial + netChange === stockFinal;
       if (!isBalanced) allBalanced = false;
 
+      // Conciliar contra la caché actual del catálogo únicamente si "Hasta" es hoy o una fecha futura (hora Argentina)
+      const todayArStr = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Argentina/Buenos_Aires',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date());
+      const isHistoricalPeriod = endDateStr < todayArStr;
+
       const catalogStock = prod.stock_quantity ?? 0;
-      const isCatalogSynced = stockFinal === catalogStock;
-      const catalogDiff = catalogStock - stockFinal;
+      const isCatalogSynced = isHistoricalPeriod ? true : stockFinal === catalogStock;
+      const catalogDiff = isHistoricalPeriod ? 0 : catalogStock - stockFinal;
       if (!isCatalogSynced) {
         allCatalogSynced = false;
         catalogDiscrepanciesCount++;
@@ -1316,6 +1331,14 @@ export async function getStockReportData(
       });
     }
 
+    const todayArFinal = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Argentina/Buenos_Aires',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+    const isHistoricalPeriod = endDateStr < todayArFinal;
+
     const activeCount = summary.filter((s) => !s.isArchived).length;
     const archivedCount = summary.filter((s) => s.isArchived).length;
 
@@ -1323,6 +1346,7 @@ export async function getStockReportData(
       success: true,
       startDate: startDateStr,
       endDate: endDateStr,
+      isHistoricalPeriod,
       summary,
       movements: periodMovements,
       allBalanced,

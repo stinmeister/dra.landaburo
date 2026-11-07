@@ -163,6 +163,20 @@ export default function MovimientosClient({ initialData }: Props) {
             <strong>Discrepancia detectada en la ecuación:</strong> Al menos un producto presenta diferencias entre la suma acumulada de movimientos y el stock de cierre del libro.
           </div>
         </div>
+      ) : initialData.isHistoricalPeriod ? (
+        <div
+          className={styles.balanceBannerOk}
+          style={{
+            backgroundColor: '#faf7f2',
+            borderColor: 'var(--color-champagne)',
+            color: 'var(--color-negro)',
+          }}
+        >
+          <Calendar size={22} color="#a8875f" style={{ flexShrink: 0 }} />
+          <div>
+            <strong>Stock al cierre del período.</strong> La conciliación con el catálogo se hace solo hasta la fecha de hoy.
+          </div>
+        </div>
       ) : !allCatalogSynced ? (
         <div className={styles.balanceBannerDiscrepancy} style={{ backgroundColor: '#fef2f2', borderColor: '#f87171' }}>
           <AlertTriangle size={24} color="#dc2626" />
@@ -316,7 +330,14 @@ export default function MovimientosClient({ initialData }: Props) {
                   </td>
                   <td className={styles.numCell} style={{ fontWeight: 600 }}>{row.stockFinal}</td>
                   <td style={{ textAlign: 'center' }}>
-                    {row.isBalanced && row.isCatalogSynced ? (
+                    {row.isBalanced && initialData.isHistoricalPeriod ? (
+                      <span
+                        className={styles.statusBalanced}
+                        title="Stock al cierre del período verificado en el libro (Inicial + Movimientos === Final)"
+                      >
+                        <Check size={14} /> Cierre OK
+                      </span>
+                    ) : row.isBalanced && row.isCatalogSynced ? (
                       <span className={styles.statusBalanced} title="Inicial + Movimientos === Final === Catálogo">
                         <Check size={14} /> OK
                       </span>

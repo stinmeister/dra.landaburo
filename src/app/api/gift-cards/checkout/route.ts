@@ -124,12 +124,14 @@ export async function POST(req: NextRequest) {
     .map((i) => i.product_id!)
     .filter(Boolean);
 
-  // Fetch treatments if needed
+  // Fetch treatments if needed (only active cosmetology treatments with valid price > 0)
   const treatmentsMap = new Map<string, { title: string; price_ars: number }>();
   if (treatmentIds.length > 0) {
     const { data: dbTreatments, error: tErr } = await supabase
       .from('treatments')
-      .select('id, title, price_ars')
+      .select('id, title, price_ars, is_active')
+      .eq('is_active', true)
+      .gt('price_ars', 0)
       .in('id', treatmentIds);
 
     if (tErr) {
@@ -137,16 +139,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Error al verificar tratamientos.' }, { status: 500 });
     }
     dbTreatments?.forEach((t) => {
-      if (t.price_ars) treatmentsMap.set(t.id, { title: t.title, price_ars: Number(t.price_ars) });
+      const price = Number(t.price_ars);
+      if (t.is_active && Number.isFinite(price) && price > 0) {
+        treatmentsMap.set(t.id, { title: t.title, price_ars: price });
+      }
     });
   }
 
-  // Fetch products if needed
+  // Fetch products if needed (only active & public products with valid price > 0)
   const productsMap = new Map<string, { name: string; price_ars: number }>();
   if (productIds.length > 0) {
     const { data: dbProducts, error: pErr } = await supabase
       .from('products')
-      .select('id, name, price_ars')
+      .select('id, name, price_ars, is_active, is_public')
+      .eq('is_active', true)
+      .eq('is_public', true)
+      .gt('price_ars', 0)
       .in('id', productIds);
 
     if (pErr) {
@@ -154,7 +162,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Error al verificar productos.' }, { status: 500 });
     }
     dbProducts?.forEach((p) => {
-      if (p.price_ars) productsMap.set(p.id, { name: p.name, price_ars: Number(p.price_ars) });
+      const price = Number(p.price_ars);
+      if (p.is_active && p.is_public && Number.isFinite(price) && price > 0) {
+        productsMap.set(p.id, { name: p.name, price_ars: price });
+      }
     });
   }
 

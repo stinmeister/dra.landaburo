@@ -61,6 +61,7 @@ export interface StockReportData {
   success: boolean;
   startDate: string;
   endDate: string;
+  isHistoricalPeriod?: boolean;
   summary: StockReportSummaryItem[];
   movements: any[];
   allBalanced: boolean;
