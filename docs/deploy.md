@@ -33,7 +33,7 @@ ssh -i ~/.ssh/antigravity_dralandaburo bitnami@54.94.94.20 \
 1. **`git pull --ff-only origin master`** en `/opt/dra-landaburo`. Si hubiera divergencia local, aborta inmediatamente sin tocar el proceso activo.
 2. **Dependencias condicionales:** compara el hash `SHA-256` de `package-lock.json` antes y después del `pull`; solo corre `npm ci` si hubo cambios.
 3. **Directorio de compilación aislado (`/home/bitnami/dra-landaburo-build`):**
-   - Sincroniza el código fuente con `rsync` excluyendo `.next`, `.git`, `node_modules` y `public`.
+   - Copia el código fuente con `tar` excluyendo `.next`, `.git`, `node_modules`, `public` y `logs`.
    - Vincula `node_modules` y `public` mediante hardlinks locales (`cp -al`), ocupando `0 MB` adicionales en disco y evitando symlinks fuera del árbol de `output: 'standalone'`.
    - Copia `.env.local` al directorio de compilación.
 4. **Compilación aislada (`npm run build` + `postbuild`):**

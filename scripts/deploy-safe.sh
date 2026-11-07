@@ -49,15 +49,15 @@ log "3/7 Preparando directorio aislado de compilación ${BUILD_DIR}..."
 rm -rf "${BUILD_DIR}"
 mkdir -p "${BUILD_DIR}"
 
-# Copiar código fuente sin tocar .next activo ni duplicar espacio de node_modules/public
-rsync -a --delete \
-  --exclude='.git' \
-  --exclude='.next' \
-  --exclude='.next.prev' \
-  --exclude='node_modules' \
-  --exclude='public' \
-  --exclude='logs' \
-  "${APP_DIR}/" "${BUILD_DIR}/"
+# Copiar código fuente con tar estándar sin tocar .next activo ni duplicar espacio de node_modules/public
+tar -C "${APP_DIR}" \
+  --exclude='./.git' \
+  --exclude='./.next' \
+  --exclude='./.next.prev' \
+  --exclude='./node_modules' \
+  --exclude='./public' \
+  --exclude='./logs' \
+  -cf - . | tar -C "${BUILD_DIR}" -xf -
 
 # Hardlinks instantáneos en el mismo filesystem (/dev/xvda1): 0 MB extra y sin symlinks externos
 cp -al "${APP_DIR}/node_modules" "${BUILD_DIR}/node_modules"
