@@ -1,0 +1,64 @@
+{
+  "description": "Fixture representativo de la planilla oficial 'Precios Nati Gualeguaychu.' con las 4 pestañas reales y todos los casos borde.",
+  "sheetsByTab": {
+    "Tratamientos Pau": [
+      ["Categoría", "Tratamiento", "Dólares", "Pesos", "Mercedes", "codigo_web", "Suplementos y Fórmulas", "Precio ARS", "codigo_web"],
+      ["Toxina Botulínica", "Botox 3 zonas", "320", "420 dolares ", "$380", "", "Minoxidil 1 mg", "$25.000", "minoxidil-1-mg"],
+      ["", "Botox Masetero / Bruxismo", "200", "$260.000", "$220", "botox-masetero", "Minoxidil 5 mg", "$28.000", "minoxidil-5-mg"],
+      ["Bioestimuladores", "Harmonyca", "520", "420 dolares ", "$550", "", "Colágeno Bellivm Velvet", " $85.000", "bellivm-velvet"],
+      ["", "Gouri", "420", "", "$440", "", "Latisse (Bimatoprost 0.03%)", "$90.000", "latisse-bimatoprost-003"],
+      ["Periocular", "Global Eyecon", "", "$220.000/$250.000", "", "", "Cápsulas Vit C (Antiox C)", "420 dolares ", "antiox-c"],
+      ["Skinbooster", "Neauvia Hydro Deluxe", "420", "", "", "", "Dutasteride 0,5 mg", "$25.000", "dutasteride-05-mg"]
+    ],
+    "Tratamientos Mechi": [
+      ["Tratamiento", "Precio", "Duración", "URDI", "codigo_web"],
+      ["Limpieza FACIAL Profunda", "$50.000", "2 hs", "$38.000", "limpieza-facial-profunda"],
+      ["Limpieza Facial Básica sin extracciones", " $35.000", "1 h", "$24.000", "limpieza-facial-basica-sin-extracciones"],
+      ["Electroestimulación (por sesión)", "$10.000 x sesión", "30 min", "$8.000", "electroestimulacion-por-sesion"],
+      ["Dermapen Facial", "$220.000/$250.000", "1 h", "$65.000", "dermapen-facial"],
+      ["TOTAL GLOW (de todo personalizado)", "$180.000", "1 h", "$75.000", "total-glow-de-todo-personalizado"],
+      ["Radiofrecuencia: Glúteos", "", "30 min", "$32.000", "gluteos"],
+      ["Exfoliación cuerpo entero", "$60.000", "1 h", "$48.000", ""],
+      ["Exfoliación por zona", "$30.000", "30 min", "$22.000", "exfoliacion-por-zona"]
+    ],
+    "Hifu": [
+      ["Grupo", "Zona", "Precio", "codigo_web"],
+      ["Facial", "HIFU Facial completo", "$110.000", "hifu-facial"],
+      ["Corporal", "HIFU Abdomen (1 zona)", "$95.000", ""]
+    ],
+    "Cremas Sulderm": [
+      ["", "Producto", "Línea", "Precio", "Combo", "codigo_web"],
+      ["", "LIMPIEZA FACIAL", "", "", "", ""],
+      ["", "Acneplur Foam", "Acné", "$45.000", "$80.000", "acneplur-foam"],
+      ["", "Agua Micelar 3 en 1", "Limpieza", "$33.000", "$60.000", "agua-micelar-3-en-1"],
+      ["", "HIDRATACIÓN Y TRATAMIENTO", "", "", "", ""],
+      ["", "Hydra Age+", "Hidratación", "Consultar", "", "hydra-age-plus"],
+      ["", "Crema Anti-Celulitis", "Corporal", "$60.000", "$90.000", "crema-anti-celulitis"],
+      ["", "Crema Anti-Celulitis (duplicado accidental)", "Corporal", "$62.000", "", "crema-anti-celulitis"]
+    ]
+  },
+  "catalogSnapshot": {
+    "products": [
+      { "id": "fa6b63cb-a910-4f5b-8157-45a4a7b8adac", "slug": "acneplur-foam", "name": "Acneplur Foam", "price_ars": 42000, "is_active": true },
+      { "id": "050bcf04-685d-4b20-b9c6-81f4b1a351ae", "slug": "agua-micelar-3-en-1", "name": "Agua Micelar 3 en 1", "price_ars": 33000, "is_active": true },
+      { "id": "1abb9827-9199-4439-93b8-bd7f83f509ef", "slug": "hydra-age-plus", "name": "Hydra Age+", "price_ars": 45000, "is_active": true },
+      { "id": "ccc47e94-3e67-4d22-bc19-7741860d0e0d", "slug": "crema-anti-celulitis", "name": "Crema Anti-Celulitis", "price_ars": 60000, "is_active": true },
+      { "id": "d308b0df-3e96-4410-be5e-ca0b9ac05bae", "slug": "minoxidil-1-mg", "name": "Minoxidil 1 mg", "price_ars": 25000, "is_active": true },
+      { "id": "5d6e0535-42b1-4c83-9f82-057ddf917bc8", "slug": "minoxidil-5-mg", "name": "Minoxidil 5 mg", "price_ars": 25000, "is_active": true },
+      { "id": "4cc66dea-13f5-463d-acd3-4ca956caf2da", "slug": "bellivm-velvet", "name": "Bellivm Velvet", "price_ars": 80000, "is_active": true },
+      { "id": "01375280-617c-4adc-a6b2-40b569b8450a", "slug": "latisse-bimatoprost-003", "name": "Latisse (Bimatoprost 0.03%)", "price_ars": 90000, "is_active": true },
+      { "id": "56751e48-b722-43e1-a287-8779660f623e", "slug": "antiox-c", "name": "Antiox C", "price_ars": 80000, "is_active": true },
+      { "id": "b7ce42ce-80b8-485f-aca9-587d84cda94a", "slug": "dutasteride-05-mg", "name": "Dutasteride 0,5 mg", "price_ars": 25000, "is_active": true }
+    ],
+    "treatments": [
+      { "id": "6fd579a5-4339-4cbc-8910-6a6fcee0ae7f", "slug": "limpieza-facial-profunda", "title": "Limpieza FACIAL Profunda", "category": "Cosmetologia", "price_ars": 50000, "is_active": true },
+      { "id": "70e6360c-dd3d-4b8c-81e4-771e8419f979", "slug": "limpieza-facial-basica-sin-extracciones", "title": "Limpieza Facial Básica sin extracciones", "category": "Cosmetologia", "price_ars": 30000, "is_active": true },
+      { "id": "a63a8d4e-7e64-4d4f-ae7e-c3f45bb3b3e6", "slug": "electroestimulacion-por-sesion", "title": "Electroestimulación (por sesión)", "category": "Cosmetologia", "price_ars": 10000, "is_active": true },
+      { "id": "2ffd71c9-deca-4403-819a-e85e4ac5c540", "slug": "dermapen-facial", "title": "Dermapen Facial", "category": "Cosmetologia", "price_ars": 80000, "is_active": true },
+      { "id": "1ac0be2f-edb1-4f8d-b7c7-231de546206e", "slug": "total-glow-de-todo-personalizado", "title": "TOTAL GLOW (de todo personalizado)", "category": "Cosmetologia", "price_ars": 90000, "is_active": true },
+      { "id": "60344182-abde-4c71-9d71-c66d5edf9708", "slug": "gluteos", "title": "Radiofrecuencia: Glúteos", "category": "Cosmetologia", "price_ars": 40000, "is_active": true },
+      { "id": "96cb5d4e-beab-405b-9831-390cbb35499b", "slug": "botox-masetero", "title": "Botox Masetero", "category": "Facial", "price_ars": null, "is_active": true },
+      { "id": "1240097e-2c92-4d7a-91b1-99fdf3c4a6ae", "slug": "hifu-facial", "title": "HIFU — Facial", "category": "Facial", "price_ars": 110000, "is_active": true }
+    ]
+  }
+}

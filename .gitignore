@@ -44,3 +44,6 @@ next-env.d.ts
 ecosystem.config.js
 scratch/
 scripts/snapshots/
+/logs/
+/.next.prev/
+*service-account*.json
