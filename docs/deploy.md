@@ -11,7 +11,7 @@ Este documento define el único procedimiento autorizado para actualizar la apli
    - El servidor avanza únicamente mediante `git pull --ff-only origin master`.
 3. **Prohibido borrar `/opt/dra-landaburo/.next` antes de tener el nuevo build listo:**
    - PM2 ejecuta `/opt/dra-landaburo/.next/standalone/server.js`. Si se borra `.next` durante la compilación o si el build falla, el sitio queda sin archivos.
-   - La compilación se realiza siempre en un directorio aislado (`/opt/dra-landaburo-build`) y solo se intercambia al finalizar con éxito.
+   - La compilación se realiza siempre en un directorio aislado (`/home/bitnami/dra-landaburo-build`) y solo se intercambia al finalizar con éxito.
 4. **Fuentes tipográficas locales:**
    - `Playfair Display` e `IBM Plex Sans` están versionadas en `src/fonts/*.woff2` con `next/font/local`, eliminando la dependencia de red contra Google Fonts durante el build.
 
@@ -32,16 +32,16 @@ ssh -i ~/.ssh/antigravity_dralandaburo bitnami@54.94.94.20 \
 
 1. **`git pull --ff-only origin master`** en `/opt/dra-landaburo`. Si hubiera divergencia local, aborta inmediatamente sin tocar el proceso activo.
 2. **Dependencias condicionales:** compara el hash `SHA-256` de `package-lock.json` antes y después del `pull`; solo corre `npm ci` si hubo cambios.
-3. **Directorio de compilación aislado (`/opt/dra-landaburo-build`):**
+3. **Directorio de compilación aislado (`/home/bitnami/dra-landaburo-build`):**
    - Sincroniza el código fuente con `rsync` excluyendo `.next`, `.git`, `node_modules` y `public`.
    - Vincula `node_modules` y `public` mediante hardlinks locales (`cp -al`), ocupando `0 MB` adicionales en disco y evitando symlinks fuera del árbol de `output: 'standalone'`.
    - Copia `.env.local` al directorio de compilación.
 4. **Compilación aislada (`npm run build` + `postbuild`):**
-   - Ejecuta `next build` y `scripts/copy-standalone-assets.js` dentro de `/opt/dra-landaburo-build` mientras PM2 continúa sirviendo `/opt/dra-landaburo/.next`.
+   - Ejecuta `next build` y `scripts/copy-standalone-assets.js` dentro de `/home/bitnami/dra-landaburo-build` mientras PM2 continúa sirviendo `/opt/dra-landaburo/.next`.
    - Verifica que existan `.next/BUILD_ID` y `.next/standalone/server.js`.
-   - **Si falla cualquier paso:** elimina `/opt/dra-landaburo-build` y termina con `exit 1`. PM2 no se reinicia ni pierde archivos.
+   - **Si falla cualquier paso:** elimina `/home/bitnami/dra-landaburo-build` y termina con `exit 1`. PM2 no se reinicia ni pierde archivos.
 5. **Intercambio atómico (`swap`):**
-   - Mueve `/opt/dra-landaburo/.next` a `/opt/dra-landaburo/.next.prev` y mueve `/opt/dra-landaburo-build/.next` a `/opt/dra-landaburo/.next`.
+   - Mueve `/opt/dra-landaburo/.next` a `/opt/dra-landaburo/.next.prev` y mueve `/home/bitnami/dra-landaburo-build/.next` a `/opt/dra-landaburo/.next`.
 6. **Recarga de PM2:**
    - Ejecuta `pm2 reload dra-landaburo --update-env` únicamente después de que el nuevo `.next` ya está en su lugar.
 7. **Verificación HTTP post-deploy y rollback automático:**

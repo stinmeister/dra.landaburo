@@ -216,9 +216,6 @@ function resolveAuditLogPath() {
   if (process.env.PRICE_SYNC_AUDIT_LOG_PATH?.trim()) {
     return process.env.PRICE_SYNC_AUDIT_LOG_PATH.trim();
   }
-  if (process.platform !== 'win32' && fs.existsSync('/opt')) {
-    return '/opt/dra-landaburo-shared/logs/price-sync-audit.jsonl';
-  }
   return path.join(ROOT_DIR, 'logs', 'price-sync-audit.jsonl');
 }
 

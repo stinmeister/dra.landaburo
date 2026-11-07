@@ -4,7 +4,7 @@
 # ==============================================================================
 # Reglas que garantiza este script:
 #   1. Avanza únicamente con `git pull --ff-only origin master` (jamás reset --hard).
-#   2. Compila en un directorio separado (`/opt/dra-landaburo-build`) sin tocar ni
+#   2. Compila en un directorio separado (`/home/bitnami/dra-landaburo-build`) sin tocar ni
 #      borrar `/opt/dra-landaburo/.next` mientras PM2 sigue atendiendo tráfico.
 #   3. Si `npm run build` falla (o falta server.js / BUILD_ID), aborta con código != 0
 #      dejando PM2 y el `.next` anterior intactos.
@@ -17,7 +17,7 @@
 set -euo pipefail
 
 APP_DIR="/opt/dra-landaburo"
-BUILD_DIR="/opt/dra-landaburo-build"
+BUILD_DIR="${DEPLOY_BUILD_DIR:-/home/bitnami/dra-landaburo-build}"
 PM2_APP="dra-landaburo"
 BASE_CHECK_URL="${DEPLOY_CHECK_URL:-http://127.0.0.1:3000}"
 
